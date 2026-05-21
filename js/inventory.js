@@ -513,8 +513,6 @@ function setupEventHandlers() {
 
   // Scanner buttons
   document.getElementById("btn-start-scanner").addEventListener("click", function() {
-    const container = document.getElementById("scanner-container");
-    container.style.display = "block";
     this.style.display = "none";
     document.getElementById("btn-stop-scanner").style.display = "inline-block";
     startScanner();
