@@ -68,17 +68,28 @@ function startScanner() {
   const status = document.getElementById("scanner-status");
   const container = document.getElementById("scanner-container");
 
+  // Check if Quagga is loaded
+  if (typeof Quagga === "undefined") {
+    status.textContent = "❌ Erreur: Quagga.js non chargé";
+    status.classList.add("error");
+    console.error("Quagga library not loaded");
+    return;
+  }
+
   // Ensure video is visible
   video.style.display = "block";
   container.style.display = "block";
   scannerActive = true;
+  status.textContent = "⏳ Initialisation caméra...";
+
+  console.log("Starting Quagga scanner initialization");
 
   Quagga.init(
     {
       inputStream: {
         name: "Live",
         type: "LiveStream",
-        target: "scanner-video",
+        target: video,
         constraints: {
           width: 400,
           height: 400,
@@ -101,16 +112,19 @@ function startScanner() {
     },
     function(err) {
       if (err) {
-        console.error("Quagga init error:", err);
-        status.textContent = "❌ Erreur: permissions ou support caméra manquant";
+        console.error("Quagga init error details:", err);
+        status.textContent = `❌ Erreur caméra: ${err.message || err}`;
         status.classList.add("error");
         scannerActive = false;
+        video.style.display = "none";
         return;
       }
+
+      console.log("Quagga initialized successfully");
       Quagga.start();
       status.textContent = "📹 Scanner actif — Dirigez vers code-barre";
       status.classList.remove("error");
-      status.classList.remove("success");
+      status.classList.add("success");
     }
   );
 
@@ -461,6 +475,46 @@ function createInventoryItemElement(item) {
  * Set up form and button event handlers
  */
 function setupEventHandlers() {
+  // UPC manual lookup
+  document.getElementById("btn-lookup-upc").addEventListener("click", async function() {
+    const upc = document.getElementById("field-upc").value.trim();
+    if (!upc) {
+      alert("Entrez un code-barres");
+      return;
+    }
+    const status = document.getElementById("scanner-status");
+    status.textContent = "⏳ Recherche produit...";
+    const product = await fetchProductFromOpenFoodFacts(upc);
+    if (!product) {
+      status.textContent = "❌ Produit non trouvé. Entrez manuellement.";
+      status.classList.add("error");
+      return;
+    }
+    status.textContent = `✅ Produit trouvé: ${product.name}`;
+    status.classList.remove("error");
+    status.classList.add("success");
+    document.getElementById("field-product-name").value = product.name;
+    scannedProductData = product;
+    const infoSection = document.getElementById("product-info");
+    infoSection.style.display = "grid";
+    if (product.calories) {
+      document.getElementById("info-calories").textContent = product.calories.toFixed(1) + " kcal";
+    }
+    if (product.proteins) {
+      document.getElementById("info-proteins").textContent = product.proteins.toFixed(1) + "g";
+    }
+    if (product.fats) {
+      document.getElementById("info-fats").textContent = product.fats.toFixed(1) + "g";
+    }
+    if (product.carbs) {
+      document.getElementById("info-carbs").textContent = product.carbs.toFixed(1) + "g";
+    }
+    document.getElementById("info-allergens").textContent = product.allergens;
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 7);
+    document.getElementById("field-expiry").value = expiryDate.toISOString().split("T")[0];
+  });
+
   // Scanner buttons
   document.getElementById("btn-start-scanner").addEventListener("click", function() {
     startScanner();
