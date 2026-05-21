@@ -222,7 +222,8 @@ function showRecipe(mealType) {
   if (!meal) return;
 
   // TODO: Link to Recipes tab or show modal with recipe details
-  alert(`Recette: ${meal.name}\n(Détails à venir)`);
+  // For now, just log to console
+  console.log(`Recipe requested for: ${meal.name}`);
 }
 
 /**
@@ -259,14 +260,18 @@ function loadMealsState() {
   const savedConsumed = localStorage.getItem(`mealflow:consumed:${today}`);
 
   if (savedState) {
-    const stateArray = JSON.parse(savedState);
-    stateArray.forEach(saved => {
-      const meal = AccueilState.todayMeals.find(m => m.mealType === saved.mealType);
-      if (meal) {
-        meal.eaten = saved.eaten;
-        meal.actualKcal = saved.actualKcal || meal.estimatedKcal;
-      }
-    });
+    try {
+      const stateArray = JSON.parse(savedState);
+      stateArray.forEach(saved => {
+        const meal = AccueilState.todayMeals.find(m => m.mealType === saved.mealType);
+        if (meal) {
+          meal.eaten = saved.eaten;
+          meal.actualKcal = saved.actualKcal || meal.estimatedKcal;
+        }
+      });
+    } catch (err) {
+      console.warn("Could not parse saved meals state:", err);
+    }
   }
 
   if (savedConsumed) {
@@ -330,16 +335,16 @@ async function loadPlanningData() {
 
     // Build meals array from columns: Petit-déj, Collation_matin, Déjeuner, etc.
     AccueilState.todayMeals = MEAL_TIMES.map(mealDef => {
-      const columnName = mealDef.type.split("_").map((w, i) =>
-        i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w
-      ).join("-");
       // Try different column name variations
-      const mealName = todayRow["Petit-déj"] !== undefined && mealDef.type === "petit_dejeuner" ? todayRow["Petit-déj"] :
-                       todayRow["Collation_matin"] !== undefined && mealDef.type === "collation_matin" ? todayRow["Collation_matin"] :
-                       todayRow["Déjeuner"] !== undefined && mealDef.type === "dejeuner" ? todayRow["Déjeuner"] :
-                       todayRow["Collation_après-midi"] !== undefined && mealDef.type === "collation_apres_midi" ? todayRow["Collation_après-midi"] :
-                       todayRow["Diner"] !== undefined && mealDef.type === "diner" ? todayRow["Diner"] :
-                       "";
+      const mealTypeToColumn = {
+        "petit_dejeuner": "Petit-déj",
+        "collation_matin": "Collation_matin",
+        "dejeuner": "Déjeuner",
+        "collation_apres_midi": "Collation_après-midi",
+        "diner": "Diner"
+      };
+      const columnName = mealTypeToColumn[mealDef.type];
+      const mealName = (todayRow[columnName] || "").trim();
 
       return {
         mealType: mealDef.type,
