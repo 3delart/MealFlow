@@ -147,7 +147,20 @@ async function generateMealPlan(profiles, inventory) {
           }
 
           const content = response.content[0].text;
-          const match = content.match(/\{[\s\S]*\}/);
+
+          // Strip markdown code fence if present
+          let jsonStr = content.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+
+          // Try to parse as-is first
+          try {
+            resolve(JSON.parse(jsonStr));
+            return;
+          } catch (e) {
+            // Fallback: extract first JSON object
+          }
+
+          // Fallback: extract first { ... } block
+          const match = jsonStr.match(/\{[\s\S]*\}/);
           if (!match) {
             reject(new Error("No JSON in Claude response"));
             return;
