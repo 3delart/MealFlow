@@ -104,7 +104,7 @@ async function generateMealPlan(profiles, inventory) {
         "x-api-key": CLAUDE_API_KEY,
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
-        "content-length": data.length
+        "content-length": Buffer.byteLength(data, 'utf8')
       }
     };
 
