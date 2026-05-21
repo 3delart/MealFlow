@@ -262,7 +262,7 @@ function saveInventory() {
  * Add new item to inventory
  * @param {Object} item - Inventory item
  */
-function addItem(item) {
+async function addItem(item) {
   const newItem = {
     id: Date.now(),
     Produit: item.product_name,
@@ -278,6 +278,32 @@ function addItem(item) {
     carbs: scannedProductData?.carbs || null,
     allergens: scannedProductData?.allergens || "—"
   };
+
+  // Send to Google Apps Script
+  try {
+    const response = await fetch("https://script.google.com/macros/s/AKfycbwYaYnzeTptXCmVuH8gwifq0Zlw_MgW643Q8fDXVbtQ1srJQ2C2bNKdi8K8cCOd5aK1/exec", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        produit: newItem.Produit,
+        qty: newItem.Qty,
+        unite: newItem.Unité,
+        categorie: newItem.Catégorie,
+        date_ajout: newItem.Date_ajout,
+        peremption: newItem.Péremption,
+        consomme: newItem.Consommé,
+        calories: newItem.calories_per_100,
+        proteins: newItem.proteins,
+        fats: newItem.fats,
+        carbs: newItem.carbs,
+        allergens: newItem.allergens
+      })
+    });
+    const result = await response.json();
+    console.log("Sheets sync result:", result);
+  } catch (err) {
+    console.error("Failed to sync to Sheets:", err);
+  }
 
   inventoryData.push(newItem);
   saveInventory();
