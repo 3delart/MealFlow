@@ -279,32 +279,6 @@ async function addItem(item) {
     allergens: scannedProductData?.allergens || "—"
   };
 
-  // Send to Google Apps Script
-  try {
-    const response = await fetch("https://script.google.com/macros/s/AKfycbw_lAy0IUl52KOTfD5zwdTL8a3XZbiAMgoiaCzprjVwTWc-LDmWzC8fmSxArprtWkoG/exec", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        produit: newItem.Produit,
-        qty: newItem.Qty,
-        unite: newItem.Unité,
-        categorie: newItem.Catégorie,
-        date_ajout: newItem.Date_ajout,
-        peremption: newItem.Péremption,
-        consomme: newItem.Consommé,
-        calories: newItem.calories_per_100,
-        proteins: newItem.proteins,
-        fats: newItem.fats,
-        carbs: newItem.carbs,
-        allergens: newItem.allergens
-      })
-    });
-    const result = await response.json();
-    console.log("Sheets sync result:", result);
-  } catch (err) {
-    console.error("Failed to sync to Sheets:", err);
-  }
-
   inventoryData.push(newItem);
   saveInventory();
   scannedProductData = null;
