@@ -5,8 +5,34 @@
 
 // Configuration constants
 // User must replace these with their actual values from Google Cloud Console
-const SHEET_ID = "YOUR_SHEET_ID_HERE";
-const SHEET_API_KEY = "YOUR_API_KEY_HERE";
+const SHEET_ID_DEFAULT = "1Dg9d-XIHzPqQIi4wZ2bTbnmHUKkn_V-IRzMOtRzQjOI";
+const SHEET_API_KEY_DEFAULT = "AlzaSyDZxRe3JtjbbqN9orW0xFCosxO4_3o6h74";
+
+/**
+ * Get Sheet ID from localStorage or fallback to default
+ */
+function getSheetId() {
+  if (typeof localStorage !== 'undefined') {
+    const stored = localStorage.getItem("SHEETS_ID");
+    if (stored && stored !== "YOUR_SHEET_ID_HERE") {
+      return stored;
+    }
+  }
+  return SHEET_ID_DEFAULT;
+}
+
+/**
+ * Get API Key from localStorage or fallback to default
+ */
+function getApiKey() {
+  if (typeof localStorage !== 'undefined') {
+    const stored = localStorage.getItem("SHEETS_API_KEY");
+    if (stored && stored !== "YOUR_API_KEY_HERE") {
+      return stored;
+    }
+  }
+  return SHEET_API_KEY_DEFAULT;
+}
 
 /**
  * Reads data from a Google Sheet tab
@@ -16,8 +42,11 @@ const SHEET_API_KEY = "YOUR_API_KEY_HERE";
  */
 async function readSheetTab(tabName) {
   try {
+    const sheetId = getSheetId();
+    const apiKey = getApiKey();
+
     // Construct the API URL for the specified tab
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${tabName}?key=${SHEET_API_KEY}`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${tabName}?key=${apiKey}`;
 
     // Fetch the data from Google Sheets API
     const response = await fetch(url);
