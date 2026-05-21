@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MealFlow — Bonjour</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/accueil.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>🍽️ MealFlow</h1>
+    </div>
+  </header>
+
+  <main class="accueil-main">
+    <div class="greeting-section">
+      <h2 id="greeting">Chargement...</h2>
+      <p id="date-today" class="date-text">Aujourd'hui</p>
+      <p id="calorie-objective" class="calorie-text">Objectif: — kcal</p>
+    </div>
+
+    <div class="progress-circle-section">
+      <svg id="progress-circle" class="progress-circle" viewBox="0 0 120 120" aria-label="Calories consommées aujourd'hui" role="img">
+        <circle class="circle-bg" cx="60" cy="60" r="54" />
+        <circle class="circle-progress" cx="60" cy="60" r="54" id="circle-path" />
+        <text class="circle-label" x="60" y="52" id="progress-percent">0%</text>
+        <text class="circle-sublabel" x="60" y="70">consommé</text>
+      </svg>
+      <p class="circle-caption" id="circle-caption">— / — kcal</p>
+    </div>
+
+    <div class="objectives-section">
+      <h3>TODAY'S OBJECTIVES</h3>
+      <div id="objectives-content">
+        <p class="loading-text">Chargement des objectifs...</p>
+      </div>
+    </div>
+
+    <div class="search-section">
+      <input type="text" id="search-meals" placeholder="🔍 Chercher une recette..." autocomplete="off">
+      <div id="search-results" class="search-results hidden"></div>
+    </div>
+  </main>
+
+  <nav class="nav-bottom" aria-label="Navigation principale">
+    <a href="index.html" class="nav-item active" aria-current="page">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Accueil</span>
+    </a>
+    <a href="planning.html" class="nav-item">
+      <span class="nav-icon">📅</span>
+      <span class="nav-label">Planning</span>
+    </a>
+    <a href="courses.html" class="nav-item">
+      <span class="nav-icon">🛒</span>
+      <span class="nav-label">Courses</span>
+    </a>
+    <a href="inventory.html" class="nav-item">
+      <span class="nav-icon">📦</span>
+      <span class="nav-label">Inventaire</span>
+    </a>
+    <a href="profils.html" class="nav-item">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profils</span>
+    </a>
+  </nav>
+
+  <script src="js/user-context.js"></script>
+  <script src="js/sheets-api.js"></script>
+  <script src="js/accueil.js"></script>
+</body>
+</html>

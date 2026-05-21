@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planning — MealFlow</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/planning.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>📅 Planning</h1>
+    </div>
+  </header>
+
+  <main>
+    <div class="planning-controls">
+      <button class="secondary" id="prev-week-btn">← Semaine précédente</button>
+      <span id="week-label" class="week-label">Semaine...</span>
+      <button class="secondary" id="next-week-btn">Semaine suivante →</button>
+    </div>
+
+    <p class="note-auto-gen">Génération auto lundi</p>
+
+    <div id="planning-grid-container" class="planning-grid-container">
+      <!-- Table dynamically populated -->
+    </div>
+  </main>
+
+  <nav class="nav-bottom" aria-label="Navigation principale">
+    <a href="index.html" class="nav-item">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Accueil</span>
+    </a>
+    <a href="planning.html" class="nav-item active" aria-current="page">
+      <span class="nav-icon">📅</span>
+      <span class="nav-label">Planning</span>
+    </a>
+    <a href="courses.html" class="nav-item">
+      <span class="nav-icon">🛒</span>
+      <span class="nav-label">Courses</span>
+    </a>
+    <a href="inventory.html" class="nav-item">
+      <span class="nav-icon">📦</span>
+      <span class="nav-label">Inventaire</span>
+    </a>
+    <a href="profils.html" class="nav-item">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profils</span>
+    </a>
+  </nav>
+
+  <script src="js/user-context.js"></script>
+  <script src="js/sheets-api.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/planning.js"></script>
+</body>
+</html>

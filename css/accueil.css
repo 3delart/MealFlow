@@ -1,0 +1,387 @@
+/**
+ * MealFlow — Accueil (Landing Page) Styles
+ * Progress circle, greeting, objectives, and search
+ */
+
+/* ============================================================================
+   MAIN LAYOUT
+   ============================================================================ */
+
+.accueil-main {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--spacing-md) var(--spacing-md) 80px; /* 80px bottom for fixed nav */
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+/* ============================================================================
+   GREETING SECTION
+   ============================================================================ */
+
+.greeting-section {
+  text-align: center;
+  padding: var(--spacing-lg) var(--spacing-md) var(--spacing-md);
+}
+
+.greeting-section h2 {
+  color: var(--color-primary);
+  font-size: 26px;
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--spacing-xs);
+  margin-top: 0;
+  line-height: 1.2;
+}
+
+.date-text {
+  color: var(--color-text-light);
+  font-size: var(--font-size-base);
+  margin-bottom: var(--spacing-xs);
+  text-transform: capitalize;
+}
+
+.calorie-text {
+  color: var(--color-primary);
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: 0;
+}
+
+/* ============================================================================
+   PROGRESS CIRCLE
+   ============================================================================ */
+
+.progress-circle-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.progress-circle {
+  width: 180px;
+  height: 180px;
+  transform: rotate(-90deg); /* Start arc at top */
+  filter: drop-shadow(0 4px 12px rgba(46, 125, 50, 0.2));
+}
+
+/* Background ring */
+.circle-bg {
+  fill: none;
+  stroke: #e0e0e0;
+  stroke-width: 10;
+}
+
+/* Progress arc */
+.circle-progress {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 10;
+  stroke-linecap: round;
+  /* Circumference for r=54: 2 * π * 54 ≈ 339.3 */
+  stroke-dasharray: 339.3;
+  stroke-dashoffset: 339.3; /* Start at 0% */
+  transition: stroke-dashoffset 1s ease-in-out;
+}
+
+/* Over-target: show warning color */
+.circle-progress.over-target {
+  stroke: var(--color-warning);
+}
+
+/* Text inside circle — counter-rotated to undo the -90deg parent rotation */
+.circle-label {
+  fill: var(--color-text);
+  font-size: 22px;
+  font-weight: var(--font-weight-bold);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: rotate(90deg);
+}
+
+.circle-sublabel {
+  fill: var(--color-text-light);
+  font-size: 9px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: rotate(90deg);
+}
+
+/* Caption below circle */
+.circle-caption {
+  color: var(--color-text-light);
+  font-size: var(--font-size-small);
+  margin: 0;
+  text-align: center;
+}
+
+/* ============================================================================
+   OBJECTIVES SECTION
+   ============================================================================ */
+
+.objectives-section {
+  background-color: var(--color-surface);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.objectives-section h3 {
+  font-size: 12px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-light);
+  margin-bottom: var(--spacing-md);
+  margin-top: 0;
+}
+
+.loading-text {
+  color: var(--color-text-light);
+  font-size: var(--font-size-small);
+  text-align: center;
+  margin: 0;
+}
+
+/* Objective card per user */
+.objective-card {
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.objective-card:last-child {
+  margin-bottom: 0;
+}
+
+.objective-card.florian {
+  background-color: var(--color-florian);
+  border-left: 4px solid #e91e63;
+}
+
+.objective-card.naomi {
+  background-color: var(--color-naomi);
+  border-left: 4px solid #5c6bc0;
+}
+
+/* Card header: name + percentage badge */
+.objective-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.objective-user-name {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+}
+
+.objective-badge {
+  font-size: 12px;
+  font-weight: var(--font-weight-bold);
+  padding: 2px 10px;
+  border-radius: 12px;
+  color: white;
+}
+
+.objective-card.florian .objective-badge {
+  background-color: #e91e63;
+}
+
+.objective-card.naomi .objective-badge {
+  background-color: #5c6bc0;
+}
+
+/* Calorie numbers */
+.objective-calories {
+  font-size: var(--font-size-small);
+  color: var(--color-text-light);
+  margin-bottom: var(--spacing-sm);
+}
+
+.objective-calories strong {
+  color: var(--color-text);
+}
+
+/* Progress bar */
+.objective-progress-bar-wrap {
+  background-color: rgba(255, 255, 255, 0.6);
+  border-radius: 4px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.objective-progress-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.8s ease-in-out;
+  background-color: var(--color-primary);
+}
+
+.objective-card.florian .objective-progress-bar {
+  background-color: #e91e63;
+}
+
+.objective-card.naomi .objective-progress-bar {
+  background-color: #5c6bc0;
+}
+
+/* Meals planned today */
+.today-meals {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.today-meals h4 {
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-light);
+  margin-bottom: var(--spacing-sm);
+  margin-top: 0;
+}
+
+.meal-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.meal-chip {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.no-meals-text {
+  font-size: var(--font-size-small);
+  color: var(--color-text-light);
+  margin: 0;
+}
+
+/* ============================================================================
+   SEARCH SECTION
+   ============================================================================ */
+
+.search-section {
+  position: relative;
+}
+
+.search-section input[type="text"] {
+  width: 100%;
+  margin-bottom: 0;
+  padding-left: var(--spacing-md);
+  border-radius: var(--border-radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-size-base);
+}
+
+.search-section input[type="text"]:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+}
+
+.search-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 20;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.search-result-item {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-small);
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border);
+  transition: background-color var(--transition-fast);
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item:hover {
+  background-color: var(--color-bg);
+  color: var(--color-primary);
+}
+
+.search-results.hidden {
+  display: none;
+}
+
+/* ============================================================================
+   BOTTOM NAV OVERRIDE FOR ACCUEIL
+   ============================================================================ */
+
+/* Ensure bottom nav is above everything */
+.nav-bottom {
+  z-index: 100;
+}
+
+/* ============================================================================
+   USER-SPECIFIC BACKGROUND TINT (applied by user-context.js)
+   ============================================================================ */
+
+body.user-florian {
+  background-color: var(--color-florian);
+}
+
+body.user-naomi {
+  background-color: var(--color-naomi);
+}
+
+/* ============================================================================
+   RESPONSIVE — DESKTOP WIDENED LAYOUT
+   ============================================================================ */
+
+@media (min-width: 480px) {
+  .accueil-main {
+    padding: var(--spacing-lg) var(--spacing-lg) 80px;
+    gap: var(--spacing-xl);
+  }
+
+  .greeting-section h2 {
+    font-size: 30px;
+  }
+
+  .progress-circle {
+    width: 210px;
+    height: 210px;
+  }
+}
+
+@media (min-width: 768px) {
+  .accueil-main {
+    max-width: 640px;
+    padding: var(--spacing-xl) var(--spacing-xl) 80px;
+  }
+
+  .progress-circle {
+    width: 240px;
+    height: 240px;
+  }
+}

@@ -1,0 +1,15 @@
+# Secrets
+.env
+.env.local
+
+# Dependencies
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
