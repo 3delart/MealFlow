@@ -113,6 +113,13 @@ async function generateMealPlan(profiles, inventory) {
       res.on("data", (chunk) => (body += chunk));
       res.on("end", () => {
         try {
+          console.log(`[Response] Status: ${res.statusCode}, Length: ${body.length}`);
+          if (res.statusCode !== 200) {
+            console.log(`[Response] Body: ${body.substring(0, 500)}`);
+            reject(new Error(`Claude API HTTP ${res.statusCode}: ${body}`));
+            return;
+          }
+
           const response = JSON.parse(body);
           if (response.error) {
             reject(new Error(`Claude API: ${response.error.message}`));
@@ -128,6 +135,7 @@ async function generateMealPlan(profiles, inventory) {
 
           resolve(JSON.parse(match[0]));
         } catch (e) {
+          console.log(`[Error] Parse failed. Body preview: ${body.substring(0, 200)}`);
           reject(e);
         }
       });
