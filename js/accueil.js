@@ -177,7 +177,7 @@ function renderMeals() {
             <div style="display: flex; align-items: center;">
               <span class="meal-time-icon">${meal.emoji}</span>
               <div>
-                <p class="meal-name">${meal.label}</p>
+                <p class="meal-name">${meal.name}</p>
                 <p class="meal-kcal">${displayKcal} kcal</p>
               </div>
             </div>
