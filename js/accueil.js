@@ -18,6 +18,12 @@ const AccueilState = {
   lastDateChecked: null,  // ISO date string to detect midnight rollover
 };
 
+/**
+ * Grignottage scanner state
+ */
+let grignottageScanner = null;
+let grignottageCurrentBarcode = null;
+
 /* ============================================================================
    DATE HELPERS (inline until utils.js is available in Task 5)
    ============================================================================ */
@@ -477,11 +483,157 @@ async function initAccueil() {
 }
 
 /**
- * Placeholder: initializes Grignottage button for adding snacks.
- * Full integration deferred until Grignottage feature is built.
+ * Opens the Grignottage scanner modal.
  */
 function initializeGrignottageButton() {
-  // TODO: Wire up Grignottage button when feature is ready
+  const btn = document.getElementById("grignottage-btn");
+  if (btn) {
+    btn.addEventListener("click", openGrignottageModal);
+  }
+}
+
+/**
+ * Opens the scanner modal.
+ */
+function openGrignottageModal() {
+  const modal = document.getElementById("scanner-modal");
+  if (!modal) return;
+
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+  startScanner();
+}
+
+/**
+ * Closes the scanner modal.
+ */
+function closeGrignottageModal() {
+  const modal = document.getElementById("scanner-modal");
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+  }
+  stopScanner();
+}
+
+/**
+ * Starts the html5-qrcode scanner.
+ */
+function startScanner() {
+  const scannerContainer = document.getElementById("scanner-container");
+  if (!scannerContainer) return;
+
+  grignottageScanner = new Html5Qrcode("scanner-container");
+
+  grignottageScanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    (decodedText) => {
+      grignottageCurrentBarcode = decodedText;
+      onBarcodeDetected(decodedText);
+    },
+    (error) => {
+      console.log(`Scanner error: ${error}`);
+    }
+  ).catch((err) => {
+    console.error("Failed to start scanner:", err);
+    alert("Caméra non disponible");
+    closeGrignottageModal();
+  });
+}
+
+/**
+ * Stops the scanner.
+ */
+function stopScanner() {
+  if (grignottageScanner) {
+    grignottageScanner.stop().then(() => {
+      grignottageScanner = null;
+    }).catch((err) => {
+      console.error("Error stopping scanner:", err);
+    });
+  }
+}
+
+/**
+ * Called when a barcode is detected. Fetches nutrition data from Open Food Facts.
+ */
+async function onBarcodeDetected(barcode) {
+  console.log(`Barcode detected: ${barcode}`);
+
+  const resultDiv = document.getElementById("scanner-result");
+  const nameEl = document.getElementById("result-name");
+  const kcalEl = document.getElementById("result-kcal");
+
+  resultDiv.classList.remove("hidden");
+
+  try {
+    // Fetch from Open Food Facts API
+    const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+    const data = await response.json();
+
+    if (data.product) {
+      const product = data.product;
+      const name = product.product_name || product.generic_name || barcode;
+      const kcal = product.nutriments?.["energy-kcal"] || product.nutriments?.["energy-kcal_100g"] || 0;
+
+      nameEl.textContent = name;
+      kcalEl.value = Math.round(kcal);
+      kcalEl.focus();
+    } else {
+      nameEl.textContent = `Code ${barcode}`;
+      kcalEl.value = "";
+      kcalEl.focus();
+      kcalEl.placeholder = "Entrer calories";
+    }
+  } catch (err) {
+    console.error("Failed to fetch product data:", err);
+    nameEl.textContent = `Code ${barcode}`;
+    kcalEl.value = "";
+    kcalEl.focus();
+  }
+
+  stopScanner();
+}
+
+/**
+ * Restarts the scanner after result is shown.
+ */
+function restartScanner() {
+  document.getElementById("scanner-result").classList.add("hidden");
+  startScanner();
+}
+
+/**
+ * Adds the scanned/entered calories to today's consumption.
+ */
+function addGrignottage() {
+  const nameEl = document.getElementById("result-name");
+  const kcalEl = document.getElementById("result-kcal");
+
+  const name = nameEl.textContent || "Snack";
+  const kcal = Number(kcalEl.value) || 0;
+
+  if (kcal === 0) {
+    alert("Entrer les calories");
+    return;
+  }
+
+  // Add to consumed calories
+  AccueilState.caloriesConsumed += kcal;
+  AccueilState.grignottageCalories += kcal;
+
+  // Save state
+  saveMealsState();
+
+  // Update UI
+  updateProgressDisplay();
+
+  // Notify user
+  alert(`Ajouté: ${name} (+${kcal} kcal)`);
+
+  // Close modal
+  closeGrignottageModal();
 }
 
 /* ============================================================================
