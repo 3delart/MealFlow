@@ -66,8 +66,11 @@ async function fetchProductFromOpenFoodFacts(barcode) {
 function startScanner() {
   const video = document.getElementById("scanner-video");
   const status = document.getElementById("scanner-status");
+  const container = document.getElementById("scanner-container");
 
-  video.classList.add("active");
+  // Ensure video is visible
+  video.style.display = "block";
+  container.style.display = "block";
   scannerActive = true;
 
   Quagga.init(
@@ -75,7 +78,7 @@ function startScanner() {
       inputStream: {
         name: "Live",
         type: "LiveStream",
-        target: video,
+        target: "scanner-video",
         constraints: {
           width: 400,
           height: 400,
@@ -92,8 +95,7 @@ function startScanner() {
           "upc_e_reader"
         ],
         debug: {
-          showCanvas: true,
-          showPatches: true
+          showCanvas: true
         }
       }
     },
@@ -136,7 +138,7 @@ function stopScanner() {
   }
 
   const video = document.getElementById("scanner-video");
-  video.classList.remove("active");
+  video.style.display = "none";
   scannerActive = false;
 
   document.getElementById("btn-start-scanner").style.display = "inline-block";
