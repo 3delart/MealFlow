@@ -6,6 +6,7 @@
   <title>MealFlow — Bonjour</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/accueil.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
   <header>
@@ -31,10 +32,33 @@
       <p class="circle-caption" id="circle-caption">— / — kcal</p>
     </div>
 
-    <div class="objectives-section">
-      <h3>TODAY'S OBJECTIVES</h3>
-      <div id="objectives-content">
-        <p class="loading-text">Chargement des objectifs...</p>
+    <div class="meals-section">
+      <div class="grignottage-banner">
+        <button id="grignottage-btn" class="btn btn-primary-outline" onclick="initializeGrignottage()">
+          🍪 Grignottage — Scanner
+        </button>
+      </div>
+
+      <div class="meals-list" id="meals-container">
+        <p class="loading-text">Chargement repas du jour...</p>
+      </div>
+
+      <div id="scanner-modal" class="modal hidden">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Scanner aliment</h3>
+            <button class="modal-close" onclick="closeGrignottageModal()">✕</button>
+          </div>
+          <div id="scanner-container" style="width: 100%; height: 300px;">
+            <!-- html5-qrcode scanner inits here -->
+          </div>
+          <div class="scanner-result" id="scanner-result" style="display:none;">
+            <p>Aliment trouvé: <strong id="result-name">—</strong></p>
+            <p>Calories: <input type="number" id="result-kcal" placeholder="0" min="0" /> kcal</p>
+            <button class="btn btn-primary" onclick="addGrignottage()">Ajouter</button>
+            <button class="btn btn-secondary" onclick="restartScanner()">Rescanner</button>
+          </div>
+        </div>
       </div>
     </div>
 
