@@ -69,7 +69,15 @@
           </div>
           <div class="form-group">
             <label for="field-regime">Régime</label>
-            <input type="text" id="field-regime" name="Régime" placeholder="ex. Omnivore">
+            <select id="field-regime" name="Régime" required>
+              <option value="">— Sélectionner —</option>
+              <option value="Omnivore">Omnivore</option>
+              <option value="Végétarien">Végétarien</option>
+              <option value="Vegan">Vegan</option>
+              <option value="Halal">Halal</option>
+              <option value="Kasher">Kasher</option>
+              <option value="Sans gluten">Sans gluten</option>
+            </select>
           </div>
         </fieldset>
 
@@ -96,22 +104,52 @@
             </select>
           </div>
           <div class="form-group">
-            <label for="field-cuisines">Cuisines préférées (virgule-séparées)</label>
-            <input type="text" id="field-cuisines" name="Cuisines_JSON" placeholder="ex. Méditerranéenne, Asiatique">
+            <fieldset class="checkbox-group" id="cuisines-group">
+              <legend>Cuisines préférées</legend>
+              <label><input type="checkbox" name="cuisine-checkbox" value="Méditerranéenne"> Méditerranéenne</label>
+              <label><input type="checkbox" name="cuisine-checkbox" value="Asiatique"> Asiatique</label>
+              <label><input type="checkbox" name="cuisine-checkbox" value="Française"> Française</label>
+              <label><input type="checkbox" name="cuisine-checkbox" value="Italienne"> Italienne</label>
+              <label><input type="checkbox" name="cuisine-checkbox" value="Espagnole"> Espagnole</label>
+              <label><input type="checkbox" name="cuisine-checkbox" value="Mexicaine"> Mexicaine</label>
+              <label><input type="checkbox" name="cuisine-checkbox" value="Indienne"> Indienne</label>
+              <label><input type="checkbox" name="cuisine-checkbox" value="Japonaise"> Japonaise</label>
+              <label><input type="checkbox" name="cuisine-checkbox" value="Thaïlandaise"> Thaïlandaise</label>
+              <label><input type="checkbox" name="cuisine-checkbox" value="Brésilienne"> Brésilienne</label>
+              <label><input type="checkbox" name="cuisine-checkbox" value="Aucune préférence"> Aucune préférence</label>
+            </fieldset>
           </div>
         </fieldset>
 
         <!-- Restrictions -->
         <fieldset>
-          <legend>Restrictions alimentaires</legend>
-          <div class="form-group">
-            <label for="field-allergies">Allergies (virgule-séparées)</label>
-            <input type="text" id="field-allergies" name="Allergies_JSON" placeholder="ex. Arachides, Noix">
-          </div>
-          <div class="form-group">
-            <label for="field-aversions">Aversions (virgule-séparées)</label>
-            <input type="text" id="field-aversions" name="Aversions_JSON" placeholder="ex. Œufs, Fromage">
-          </div>
+          <legend>Allergies</legend>
+          <fieldset class="checkbox-group" id="allergies-group">
+            <label><input type="checkbox" name="allergy-checkbox" value="Arachides"> Arachides</label>
+            <label><input type="checkbox" name="allergy-checkbox" value="Noix"> Noix</label>
+            <label><input type="checkbox" name="allergy-checkbox" value="Œufs"> Œufs</label>
+            <label><input type="checkbox" name="allergy-checkbox" value="Lait"> Lait</label>
+            <label><input type="checkbox" name="allergy-checkbox" value="Poisson"> Poisson</label>
+            <label><input type="checkbox" name="allergy-checkbox" value="Crustacés"> Crustacés</label>
+            <label><input type="checkbox" name="allergy-checkbox" value="Soja"> Soja</label>
+            <label><input type="checkbox" name="allergy-checkbox" value="Sésame"> Sésame</label>
+            <label><input type="checkbox" name="allergy-checkbox" value="Aucune"> Aucune</label>
+          </fieldset>
+        </fieldset>
+
+        <fieldset>
+          <legend>Aversions</legend>
+          <fieldset class="checkbox-group" id="aversions-group">
+            <label><input type="checkbox" name="aversion-checkbox" value="Œufs"> Œufs</label>
+            <label><input type="checkbox" name="aversion-checkbox" value="Fromage"> Fromage</label>
+            <label><input type="checkbox" name="aversion-checkbox" value="Champignons"> Champignons</label>
+            <label><input type="checkbox" name="aversion-checkbox" value="Épinards"> Épinards</label>
+            <label><input type="checkbox" name="aversion-checkbox" value="Oignons"> Oignons</label>
+            <label><input type="checkbox" name="aversion-checkbox" value="Tomates"> Tomates</label>
+            <label><input type="checkbox" name="aversion-checkbox" value="Poisson"> Poisson</label>
+            <label><input type="checkbox" name="aversion-checkbox" value="Viande rouge"> Viande rouge</label>
+            <label><input type="checkbox" name="aversion-checkbox" value="Aucune"> Aucune</label>
+          </fieldset>
         </fieldset>
 
         <div class="form-actions">

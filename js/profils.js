@@ -443,15 +443,26 @@ function openEditModal(userId) {
   document.getElementById("field-niveau").value = profile["Niveau_culinaire"] || "";
   document.getElementById("field-duree").value = profile["Durée_max_prep"] || "";
 
-  // Convert JSON arrays back to comma-separated strings
+  // Check appropriate cuisine checkboxes
   const cuisines = parseArrayField(profile["Cuisines_JSON"]);
-  document.getElementById("field-cuisines").value = cuisines.join(", ");
+  const cuisineCheckboxes = document.querySelectorAll('input[name="cuisine-checkbox"]');
+  cuisineCheckboxes.forEach(cb => {
+    cb.checked = cuisines.includes(cb.value);
+  });
 
+  // Check appropriate allergy checkboxes
   const allergies = parseArrayField(profile["Allergies_JSON"]);
-  document.getElementById("field-allergies").value = allergies.join(", ");
+  const allergyCheckboxes = document.querySelectorAll('input[name="allergy-checkbox"]');
+  allergyCheckboxes.forEach(cb => {
+    cb.checked = allergies.includes(cb.value);
+  });
 
+  // Check appropriate aversion checkboxes
   const aversions = parseArrayField(profile["Aversions_JSON"]);
-  document.getElementById("field-aversions").value = aversions.join(", ");
+  const aversionCheckboxes = document.querySelectorAll('input[name="aversion-checkbox"]');
+  aversionCheckboxes.forEach(cb => {
+    cb.checked = aversions.includes(cb.value);
+  });
 
   // Store current user ID in form for submission handler
   form.dataset.userId = userId;
@@ -474,19 +485,28 @@ function closeEditModal() {
  * @param {Object} formData - Form field data
  */
 function saveProfileData(userId, formData) {
-  // Convert comma-separated strings to JSON arrays
-  const cuisines = (formData["Cuisines_JSON"] || "")
-    .split(",")
-    .map(s => s.trim())
-    .filter(Boolean);
-  const allergies = (formData["Allergies_JSON"] || "")
-    .split(",")
-    .map(s => s.trim())
-    .filter(Boolean);
-  const aversions = (formData["Aversions_JSON"] || "")
-    .split(",")
-    .map(s => s.trim())
-    .filter(Boolean);
+  // Parse cuisines, allergies, aversions (all JSON from checkboxes)
+  let cuisines = [];
+  let allergies = [];
+  let aversions = [];
+
+  try {
+    cuisines = JSON.parse(formData["Cuisines_JSON"]);
+  } catch (_) {
+    cuisines = [];
+  }
+
+  try {
+    allergies = JSON.parse(formData["Allergies_JSON"]);
+  } catch (_) {
+    allergies = [];
+  }
+
+  try {
+    aversions = JSON.parse(formData["Aversions_JSON"]);
+  } catch (_) {
+    aversions = [];
+  }
 
   const updatedProfile = {
     ...profilesData[userId],
@@ -574,6 +594,14 @@ function setupModalHandlers() {
       return;
     }
 
+    // Collect checked cuisines, allergies, aversions
+    const checkedCuisines = Array.from(document.querySelectorAll('input[name="cuisine-checkbox"]:checked'))
+      .map(cb => cb.value);
+    const checkedAllergies = Array.from(document.querySelectorAll('input[name="allergy-checkbox"]:checked'))
+      .map(cb => cb.value);
+    const checkedAversions = Array.from(document.querySelectorAll('input[name="aversion-checkbox"]:checked'))
+      .map(cb => cb.value);
+
     // Collect form data
     const formData = {
       "Taille_cm": document.getElementById("field-taille").value,
@@ -584,9 +612,9 @@ function setupModalHandlers() {
       "Régime": document.getElementById("field-regime").value,
       "Niveau_culinaire": document.getElementById("field-niveau").value,
       "Durée_max_prep": document.getElementById("field-duree").value,
-      "Cuisines_JSON": document.getElementById("field-cuisines").value,
-      "Allergies_JSON": document.getElementById("field-allergies").value,
-      "Aversions_JSON": document.getElementById("field-aversions").value
+      "Cuisines_JSON": JSON.stringify(checkedCuisines),
+      "Allergies_JSON": JSON.stringify(checkedAllergies),
+      "Aversions_JSON": JSON.stringify(checkedAversions)
     };
 
     // Validate required fields
