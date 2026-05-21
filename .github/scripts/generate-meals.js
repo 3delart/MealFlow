@@ -74,56 +74,20 @@ async function generateMealPlan(profiles, inventory) {
         if (p.Cuisines_JSON) cuisines = JSON.parse(p.Cuisines_JSON);
       } catch (e) {}
 
-      return `## ${p.Prénom}
-- Infos: ${p.Sexe}, ${p.Âge} ans, ${p.Poids_kg}kg, ${p.Taille_cm}cm
-- Régime: ${p.Régime} (STRICT - évite complètement autres régimes)
-- Objectif: ${p.Objectif}
-- Niveau culinaire: ${p.Niveau_culinaire}
-- Durée max prép: ${p.Durée_max_prep}
-- **ALLERGIES (CRITICAL - EVITE ABSOLUMENT)**: ${allergies.length ? allergies.join(", ") : "Aucune"}
-- **AVERSIONS (NEVER)**: ${aversions.length ? aversions.join(", ") : "Aucune"}
-- **Cuisines préférées**: ${cuisines.length ? cuisines.join(", ") : "Aucune"}
-- Calories cible/jour: ${p.Calories_cible_manuel || "2000 (défaut)"}`;
+      const allergyStr = allergies.length ? allergies.join(", ") : "Aucune";
+      const aversionStr = aversions.length ? aversions.join(", ") : "Aucune";
+      const cuisineStr = cuisines.length ? cuisines.join(", ") : "Aucune";
+
+      return `${p.Prénom}: ${p.Régime}, allergies=${allergyStr}, aversions=${aversionStr}, cuisines=${cuisineStr}, calories=${p.Calories_cible_manuel || "2000"}`;
     })
-    .join("\n\n");
+    .join("; ");
 
   const inventoryList = inventory
     .filter(i => !i.Consommé || i.Consommé === "FALSE")
-    .map(i => `- ${i.Produit} (${i.Qty}${i.Unité}, expires ${i.Péremption})`)
-    .join("\n");
+    .map(i => `${i.Produit} (${i.Qty}${i.Unité})`)
+    .join(", ");
 
-  const prompt = `Tu es nutritionniste. Crée plan repas 7 jours pour 2 personnes.
-
-PROFILS:
-${profileSummary}
-
-INGRÉDIENTS DISPO:
-${inventoryList || "AUCUN"}
-
-RÈGLES:
-1. Respecte régimes (vegan/omnivore/etc)
-2. JAMAIS allergènes
-3. JAMAIS aversions
-4. Privilégie cuisines
-5. Respecte calories cible par jour
-6. Utilise ingrédients dispo
-7. Suggère achats manquants
-
-RÉPONSE: JSON ONLY
-{
-  "semaine": [
-    {
-      "date": "2026-05-26",
-      "jour": "Lundi",
-      "petit_dejeuner": "plat + ingredients",
-      "collation_matin": "...",
-      "dejeuner": "...",
-      "collation_apres_midi": "...",
-      "diner": "..."
-    }
-  ],
-  "achats": ["item1"]
-}`;
+  const prompt = `Meal planner. Create 7-day meal plan for: ${profileSummary}. Available: ${inventoryList || "none"}. Rules: respect diets, avoid allergens/dislikes, prefer cuisines, hit calorie targets. Output JSON only: {semaine: [{date, jour, petit_dejeuner, collation_matin, dejeuner, collation_apres_midi, diner}], achats: []}`;
 
   return new Promise((resolve, reject) => {
     const data = JSON.stringify({
