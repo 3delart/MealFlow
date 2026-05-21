@@ -281,7 +281,7 @@ async function addItem(item) {
 
   // Send to Google Apps Script
   try {
-    const response = await fetch("https://script.google.com/macros/s/AKfycbwYaYnzeTptXCmVuH8gwifq0Zlw_MgW643Q8fDXVbtQ1srJQ2C2bNKdi8K8cCOd5aK1/exec", {
+    const response = await fetch("https://script.google.com/macros/s/AKfycbw_lAy0IUl52KOTfD5zwdTL8a3XZbiAMgoiaCzprjVwTWc-LDmWzC8fmSxArprtWkoG/exec", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
