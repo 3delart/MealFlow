@@ -507,13 +507,16 @@ function openGrignottageModal() {
 /**
  * Closes the scanner modal.
  */
-function closeGrignottageModal() {
+async function closeGrignottageModal() {
   const modal = document.getElementById("scanner-modal");
   if (modal) {
     modal.classList.add("hidden");
     modal.setAttribute("aria-hidden", "true");
   }
-  stopScanner();
+  if (grignottageScanner) {
+    await grignottageScanner.stop().catch(() => {});
+    grignottageScanner = null;
+  }
 }
 
 /**
@@ -522,6 +525,11 @@ function closeGrignottageModal() {
 function startScanner() {
   const scannerContainer = document.getElementById("scanner-container");
   if (!scannerContainer) return;
+
+  // Stop any existing scanner before starting a new one
+  if (grignottageScanner) {
+    grignottageScanner.stop().catch(() => {});
+  }
 
   grignottageScanner = new Html5Qrcode("scanner-container");
 
@@ -565,11 +573,20 @@ async function onBarcodeDetected(barcode) {
   const nameEl = document.getElementById("result-name");
   const kcalEl = document.getElementById("result-kcal");
 
+  if (!resultDiv || !nameEl || !kcalEl) {
+    console.error("Scanner result elements not found");
+    stopScanner();
+    return;
+  }
+
   resultDiv.classList.remove("hidden");
 
   try {
     // Fetch from Open Food Facts API
     const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
     const data = await response.json();
 
     if (data.product) {
@@ -614,8 +631,8 @@ function addGrignottage() {
   const name = nameEl.textContent || "Snack";
   const kcal = Number(kcalEl.value) || 0;
 
-  if (kcal === 0) {
-    alert("Entrer les calories");
+  if (kcal < 1 || kcal > 10000) {
+    alert("Entrer une valeur entre 1 et 10000 kcal");
     return;
   }
 
