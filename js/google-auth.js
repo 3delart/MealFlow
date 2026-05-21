@@ -12,15 +12,20 @@ let googleAuthToken = null;
  * Initialize Google Sign-In
  */
 function initGoogleAuth() {
+  console.log("Initializing Google Auth...");
+
+  // Wait for Google API to load
   if (typeof google === "undefined") {
-    console.error("Google API library not loaded");
+    console.log("Google API not loaded yet, waiting...");
+    setTimeout(initGoogleAuth, 100);
     return;
   }
 
-  google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: handleCredentialResponse
-  });
+  console.log("Google API loaded, initializing...");
+
+  if (google.accounts && google.accounts.oauth2) {
+    console.log("Google OAuth2 ready");
+  }
 }
 
 /**
@@ -36,11 +41,13 @@ function handleCredentialResponse(response) {
     console.log("Auth token saved");
 
     // Update UI
-    document.getElementById("google-login-btn")?.style.display = "none";
-    document.getElementById("google-logout-btn")?.style.display = "block";
+    const loginBtn = document.getElementById("google-login-btn");
+    const logoutBtn = document.getElementById("google-logout-btn");
+    if (loginBtn) loginBtn.style.display = "none";
+    if (logoutBtn) logoutBtn.style.display = "block";
 
     // Trigger page reload to show authenticated state
-    window.location.reload();
+    setTimeout(() => window.location.reload(), 500);
   }
 }
 
@@ -82,15 +89,17 @@ function logoutGoogle() {
   localStorage.removeItem("googleAuthToken");
   localStorage.removeItem("googleAccessToken");
 
-  if (typeof google !== "undefined") {
+  if (typeof google !== "undefined" && google.accounts && google.accounts.id) {
     google.accounts.id.disableAutoSelect();
   }
 
-  document.getElementById("google-login-btn")?.style.display = "block";
-  document.getElementById("google-logout-btn")?.style.display = "none";
+  const loginBtn = document.getElementById("google-login-btn");
+  const logoutBtn = document.getElementById("google-logout-btn");
+  if (loginBtn) loginBtn.style.display = "block";
+  if (logoutBtn) logoutBtn.style.display = "none";
 
   console.log("Logged out from Google");
-  window.location.reload();
+  setTimeout(() => window.location.reload(), 500);
 }
 
 /**
@@ -116,8 +125,13 @@ function restoreAuthToken() {
   }
 }
 
-// Run on load
-document.addEventListener("DOMContentLoaded", () => {
+// Initialize when DOM is ready
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    restoreAuthToken();
+    setTimeout(initGoogleAuth, 500);
+  });
+} else {
   restoreAuthToken();
-  initGoogleAuth();
-});
+  setTimeout(initGoogleAuth, 500);
+}
