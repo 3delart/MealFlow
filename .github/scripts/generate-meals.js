@@ -57,6 +57,23 @@ async function fetchInventory(sheets) {
   });
 }
 
+function getWeekDates() {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+
+  const dates = [];
+  const days = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const dateStr = d.toLocaleDateString("fr-FR");
+    dates.push({ date: dateStr, jour: days[i] });
+  }
+  return dates;
+}
+
 async function generateMealPlan(profiles, inventory) {
   const profileSummary = profiles
     .map(p => {
@@ -87,7 +104,10 @@ async function generateMealPlan(profiles, inventory) {
     .map(i => `${i.Produit} (${i.Qty}${i.Unité})`)
     .join(", ");
 
-  const prompt = `Meal planner. Create 7-day meal plan for: ${profileSummary}. Available: ${inventoryList || "none"}. Rules: respect diets, avoid allergens/dislikes, prefer cuisines, hit calorie targets. Output JSON only: {semaine: [{date, jour, petit_dejeuner, collation_matin, dejeuner, collation_apres_midi, diner}], achats: []}`;
+  const weekDates = getWeekDates();
+  const dateList = weekDates.map(d => `${d.jour} ${d.date}`).join(", ");
+
+  const prompt = `Meal planner. Create 7-day meal plan for week of ${dateList} for: ${profileSummary}. Available: ${inventoryList || "none"}. Rules: respect diets, avoid allergens/dislikes, prefer cuisines, hit calorie targets. Output JSON only: {semaine: [{date, jour, petit_dejeuner, collation_matin, dejeuner, collation_apres_midi, diner}], achats: []}`;
 
   return new Promise((resolve, reject) => {
     const data = JSON.stringify({
