@@ -20,6 +20,108 @@
     </div>
   </main>
 
+  <div id="modal-edit-profile" class="modal-overlay">
+    <div class="modal-dialog">
+      <button class="modal-close" aria-label="Fermer">&times;</button>
+      <h2 id="modal-title">Modification du profil</h2>
+      <form id="edit-profile-form" class="edit-profile-form">
+        <!-- Measurements -->
+        <fieldset>
+          <legend>Mensurations</legend>
+          <div class="form-group">
+            <label for="field-taille">Taille (cm)</label>
+            <input type="number" id="field-taille" name="Taille_cm" step="0.1" required>
+          </div>
+          <div class="form-group">
+            <label for="field-poids">Poids (kg)</label>
+            <input type="number" id="field-poids" name="Poids_kg" step="0.1" required>
+          </div>
+          <div class="form-group">
+            <label for="field-age">Âge (ans)</label>
+            <input type="number" id="field-age" name="Âge" required>
+          </div>
+        </fieldset>
+
+        <!-- Metabolism -->
+        <fieldset>
+          <legend>Métabolisme</legend>
+          <div class="form-group">
+            <label for="field-activite">Activité</label>
+            <select id="field-activite" name="Activité" required>
+              <option value="">— Sélectionner —</option>
+              <option value="Sédentaire">Sédentaire</option>
+              <option value="Léger">Léger</option>
+              <option value="Modéré">Modéré</option>
+              <option value="Actif">Actif</option>
+              <option value="Très actif">Très actif</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="field-objectif">Objectif</label>
+            <select id="field-objectif" name="Objectif" required>
+              <option value="">— Sélectionner —</option>
+              <option value="Perte agressive">Perte agressive (−750 kcal)</option>
+              <option value="Perte modérée">Perte modérée (−500 kcal)</option>
+              <option value="Perte légère">Perte légère (−250 kcal)</option>
+              <option value="Maintien">Maintien</option>
+              <option value="Prise de masse">Prise de masse (+300 kcal)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="field-regime">Régime</label>
+            <input type="text" id="field-regime" name="Régime" placeholder="ex. Omnivore">
+          </div>
+        </fieldset>
+
+        <!-- Preferences -->
+        <fieldset>
+          <legend>Préférences culinaires</legend>
+          <div class="form-group">
+            <label for="field-niveau">Niveau culinaire</label>
+            <select id="field-niveau" name="Niveau_culinaire">
+              <option value="">— Sélectionner —</option>
+              <option value="Débutant">Débutant</option>
+              <option value="Intermédiaire">Intermédiaire</option>
+              <option value="Expert">Expert</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="field-duree">Durée max préparation</label>
+            <select id="field-duree" name="Durée_max_prep">
+              <option value="">— Sélectionner —</option>
+              <option value="Rapide">Rapide (&lt; 15 min)</option>
+              <option value="Courte">Courte (15−30 min)</option>
+              <option value="Moyenne">Moyenne (30−60 min)</option>
+              <option value="Longue">Longue (&gt; 60 min)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="field-cuisines">Cuisines préférées (virgule-séparées)</label>
+            <input type="text" id="field-cuisines" name="Cuisines_JSON" placeholder="ex. Méditerranéenne, Asiatique">
+          </div>
+        </fieldset>
+
+        <!-- Restrictions -->
+        <fieldset>
+          <legend>Restrictions alimentaires</legend>
+          <div class="form-group">
+            <label for="field-allergies">Allergies (virgule-séparées)</label>
+            <input type="text" id="field-allergies" name="Allergies_JSON" placeholder="ex. Arachides, Noix">
+          </div>
+          <div class="form-group">
+            <label for="field-aversions">Aversions (virgule-séparées)</label>
+            <input type="text" id="field-aversions" name="Aversions_JSON" placeholder="ex. Œufs, Fromage">
+          </div>
+        </fieldset>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+          <button type="button" class="btn btn-secondary" id="btn-cancel">Annuler</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <nav class="nav-bottom" aria-label="Navigation principale">
     <a href="index.html" class="nav-item">
       <span class="nav-icon">🏠</span>

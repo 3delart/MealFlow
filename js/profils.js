@@ -402,7 +402,7 @@ function renderProfileCard(userId) {
   editBtn.className = "btn-edit-profile";
   editBtn.textContent = "✏️ Modifier";
   editBtn.addEventListener("click", function() {
-    alert(`Modification du profil de ${prenom} — fonctionnalité à venir.`);
+    openEditModal(userId);
   });
 
   footer.appendChild(editBtn);
@@ -412,8 +412,214 @@ function renderProfileCard(userId) {
 }
 
 // ============================================================================
+// MODAL MANAGEMENT
+// ============================================================================
+
+/**
+ * Open the edit modal for a given user.
+ * @param {string} userId - Lowercase user ID (e.g., "florian")
+ */
+function openEditModal(userId) {
+  const profile = profilesData[userId];
+  if (!profile) {
+    console.error("Profile not found for user:", userId);
+    return;
+  }
+
+  const modal = document.getElementById("modal-edit-profile");
+  const form = document.getElementById("edit-profile-form");
+  const title = document.getElementById("modal-title");
+
+  const prenom = profile["Prénom"] || userId;
+  title.textContent = `Modification du profil de ${prenom}`;
+
+  // Populate form fields
+  document.getElementById("field-taille").value = profile["Taille_cm"] || "";
+  document.getElementById("field-poids").value = profile["Poids_kg"] || "";
+  document.getElementById("field-age").value = profile["Âge"] || "";
+  document.getElementById("field-activite").value = profile["Activité"] || "";
+  document.getElementById("field-objectif").value = profile["Objectif"] || "";
+  document.getElementById("field-regime").value = profile["Régime"] || "";
+  document.getElementById("field-niveau").value = profile["Niveau_culinaire"] || "";
+  document.getElementById("field-duree").value = profile["Durée_max_prep"] || "";
+
+  // Convert JSON arrays back to comma-separated strings
+  const cuisines = parseArrayField(profile["Cuisines_JSON"]);
+  document.getElementById("field-cuisines").value = cuisines.join(", ");
+
+  const allergies = parseArrayField(profile["Allergies_JSON"]);
+  document.getElementById("field-allergies").value = allergies.join(", ");
+
+  const aversions = parseArrayField(profile["Aversions_JSON"]);
+  document.getElementById("field-aversions").value = aversions.join(", ");
+
+  // Store current user ID in form for submission handler
+  form.dataset.userId = userId;
+
+  // Show modal
+  modal.classList.add("open");
+}
+
+/**
+ * Close the edit modal.
+ */
+function closeEditModal() {
+  const modal = document.getElementById("modal-edit-profile");
+  modal.classList.remove("open");
+}
+
+/**
+ * Save edited profile data. Stores to localStorage and updates in-memory state.
+ * @param {string} userId - Lowercase user ID
+ * @param {Object} formData - Form field data
+ */
+function saveProfileData(userId, formData) {
+  // Convert comma-separated strings to JSON arrays
+  const cuisines = (formData["Cuisines_JSON"] || "")
+    .split(",")
+    .map(s => s.trim())
+    .filter(Boolean);
+  const allergies = (formData["Allergies_JSON"] || "")
+    .split(",")
+    .map(s => s.trim())
+    .filter(Boolean);
+  const aversions = (formData["Aversions_JSON"] || "")
+    .split(",")
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  const updatedProfile = {
+    ...profilesData[userId],
+    Taille_cm: formData["Taille_cm"],
+    Poids_kg: formData["Poids_kg"],
+    Âge: formData["Âge"],
+    Activité: formData["Activité"],
+    Objectif: formData["Objectif"],
+    Régime: formData["Régime"],
+    Niveau_culinaire: formData["Niveau_culinaire"],
+    Durée_max_prep: formData["Durée_max_prep"],
+    Cuisines_JSON: JSON.stringify(cuisines),
+    Allergies_JSON: JSON.stringify(allergies),
+    Aversions_JSON: JSON.stringify(aversions)
+  };
+
+  // Save to localStorage
+  localStorage.setItem(`mealflow_profile_${userId}`, JSON.stringify(updatedProfile));
+
+  // Update in-memory state
+  profilesData[userId] = updatedProfile;
+
+  console.log(`Profile saved for user: ${userId}`);
+}
+
+/**
+ * Load profile data from localStorage if available, otherwise use Sheets data.
+ * Call this during initialization to merge localStorage overrides.
+ */
+function loadProfileOverrides() {
+  Object.keys(profilesData).forEach(userId => {
+    const stored = localStorage.getItem(`mealflow_profile_${userId}`);
+    if (stored) {
+      try {
+        profilesData[userId] = JSON.parse(stored);
+      } catch (err) {
+        console.warn(`Failed to parse localStorage profile for ${userId}:`, err);
+      }
+    }
+  });
+}
+
+// ============================================================================
 // INITIALIZATION
 // ============================================================================
+
+/**
+ * Set up modal event handlers (close button, cancel, form submission, overlay click).
+ */
+function setupModalHandlers() {
+  const modal = document.getElementById("modal-edit-profile");
+  const form = document.getElementById("edit-profile-form");
+  const closeBtn = document.querySelector(".modal-close");
+  const cancelBtn = document.getElementById("btn-cancel");
+
+  if (!modal || !form) return;
+
+  // Close button (X)
+  if (closeBtn) {
+    closeBtn.addEventListener("click", closeEditModal);
+  }
+
+  // Cancel button
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", function(e) {
+      e.preventDefault();
+      closeEditModal();
+    });
+  }
+
+  // Overlay click (close on backdrop)
+  modal.addEventListener("click", function(e) {
+    if (e.target === modal) {
+      closeEditModal();
+    }
+  });
+
+  // Form submission
+  form.addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const userId = form.dataset.userId;
+    if (!userId) {
+      console.error("Form user ID not set");
+      return;
+    }
+
+    // Collect form data
+    const formData = {
+      "Taille_cm": document.getElementById("field-taille").value,
+      "Poids_kg": document.getElementById("field-poids").value,
+      "Âge": document.getElementById("field-age").value,
+      "Activité": document.getElementById("field-activite").value,
+      "Objectif": document.getElementById("field-objectif").value,
+      "Régime": document.getElementById("field-regime").value,
+      "Niveau_culinaire": document.getElementById("field-niveau").value,
+      "Durée_max_prep": document.getElementById("field-duree").value,
+      "Cuisines_JSON": document.getElementById("field-cuisines").value,
+      "Allergies_JSON": document.getElementById("field-allergies").value,
+      "Aversions_JSON": document.getElementById("field-aversions").value
+    };
+
+    // Validate required fields
+    if (!formData["Taille_cm"] || !formData["Poids_kg"] || !formData["Âge"] ||
+        !formData["Activité"] || !formData["Objectif"]) {
+      alert("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    // Save data
+    saveProfileData(userId, formData);
+
+    // Close modal
+    closeEditModal();
+
+    // Re-render profiles
+    const container = document.getElementById("profiles-container");
+    container.innerHTML = "";
+    const orderedUsers = ["florian", "naomi"];
+    orderedUsers.forEach(u => {
+      if (profilesData[u]) {
+        const card = renderProfileCard(u);
+        if (card) {
+          container.appendChild(card);
+        }
+      }
+    });
+
+    // Show success feedback
+    const prenom = profilesData[userId]["Prénom"] || userId;
+    console.log(`Profil de ${prenom} enregistré avec succès.`);
+  });
+}
 
 /**
  * Main entry point: load data, render both profile cards.
@@ -437,6 +643,9 @@ async function initializeProfiles() {
     console.error("Profils: unexpected error during load:", err);
     useFallbackProfiles();
   }
+
+  // Load any localStorage overrides
+  loadProfileOverrides();
 
   // Clear loading indicator
   container.innerHTML = "";
@@ -482,5 +691,6 @@ document.addEventListener("DOMContentLoaded", function() {
     UserContext.initializeUserToggle();
   }
 
+  setupModalHandlers();
   initializeProfiles();
 });
