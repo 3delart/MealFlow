@@ -240,6 +240,7 @@ function updateProgressDisplay() {
   const profile = AccueilState.profiles[user];
   const target = profile && profile.objectifKcal ? Number(profile.objectifKcal) : 0;
   const pct = target > 0 ? (AccueilState.caloriesConsumed / target) * 100 : 0;
+  console.log(`updateProgressDisplay: user=${user}, target=${target}, consumed=${AccueilState.caloriesConsumed}, pct=${pct}%`);
   renderProgressCircle(pct);
 }
 
@@ -307,13 +308,17 @@ async function loadProfilsData() {
     const rows = await window.SheetsAPI.readSheetTab("Profils");
     const objects = window.SheetsAPI.rowsToObjects(rows);
 
-    // Expected columns: nom, objectifKcal, poids, taille, age, sexe, activite, etc.
+    console.log("Accueil: Profils columns available:", objects.length > 0 ? Object.keys(objects[0]) : "no data");
+
+    // Expected columns: nom, objectifKcal (or Objectif, Calories_cible, etc.)
     objects.forEach(profile => {
       const key = (profile.nom || "").toLowerCase().trim();
       if (key === "florian" || key === "naomi") {
+        console.log(`Accueil: Loaded profile ${key}:`, profile);
         AccueilState.profiles[key] = profile;
       }
     });
+    console.log("Accueil: Profiles loaded:", AccueilState.profiles);
   } catch (err) {
     console.warn("Accueil: Could not load Profils tab:", err.message);
     // Leave profiles as null — UI will show placeholder
