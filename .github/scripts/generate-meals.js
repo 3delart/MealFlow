@@ -2,9 +2,22 @@ const fs = require("fs");
 const { google } = require("googleapis");
 const https = require("https");
 
+console.log("🚀 Starting meal generation script");
+
 const SHEET_ID = process.env.SHEET_ID;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
-const SERVICE_ACCOUNT = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
+
+console.log(`Sheet ID: ${SHEET_ID}`);
+console.log(`Claude API Key: ${CLAUDE_API_KEY ? "✓ set" : "❌ missing"}`);
+
+let SERVICE_ACCOUNT;
+try {
+  SERVICE_ACCOUNT = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
+  console.log(`Service Account: ✓ loaded (${SERVICE_ACCOUNT.client_email})`);
+} catch (e) {
+  console.error("❌ Failed to parse SERVICE_ACCOUNT JSON:", e.message);
+  process.exit(1);
+}
 
 async function fetchProfiles(sheets) {
   const response = await sheets.spreadsheets.values.get({
