@@ -123,33 +123,15 @@
 
         <!-- Restrictions -->
         <fieldset>
-          <legend>Allergies</legend>
-          <fieldset class="checkbox-group" id="allergies-group">
-            <label><input type="checkbox" name="allergy-checkbox" value="Arachides"> Arachides</label>
-            <label><input type="checkbox" name="allergy-checkbox" value="Noix"> Noix</label>
-            <label><input type="checkbox" name="allergy-checkbox" value="Œufs"> Œufs</label>
-            <label><input type="checkbox" name="allergy-checkbox" value="Lait"> Lait</label>
-            <label><input type="checkbox" name="allergy-checkbox" value="Poisson"> Poisson</label>
-            <label><input type="checkbox" name="allergy-checkbox" value="Crustacés"> Crustacés</label>
-            <label><input type="checkbox" name="allergy-checkbox" value="Soja"> Soja</label>
-            <label><input type="checkbox" name="allergy-checkbox" value="Sésame"> Sésame</label>
-            <label><input type="checkbox" name="allergy-checkbox" value="Aucune"> Aucune</label>
-          </fieldset>
-        </fieldset>
-
-        <fieldset>
-          <legend>Aversions</legend>
-          <fieldset class="checkbox-group" id="aversions-group">
-            <label><input type="checkbox" name="aversion-checkbox" value="Œufs"> Œufs</label>
-            <label><input type="checkbox" name="aversion-checkbox" value="Fromage"> Fromage</label>
-            <label><input type="checkbox" name="aversion-checkbox" value="Champignons"> Champignons</label>
-            <label><input type="checkbox" name="aversion-checkbox" value="Épinards"> Épinards</label>
-            <label><input type="checkbox" name="aversion-checkbox" value="Oignons"> Oignons</label>
-            <label><input type="checkbox" name="aversion-checkbox" value="Tomates"> Tomates</label>
-            <label><input type="checkbox" name="aversion-checkbox" value="Poisson"> Poisson</label>
-            <label><input type="checkbox" name="aversion-checkbox" value="Viande rouge"> Viande rouge</label>
-            <label><input type="checkbox" name="aversion-checkbox" value="Aucune"> Aucune</label>
-          </fieldset>
+          <legend>Restrictions alimentaires</legend>
+          <div class="form-group">
+            <label for="field-allergies">Allergies (virgule-séparées)</label>
+            <input type="text" id="field-allergies" name="Allergies_JSON" placeholder="ex. Saumon, Kiwi">
+          </div>
+          <div class="form-group">
+            <label for="field-aversions">Aversions (virgule-séparées)</label>
+            <input type="text" id="field-aversions" name="Aversions_JSON" placeholder="ex. Olives, Champignons">
+          </div>
         </fieldset>
 
         <div class="form-actions">

@@ -450,19 +450,12 @@ function openEditModal(userId) {
     cb.checked = cuisines.includes(cb.value);
   });
 
-  // Check appropriate allergy checkboxes
+  // Populate allergy + aversion text fields
   const allergies = parseArrayField(profile["Allergies_JSON"]);
-  const allergyCheckboxes = document.querySelectorAll('input[name="allergy-checkbox"]');
-  allergyCheckboxes.forEach(cb => {
-    cb.checked = allergies.includes(cb.value);
-  });
+  document.getElementById("field-allergies").value = allergies.join(", ");
 
-  // Check appropriate aversion checkboxes
   const aversions = parseArrayField(profile["Aversions_JSON"]);
-  const aversionCheckboxes = document.querySelectorAll('input[name="aversion-checkbox"]');
-  aversionCheckboxes.forEach(cb => {
-    cb.checked = aversions.includes(cb.value);
-  });
+  document.getElementById("field-aversions").value = aversions.join(", ");
 
   // Store current user ID in form for submission handler
   form.dataset.userId = userId;
@@ -485,28 +478,23 @@ function closeEditModal() {
  * @param {Object} formData - Form field data
  */
 function saveProfileData(userId, formData) {
-  // Parse cuisines, allergies, aversions (all JSON from checkboxes)
+  // Parse cuisines (JSON from checkboxes)
   let cuisines = [];
-  let allergies = [];
-  let aversions = [];
-
   try {
     cuisines = JSON.parse(formData["Cuisines_JSON"]);
   } catch (_) {
     cuisines = [];
   }
 
-  try {
-    allergies = JSON.parse(formData["Allergies_JSON"]);
-  } catch (_) {
-    allergies = [];
-  }
-
-  try {
-    aversions = JSON.parse(formData["Aversions_JSON"]);
-  } catch (_) {
-    aversions = [];
-  }
+  // Parse allergies and aversions (comma-separated strings)
+  const allergies = (formData["Allergies_JSON"] || "")
+    .split(",")
+    .map(s => s.trim())
+    .filter(Boolean);
+  const aversions = (formData["Aversions_JSON"] || "")
+    .split(",")
+    .map(s => s.trim())
+    .filter(Boolean);
 
   const updatedProfile = {
     ...profilesData[userId],
@@ -594,12 +582,8 @@ function setupModalHandlers() {
       return;
     }
 
-    // Collect checked cuisines, allergies, aversions
+    // Collect checked cuisines
     const checkedCuisines = Array.from(document.querySelectorAll('input[name="cuisine-checkbox"]:checked'))
-      .map(cb => cb.value);
-    const checkedAllergies = Array.from(document.querySelectorAll('input[name="allergy-checkbox"]:checked'))
-      .map(cb => cb.value);
-    const checkedAversions = Array.from(document.querySelectorAll('input[name="aversion-checkbox"]:checked'))
       .map(cb => cb.value);
 
     // Collect form data
@@ -613,8 +597,8 @@ function setupModalHandlers() {
       "Niveau_culinaire": document.getElementById("field-niveau").value,
       "Durée_max_prep": document.getElementById("field-duree").value,
       "Cuisines_JSON": JSON.stringify(checkedCuisines),
-      "Allergies_JSON": JSON.stringify(checkedAllergies),
-      "Aversions_JSON": JSON.stringify(checkedAversions)
+      "Allergies_JSON": document.getElementById("field-allergies").value,
+      "Aversions_JSON": document.getElementById("field-aversions").value
     };
 
     // Validate required fields
