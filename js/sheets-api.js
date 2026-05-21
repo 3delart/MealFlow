@@ -155,13 +155,65 @@ function writeSheetTab(tabName, rows) {
   throw new Error("writeSheetTab requires appendRowWithToken() with access token");
 }
 
+/**
+ * Update a single cell in a Sheets via Google API.
+ * @param {string} range - Cell range (e.g., "Inventory!G2")
+ * @param {string} value - Value to set
+ * @returns {Promise<void>}
+ */
+async function updateSheetCell(range, value) {
+  const sheetId = getSheetId();
+  const apiKey = getApiKey();
+
+  if (!sheetId || !apiKey) {
+    throw new Error("Sheet ID or API Key not configured");
+  }
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}`;
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ values: [[value]] })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update cell: ${response.statusText}`);
+  }
+}
+
+/**
+ * Clear a range in Sheets via Google API.
+ * @param {string} range - Range to clear (e.g., "Inventory!A2:L2")
+ * @returns {Promise<void>}
+ */
+async function clearSheetRange(range) {
+  const sheetId = getSheetId();
+  const apiKey = getApiKey();
+
+  if (!sheetId || !apiKey) {
+    throw new Error("Sheet ID or API Key not configured");
+  }
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}:clear?key=${apiKey}`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to clear range: ${response.statusText}`);
+  }
+}
+
 // Export all functions to the window object so they can be used globally (in browser)
 if (typeof window !== 'undefined') {
   window.SheetsAPI = {
     readSheetTab,
     rowsToObjects,
     writeSheetTab,
-    appendRowWithToken
+    appendRowWithToken,
+    updateSheetCell,
+    clearSheetRange
   };
 }
 

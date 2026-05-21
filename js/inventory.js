@@ -218,8 +218,10 @@ async function loadInventory() {
     const objects = SheetsAPI.rowsToObjects(rows);
 
     if (objects.length > 0) {
+      // Row 0 is header, data starts at row 1
       inventoryData = objects.map((row, idx) => ({
-        id: idx,
+        id: `sheet_${idx + 2}`, // Store actual Sheets row number (1-indexed + header)
+        sheetRowNumber: idx + 2,
         Produit: row["Produit"] || "",
         Qty: row["Qty"] || "",
         Unité: row["Unité"] || "g",
@@ -315,25 +317,52 @@ async function addItem(item) {
 }
 
 /**
- * Mark item as consumed
- * @param {number} itemId
+ * Mark item as consumed (updates Sheets if available)
+ * @param {string} itemId
  */
-function markConsumed(itemId) {
+async function markConsumed(itemId) {
   const item = inventoryData.find(i => i.id === itemId);
-  if (item) {
-    item.Consommé = true;
-    saveInventory();
-    renderInventory();
+  if (!item) return;
+
+  item.Consommé = true;
+  saveInventory();
+
+  // Update Sheets if row number is available
+  if (item.sheetRowNumber && window.SheetsAPI) {
+    try {
+      const range = `Inventory!G${item.sheetRowNumber}`; // Column G is "Consommé"
+      await window.SheetsAPI.updateSheetCell(range, "TRUE");
+      console.log(`Marked as consumed in Sheets: row ${item.sheetRowNumber}`);
+    } catch (err) {
+      console.warn(`Failed to update Sheets for item ${itemId}:`, err);
+    }
   }
+
+  renderInventory();
 }
 
 /**
- * Delete item from inventory
- * @param {number} itemId
+ * Delete item from inventory (removes from Sheets if available)
+ * @param {string} itemId
  */
-function deleteItem(itemId) {
+async function deleteItem(itemId) {
+  const item = inventoryData.find(i => i.id === itemId);
+  const hadSheetRow = item && item.sheetRowNumber;
+
   inventoryData = inventoryData.filter(i => i.id !== itemId);
   saveInventory();
+
+  // Delete from Sheets if row number is available
+  if (hadSheetRow && window.SheetsAPI) {
+    try {
+      const range = `Inventory!A${item.sheetRowNumber}:L${item.sheetRowNumber}`;
+      await window.SheetsAPI.clearSheetRange(range);
+      console.log(`Deleted from Sheets: row ${item.sheetRowNumber}`);
+    } catch (err) {
+      console.warn(`Failed to delete from Sheets for item ${itemId}:`, err);
+    }
+  }
+
   renderInventory();
 }
 
