@@ -92,37 +92,37 @@ async function generateMealPlan(profiles, inventory) {
     .map(i => `- ${i.Produit} (${i.Qty}${i.Unité}, expires ${i.Péremption})`)
     .join("\n");
 
-  const prompt = `Tu es nutritionniste expert. Crée plan repas 7 jours PERSONNALISÉ pour 2 personnes avec contraintes STRICTES.
+  const prompt = `Tu es nutritionniste. Crée plan repas 7 jours pour 2 personnes.
 
-## PROFILS DÉTAILLÉS:
+PROFILS:
 ${profileSummary}
 
-## INGRÉDIENTS DISPONIBLES:
-${inventoryList || "❌ AUCUN - Suggère achats essentiels"}
+INGRÉDIENTS DISPO:
+${inventoryList || "AUCUN"}
 
-## RÈGLES ABSOLUES (NON-NÉGOCIABLES):
-1. **RÉGIME**: Respecte PRÉCISÉMENT le régime listés (vegan=zéro viande/poisson/oeufs/lait; omnivore=tout ok)
-2. **ALLERGIES**: JAMAIS d'allergènes listés (risque santé)
-3. **AVERSIONS**: JAMAIS les ingrédients/plats listés (même en petite quantité)
-4. **CUISINES**: Privilégie les cuisines préférées de chaque personne
-5. **CALORIES**: Chaque repas doit environ atteindre cible journalière (divisée entre 5 repas)
-6. **INGRÉDIENTS**: Utilise MAX les ingrédients dispo (+ suggère achats complémentaires)
-7. **PRÉPARATION**: Respecte durée max prép (rapide/moyenne/longue)
+RÈGLES:
+1. Respecte régimes (vegan/omnivore/etc)
+2. JAMAIS allergènes
+3. JAMAIS aversions
+4. Privilégie cuisines
+5. Respecte calories cible par jour
+6. Utilise ingrédients dispo
+7. Suggère achats manquants
 
-## FORMAT RÉPONSE (JSON UNIQUEMENT, PAS DE TEXTE):
+RÉPONSE: JSON ONLY
 {
   "semaine": [
     {
       "date": "2026-05-26",
       "jour": "Lundi",
-      "petit_dejeuner": "Description détaillée du plat + ingrédients clés",
+      "petit_dejeuner": "plat + ingredients",
       "collation_matin": "...",
       "dejeuner": "...",
       "collation_apres_midi": "...",
       "diner": "..."
     }
   ],
-  "achats_recommandes": ["Ingrédient 1", "Ingrédient 2"]
+  "achats": ["item1"]
 }`;
 
   return new Promise((resolve, reject) => {
