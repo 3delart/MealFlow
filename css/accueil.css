@@ -477,7 +477,7 @@ body.user-naomi {
 }
 
 .btn-meal {
-  padding: 6px 12px;
+  padding: var(--spacing-xs) var(--spacing-sm);
   font-size: 11px;
   border-radius: 6px;
   border: none;
@@ -508,11 +508,11 @@ body.user-naomi {
 }
 
 .btn-mange.checked {
-  background-color: #4caf50;
+  background-color: var(--color-success);
 }
 
 .meal-card.eaten .btn-mange {
-  background-color: #4caf50;
+  background-color: var(--color-success);
 }
 
 .meal-card.eaten .btn-mange::before {
@@ -540,7 +540,7 @@ body.user-naomi {
 }
 
 .modal-content {
-  background-color: white;
+  background-color: var(--color-surface);
   width: 100%;
   border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
   padding: var(--spacing-lg);
@@ -555,6 +555,12 @@ body.user-naomi {
   }
   to {
     transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-content {
+    animation: none;
   }
 }
 
