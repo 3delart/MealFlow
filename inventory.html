@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventaire — MealFlow</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/inventory.css">
+  <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>📦 Inventaire</h1>
+    </div>
+  </header>
+
+  <main>
+    <!-- Scanner Section -->
+    <section class="scanner-section">
+      <h2>Scan Code-Barres</h2>
+      <div id="scanner-container">
+        <video id="scanner-video" class="scanner-video"></video>
+        <div id="scanner-overlay" class="scanner-overlay"></div>
+      </div>
+      <div class="scanner-controls">
+        <button id="btn-start-scanner" class="btn btn-primary">📱 Lancer Scanner</button>
+        <button id="btn-stop-scanner" class="btn btn-secondary" style="display:none;">⏹️ Arrêter</button>
+      </div>
+      <p id="scanner-status" class="scanner-status"></p>
+    </section>
+
+    <!-- Add Item Form -->
+    <section class="add-item-section">
+      <h2>Ajouter Article (Manuel)</h2>
+      <form id="add-item-form" class="add-item-form">
+        <div class="form-group">
+          <label for="field-product-name">Produit</label>
+          <input type="text" id="field-product-name" name="product_name" required placeholder="ex. Tomates Cerises">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="field-quantity">Quantité</label>
+            <input type="number" id="field-quantity" name="quantity" min="1" step="0.1" required placeholder="500">
+          </div>
+          <div class="form-group">
+            <label for="field-unit">Unité</label>
+            <select id="field-unit" name="unit" required>
+              <option value="">— Sélectionner —</option>
+              <option value="g">g (grammes)</option>
+              <option value="ml">ml (millilitres)</option>
+              <option value="pièce">pièce</option>
+              <option value="litre">litre</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="field-category">Catégorie</label>
+          <select id="field-category" name="category" required>
+            <option value="">— Sélectionner —</option>
+            <option value="Fruits">Fruits</option>
+            <option value="Légumes">Légumes</option>
+            <option value="Produits laitiers">Produits laitiers</option>
+            <option value="Viandes">Viandes</option>
+            <option value="Poissons">Poissons</option>
+            <option value="Œufs">Œufs</option>
+            <option value="Féculents">Féculents</option>
+            <option value="Conserves">Conserves</option>
+            <option value="Épices & Condiments">Épices & Condiments</option>
+            <option value="Boissons">Boissons</option>
+            <option value="Autres">Autres</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="field-expiry">Date d'expiration</label>
+          <input type="date" id="field-expiry" name="expiry_date" required>
+        </div>
+
+        <div id="product-info" class="product-info" style="display:none;">
+          <div class="info-item">
+            <span class="info-label">Calories (100g)</span>
+            <span class="info-value" id="info-calories">—</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Protéines</span>
+            <span class="info-value" id="info-proteins">—</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Lipides</span>
+            <span class="info-value" id="info-fats">—</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Glucides</span>
+            <span class="info-value" id="info-carbs">—</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Allergènes</span>
+            <span class="info-value" id="info-allergens">—</span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">➕ Ajouter</button>
+      </form>
+    </section>
+
+    <!-- Inventory List -->
+    <section class="inventory-section">
+      <div class="inventory-header">
+        <h2>Articles en Stock</h2>
+        <select id="filter-category" class="filter-select">
+          <option value="">Tous les articles</option>
+          <option value="Fruits">Fruits</option>
+          <option value="Légumes">Légumes</option>
+          <option value="Produits laitiers">Produits laitiers</option>
+          <option value="Viandes">Viandes</option>
+          <option value="Poissons">Poissons</option>
+          <option value="Œufs">Œufs</option>
+          <option value="Féculents">Féculents</option>
+          <option value="Conserves">Conserves</option>
+          <option value="Épices & Condiments">Épices & Condiments</option>
+          <option value="Boissons">Boissons</option>
+          <option value="Autres">Autres</option>
+        </select>
+      </div>
+      <div id="inventory-list" class="inventory-list">
+        <!-- Dynamically populated -->
+      </div>
+    </section>
+  </main>
+
+  <nav class="nav-bottom" aria-label="Navigation principale">
+    <a href="index.html" class="nav-item">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Accueil</span>
+    </a>
+    <a href="planning.html" class="nav-item">
+      <span class="nav-icon">📅</span>
+      <span class="nav-label">Planning</span>
+    </a>
+    <a href="courses.html" class="nav-item">
+      <span class="nav-icon">🛒</span>
+      <span class="nav-label">Courses</span>
+    </a>
+    <a href="inventory.html" class="nav-item active" aria-current="page">
+      <span class="nav-icon">📦</span>
+      <span class="nav-label">Inventaire</span>
+    </a>
+    <a href="profils.html" class="nav-item">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profils</span>
+    </a>
+  </nav>
+
+  <script src="js/user-context.js"></script>
+  <script src="js/sheets-api.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/inventory.js"></script>
+</body>
+</html>
