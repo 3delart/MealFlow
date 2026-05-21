@@ -247,14 +247,18 @@ function updateProgressDisplay() {
  * Saves meals state (eaten status) to localStorage.
  */
 function saveMealsState() {
-  const today = getTodayISO();
-  const stateToSave = AccueilState.todayMeals.map(m => ({
-    mealType: m.mealType,
-    eaten: m.eaten,
-    actualKcal: m.actualKcal,
-  }));
-  localStorage.setItem(`mealflow:meals:${today}`, JSON.stringify(stateToSave));
-  localStorage.setItem(`mealflow:consumed:${today}`, String(AccueilState.caloriesConsumed));
+  try {
+    const today = getTodayISO();
+    const stateToSave = AccueilState.todayMeals.map(m => ({
+      mealType: m.mealType,
+      eaten: m.eaten,
+      actualKcal: m.actualKcal,
+    }));
+    localStorage.setItem(`mealflow:meals:${today}`, JSON.stringify(stateToSave));
+    localStorage.setItem(`mealflow:consumed:${today}`, String(AccueilState.caloriesConsumed));
+  } catch (err) {
+    console.warn("Could not save meals state to localStorage:", err);
+  }
 }
 
 /**
@@ -555,11 +559,8 @@ function startScanner() {
  */
 function stopScanner() {
   if (grignottageScanner) {
-    grignottageScanner.stop().then(() => {
-      grignottageScanner = null;
-    }).catch((err) => {
-      console.error("Error stopping scanner:", err);
-    });
+    grignottageScanner.stop().catch(() => {});
+    grignottageScanner = null;
   }
 }
 
@@ -617,7 +618,10 @@ async function onBarcodeDetected(barcode) {
  * Restarts the scanner after result is shown.
  */
 function restartScanner() {
-  document.getElementById("scanner-result").classList.add("hidden");
+  const resultDiv = document.getElementById("scanner-result");
+  if (resultDiv) {
+    resultDiv.classList.add("hidden");
+  }
   startScanner();
 }
 
