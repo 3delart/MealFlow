@@ -84,8 +84,8 @@ function renderGreeting() {
 
   if (calorieObjectiveEl) {
     const profile = AccueilState.profiles[user];
-    if (profile && profile.objectifKcal) {
-      const kcal = Number(profile.objectifKcal) || 0;
+    if (profile && (profile.Objectif || profile.objectifKcal)) {
+      const kcal = Number(profile.Objectif || profile.objectifKcal) || 0;
       calorieObjectiveEl.textContent = `Objectif: ${kcal.toLocaleString("fr-FR")} kcal`;
     } else {
       calorieObjectiveEl.textContent = "Objectif: — kcal";
@@ -136,7 +136,7 @@ function renderProgressCircle(percentage) {
   if (circleCaption) {
     const user = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
     const profile = AccueilState.profiles[user];
-    const target = profile && profile.objectifKcal ? Number(profile.objectifKcal) : null;
+    const target = profile && (profile.Objectif || profile.objectifKcal) ? Number(profile.Objectif || profile.objectifKcal) : null;
     const consumed = AccueilState.caloriesConsumed;
 
     if (target) {
@@ -238,7 +238,7 @@ function showRecipe(mealType) {
 function updateProgressDisplay() {
   const user = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
   const profile = AccueilState.profiles[user];
-  const target = profile && profile.objectifKcal ? Number(profile.objectifKcal) : 0;
+  const target = profile && (profile.Objectif || profile.objectifKcal) ? Number(profile.Objectif || profile.objectifKcal) : 0;
   const pct = target > 0 ? (AccueilState.caloriesConsumed / target) * 100 : 0;
   console.log(`updateProgressDisplay: user=${user}, target=${target}, consumed=${AccueilState.caloriesConsumed}, pct=${pct}%`);
   renderProgressCircle(pct);
@@ -310,9 +310,9 @@ async function loadProfilsData() {
 
     console.log("Accueil: Profils columns available:", objects.length > 0 ? Object.keys(objects[0]) : "no data");
 
-    // Expected columns: nom, objectifKcal (or Objectif, Calories_cible, etc.)
+    // Expected columns: User (or nom), Objectif (or objectifKcal)
     objects.forEach(profile => {
-      const key = (profile.nom || "").toLowerCase().trim();
+      const key = (profile.User || profile.nom || "").toLowerCase().trim();
       if (key === "florian" || key === "naomi") {
         console.log(`Accueil: Loaded profile ${key}:`, profile);
         AccueilState.profiles[key] = profile;
