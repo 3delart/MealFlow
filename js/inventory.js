@@ -17,6 +17,9 @@ let scannerActive = false;
 /** @type {Object} Scanned product data (from Open Food Facts) */
 let scannedProductData = null;
 
+/** @type {Html5Qrcode} HTML5 QR Code scanner instance */
+let qrScanner = null;
+
 // ============================================================================
 // OPEN FOOD FACTS API
 // ============================================================================
@@ -78,102 +81,78 @@ async function fetchProductFromOpenFoodFacts(barcode) {
 // ============================================================================
 
 /**
- * Start barcode scanner with Quagga.js
+ * Start barcode scanner with html5-qrcode
  */
 function startScanner() {
-  const video = document.getElementById("scanner-video");
   const status = document.getElementById("scanner-status");
   const container = document.getElementById("scanner-container");
 
-  // Check if Quagga is loaded
-  if (typeof Quagga === "undefined") {
-    status.textContent = "❌ Erreur: Quagga.js non chargé";
+  // Check if html5-qrcode is loaded
+  if (typeof Html5Qrcode === "undefined") {
+    status.textContent = "❌ Erreur: Html5Qrcode non chargé";
     status.classList.add("error");
-    console.error("Quagga library not loaded");
+    console.error("Html5Qrcode library not loaded");
     return;
   }
 
-  // Ensure video is visible
-  video.style.display = "block";
   container.style.display = "block";
   scannerActive = true;
   status.textContent = "⏳ Initialisation caméra...";
 
-  console.log("Starting Quagga scanner initialization");
+  console.log("Starting Html5Qrcode scanner");
 
-  Quagga.init(
+  // Create scanner instance
+  qrScanner = new Html5Qrcode("scanner-video");
+
+  qrScanner.start(
+    { facingMode: "environment" },
     {
-      inputStream: {
-        name: "Live",
-        type: "LiveStream",
-        target: "#scanner-video",
-        constraints: {
-          width: 400,
-          height: 400,
-          facingMode: "environment"
-        }
-      },
-      decoder: {
-        readers: [
-          "ean_reader",
-          "ean_8_reader",
-          "code_128_reader",
-          "code_39_reader",
-          "upc_reader",
-          "upc_e_reader"
-        ],
-        debug: {
-          showCanvas: true
-        }
-      }
+      fps: 10,
+      qrbox: { width: 300, height: 300 }
     },
-    function(err) {
-      if (err) {
-        console.error("Quagga init error details:", err);
-        status.textContent = `❌ Erreur caméra: ${err.message || err}`;
-        status.classList.add("error");
-        scannerActive = false;
-        video.style.display = "none";
-        return;
-      }
-
-      console.log("Quagga initialized successfully");
-      Quagga.start();
-      status.textContent = "📹 Scanner actif — Dirigez vers code-barre";
-      status.classList.remove("error");
-      status.classList.add("success");
+    function(decodedText, decodedResult) {
+      console.log("Barcode detected:", decodedText);
+      stopScanner();
+      processBarcodeDetection(decodedText);
+    },
+    function(errorMessage) {
+      // Ignore scanning errors (they happen constantly while scanning)
+      // console.log("Scan error:", errorMessage);
     }
-  );
-
-  Quagga.onDetected(function(result) {
-    if (!scannerActive) return;
-
-    const barcode = result.codeResult.code;
-    console.log("Barcode detected:", barcode);
-
-    stopScanner();
-    processBarcodeDetection(barcode);
+  ).catch(err => {
+    console.error("Scanner start error:", err);
+    status.textContent = `❌ Erreur caméra: ${err.message || err}`;
+    status.classList.add("error");
+    scannerActive = false;
+    container.style.display = "none";
   });
+
+  status.textContent = "📹 Scanner actif — Dirigez vers code-barre";
+  status.classList.remove("error");
+  status.classList.add("success");
 }
 
 /**
  * Stop barcode scanner
  */
 function stopScanner() {
-  if (!scannerActive) return;
+  if (!scannerActive || !qrScanner) return;
 
-  try {
-    Quagga.stop();
-  } catch (err) {
+  qrScanner.stop().then(() => {
+    console.log("Scanner stopped");
+    scannerActive = false;
+    qrScanner = null;
+
+    const container = document.getElementById("scanner-container");
+    container.style.display = "none";
+
+    document.getElementById("btn-start-scanner").style.display = "inline-block";
+    document.getElementById("btn-stop-scanner").style.display = "none";
+  }).catch(err => {
     console.error("Error stopping scanner:", err);
-  }
-
-  const video = document.getElementById("scanner-video");
-  video.style.display = "none";
-  scannerActive = false;
-
-  document.getElementById("btn-start-scanner").style.display = "inline-block";
-  document.getElementById("btn-stop-scanner").style.display = "none";
+    scannerActive = false;
+    qrScanner = null;
+  });
 }
 
 /**
