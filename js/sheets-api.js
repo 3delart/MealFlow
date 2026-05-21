@@ -103,23 +103,56 @@ function rowsToObjects(rows) {
 }
 
 /**
+ * Append row to Google Sheet tab with OAuth2 token
+ * @param {string} tabName - The sheet tab name
+ * @param {Array} row - Row data to append
+ * @param {string} accessToken - OAuth2 access token
+ * @returns {Promise<Object>} API response
+ */
+async function appendRowWithToken(tabName, row, accessToken) {
+  if (!accessToken) {
+    throw new Error("No access token provided. User must be authenticated.");
+  }
+
+  const sheetId = getSheetId();
+  const values = [row];
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${tabName}!A:Z:append?valueInputOption=USER_ENTERED`;
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ values })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error(`Sheets API error: ${error.error.message}`);
+      throw new Error(`Failed to append row: ${error.error.message}`);
+    }
+
+    const result = await response.json();
+    console.log(`Row appended to ${tabName}:`, result);
+    return result;
+  } catch (error) {
+    console.error(`Error appending row to ${tabName}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Writes data to a Google Sheet tab
- * NOTE: This is a stub function. Writing to Google Sheets requires OAuth2 authentication
- * or a service account, which is not possible with a public API key.
- *
- * TODO: Implement with OAuth2 or service account credentials
- *
- * @param {string} tabName - The name of the sheet tab to write to
+ * @param {string} tabName - The sheet tab name
  * @param {Array<Array>} rows - Array of rows to write
- * @throws {Error} Always throws as write is not yet implemented
+ * @throws {Error} If write fails or no token available
  */
 function writeSheetTab(tabName, rows) {
-  console.warn(
-    "Write not yet implemented. " +
-    "Writing to Google Sheets requires OAuth2 or service account authentication. " +
-    "Please use the Google Sheets UI to modify data, or implement OAuth2."
-  );
-  throw new Error("writeSheetTab is not yet implemented");
+  console.warn("Use appendRowWithToken() with OAuth2 access token instead");
+  throw new Error("writeSheetTab requires appendRowWithToken() with access token");
 }
 
 // Export all functions to the window object so they can be used globally (in browser)
@@ -127,7 +160,8 @@ if (typeof window !== 'undefined') {
   window.SheetsAPI = {
     readSheetTab,
     rowsToObjects,
-    writeSheetTab
+    writeSheetTab,
+    appendRowWithToken
   };
 }
 

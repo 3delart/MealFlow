@@ -281,6 +281,30 @@ async function addItem(item) {
 
   inventoryData.push(newItem);
   saveInventory();
+
+  // Sync to Sheets if authenticated
+  if (typeof isAuthenticated === "function" && isAuthenticated()) {
+    const token = getAccessToken();
+    const row = [
+      newItem.Produit,
+      newItem.Qty,
+      newItem.Unité,
+      newItem.Catégorie,
+      newItem.Date_ajout,
+      newItem.Péremption,
+      newItem.Consommé,
+      newItem.calories_per_100,
+      newItem.proteins,
+      newItem.fats,
+      newItem.carbs,
+      newItem.allergens
+    ];
+
+    SheetsAPI.appendRowWithToken("Inventory", row, token)
+      .then(() => console.log("Item synced to Sheets"))
+      .catch(err => console.error("Failed to sync to Sheets:", err));
+  }
+
   scannedProductData = null;
 
   // Clear form

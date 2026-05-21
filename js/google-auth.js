@@ -1,13 +1,51 @@
 const GOOGLE_CLIENT_ID = "864467783347-povu10fv1f30km3sfp8u14ppregeduro.apps.googleusercontent.com";
-let googleAuthToken = null;
+let googleAccessToken = null;
+let tokenClient = null;
 
 function handleCredentialResponse(response) {
-  console.log("Auth success");
-  googleAuthToken = response.credential;
-  localStorage.setItem("googleAuthToken", googleAuthToken);
-  const btn = document.getElementById("google-logout-btn");
-  if (btn) btn.style.display = "block";
-  setTimeout(() => location.reload(), 500);
+  console.log("Sign-In success");
+  localStorage.setItem("googleIdToken", response.credential);
+
+  requestAccessToken();
+}
+
+function requestAccessToken() {
+  if (!tokenClient) {
+    console.log("Initializing token client...");
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: "https://www.googleapis.com/auth/spreadsheets",
+      callback: handleTokenResponse,
+    });
+  }
+
+  tokenClient.requestAccessToken({ prompt: "" });
+}
+
+function handleTokenResponse(response) {
+  if (response.access_token) {
+    googleAccessToken = response.access_token;
+    localStorage.setItem("googleAccessToken", googleAccessToken);
+    console.log("Access token obtained");
+
+    updateUI();
+  } else {
+    console.log("No access token, prompting user...");
+    tokenClient.requestAccessToken({ prompt: "consent" });
+  }
+}
+
+function updateUI() {
+  const loginDiv = document.getElementById("google-login-btn");
+  const logoutBtn = document.getElementById("google-logout-btn");
+
+  if (googleAccessToken || localStorage.getItem("googleAccessToken")) {
+    if (loginDiv) loginDiv.style.display = "none";
+    if (logoutBtn) logoutBtn.style.display = "block";
+  } else {
+    if (loginDiv) loginDiv.style.display = "block";
+    if (logoutBtn) logoutBtn.style.display = "none";
+  }
 }
 
 function initGoogleAuth() {
@@ -18,37 +56,51 @@ function initGoogleAuth() {
 
   google.accounts.id.initialize({
     client_id: GOOGLE_CLIENT_ID,
-    callback: handleCredentialResponse
+    callback: handleCredentialResponse,
   });
 
   const loginDiv = document.getElementById("google-login-btn");
-  if (loginDiv && !localStorage.getItem("googleAuthToken")) {
-    google.accounts.id.renderButton(loginDiv, { theme: "outline", size: "large" });
+  if (loginDiv && !localStorage.getItem("googleAccessToken")) {
+    google.accounts.id.renderButton(loginDiv, {
+      theme: "outline",
+      size: "large",
+      text: "signin_with"
+    });
+  }
+
+  restoreToken();
+  updateUI();
+}
+
+function restoreToken() {
+  const token = localStorage.getItem("googleAccessToken");
+  if (token) {
+    googleAccessToken = token;
+    console.log("Access token restored");
   }
 }
 
 function logoutGoogle() {
-  googleAuthToken = null;
-  localStorage.removeItem("googleAuthToken");
+  googleAccessToken = null;
+  localStorage.removeItem("googleAccessToken");
+  localStorage.removeItem("googleIdToken");
+
+  if (typeof google !== "undefined") {
+    google.accounts.id.disableAutoSelect();
+  }
+
+  updateUI();
   location.reload();
 }
 
-function getAuthToken() {
-  return googleAuthToken || localStorage.getItem("googleAuthToken");
+function getAccessToken() {
+  return googleAccessToken || localStorage.getItem("googleAccessToken");
 }
 
 function isAuthenticated() {
-  return !!getAuthToken();
+  return !!getAccessToken();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const token = localStorage.getItem("googleAuthToken");
-  if (token) {
-    googleAuthToken = token;
-    const btn = document.getElementById("google-logout-btn");
-    if (btn) btn.style.display = "block";
-    const div = document.getElementById("google-login-btn");
-    if (div) div.style.display = "none";
-  }
   setTimeout(initGoogleAuth, 100);
 });
