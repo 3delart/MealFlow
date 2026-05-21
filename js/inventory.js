@@ -85,7 +85,7 @@ async function fetchProductFromOpenFoodFacts(barcode) {
  */
 function startScanner() {
   const status = document.getElementById("scanner-status");
-  const container = document.getElementById("scanner-container");
+  const container = document.getElementById("scanner-video");
 
   // Check if html5-qrcode is loaded
   if (typeof Html5Qrcode === "undefined") {
@@ -96,6 +96,7 @@ function startScanner() {
   }
 
   container.style.display = "block";
+  container.style.height = "400px";
   scannerActive = true;
   status.textContent = "⏳ Initialisation caméra...";
 
@@ -108,7 +109,7 @@ function startScanner() {
     { facingMode: "environment" },
     {
       fps: 10,
-      qrbox: { width: 300, height: 300 }
+      qrbox: { width: 280, height: 280 }
     },
     function(decodedText, decodedResult) {
       console.log("Barcode detected:", decodedText);
@@ -116,8 +117,7 @@ function startScanner() {
       processBarcodeDetection(decodedText);
     },
     function(errorMessage) {
-      // Ignore scanning errors (they happen constantly while scanning)
-      // console.log("Scan error:", errorMessage);
+      // Ignore scanning errors
     }
   ).catch(err => {
     console.error("Scanner start error:", err);
@@ -143,7 +143,7 @@ function stopScanner() {
     scannerActive = false;
     qrScanner = null;
 
-    const container = document.getElementById("scanner-container");
+    const container = document.getElementById("scanner-video");
     container.style.display = "none";
 
     document.getElementById("btn-start-scanner").style.display = "inline-block";
