@@ -1,0 +1,35 @@
+name: Generate Weekly Meals
+
+on:
+  schedule:
+    - cron: '0 17 * * 5'
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: cd .github/scripts && npm install
+
+      - name: Generate meals
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+          SHEET_ID: '1Dg9d-XIHzPqQIi4wZ2bTbnmHUKkn_V-IRzMOtRzQjOI'
+        run: node .github/scripts/generate-meals.js
+
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "Meal Generator"
+          git add Planning.md || true
+          git commit -m "chore: auto-generated meal plan $(date +%Y-%m-%d)" || true
+          git push || true

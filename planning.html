@@ -11,21 +11,21 @@
   <header>
     <div>
       <h1>📅 Planning</h1>
+      <div style="display: flex; gap: 10px; margin-top: 10px;">
+        <button id="regenerate-meals-btn" class="btn btn-primary" onclick="regenerateMeals()">
+          🤖 Régénérer semaine
+        </button>
+      </div>
     </div>
   </header>
 
   <main>
-    <div class="planning-controls">
-      <button class="secondary" id="prev-week-btn">← Semaine précédente</button>
-      <span id="week-label" class="week-label">Semaine...</span>
-      <button class="secondary" id="next-week-btn">Semaine suivante →</button>
-    </div>
-
-    <p class="note-auto-gen">Génération auto lundi</p>
-
-    <div id="planning-grid-container" class="planning-grid-container">
-      <!-- Table dynamically populated -->
-    </div>
+    <section class="planning-section">
+      <h2>Semaine</h2>
+      <div id="meal-plan" class="meal-plan">
+        <!-- Dynamically populated -->
+      </div>
+    </section>
   </main>
 
   <nav class="nav-bottom" aria-label="Navigation principale">
@@ -51,9 +51,12 @@
     </a>
   </nav>
 
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="js/user-context.js"></script>
+  <script src="js/google-auth.js"></script>
   <script src="js/sheets-api.js"></script>
   <script src="js/utils.js"></script>
+  <script src="js/meal-generation.js"></script>
   <script src="js/planning.js"></script>
 </body>
 </html>
