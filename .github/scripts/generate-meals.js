@@ -61,13 +61,16 @@ async function generateMealPlan(profiles, inventory) {
         if (p.Cuisines_JSON) cuisines = JSON.parse(p.Cuisines_JSON);
       } catch (e) {}
 
-      return `**${p.Prénom}** (${p.Sexe}, ${p.Âge}yo, ${p.Poids_kg}kg, ${p.Taille_cm}cm)
-- Régime: ${p.Régime}
+      return `## ${p.Prénom}
+- Infos: ${p.Sexe}, ${p.Âge} ans, ${p.Poids_kg}kg, ${p.Taille_cm}cm
+- Régime: ${p.Régime} (STRICT - évite complètement autres régimes)
 - Objectif: ${p.Objectif}
-- Allergies: ${allergies.length ? allergies.join(", ") : "Aucune"}
-- Aversions: ${aversions.length ? aversions.join(", ") : "Aucune"}
-- Cuisines: ${cuisines.length ? cuisines.join(", ") : "Aucune"}
-- Calories cible: ${p.Calories_cible_manuel || "Auto"}`;
+- Niveau culinaire: ${p.Niveau_culinaire}
+- Durée max prép: ${p.Durée_max_prep}
+- **ALLERGIES (CRITICAL - EVITE ABSOLUMENT)**: ${allergies.length ? allergies.join(", ") : "Aucune"}
+- **AVERSIONS (NEVER)**: ${aversions.length ? aversions.join(", ") : "Aucune"}
+- **Cuisines préférées**: ${cuisines.length ? cuisines.join(", ") : "Aucune"}
+- Calories cible/jour: ${p.Calories_cible_manuel || "2000 (défaut)"}`;
     })
     .join("\n\n");
 
@@ -76,36 +79,37 @@ async function generateMealPlan(profiles, inventory) {
     .map(i => `- ${i.Produit} (${i.Qty}${i.Unité}, expires ${i.Péremption})`)
     .join("\n");
 
-  const prompt = `Tu es nutritionniste. Crée plan repas 7 jours (petit-déj, collation matin, déjeuner, collation apres-midi, diner) pour deux personnes:
+  const prompt = `Tu es nutritionniste expert. Crée plan repas 7 jours PERSONNALISÉ pour 2 personnes avec contraintes STRICTES.
 
+## PROFILS DÉTAILLÉS:
 ${profileSummary}
 
-Ingrédients disponibles:
-${inventoryList || "Aucun (suggère achats)"}
+## INGRÉDIENTS DISPONIBLES:
+${inventoryList || "❌ AUCUN - Suggère achats essentiels"}
 
-STRICT:
-1. Respecte régimes (vegan/omnivore/etc)
-2. EVITE allergènes
-3. EVITE aversions
-4. Privilégie cuisines préférées
-5. Respecte calories cible
-6. Utilise ingrédients dispo max
-7. Suggère achats manquants
+## RÈGLES ABSOLUES (NON-NÉGOCIABLES):
+1. **RÉGIME**: Respecte PRÉCISÉMENT le régime listés (vegan=zéro viande/poisson/oeufs/lait; omnivore=tout ok)
+2. **ALLERGIES**: JAMAIS d'allergènes listés (risque santé)
+3. **AVERSIONS**: JAMAIS les ingrédients/plats listés (même en petite quantité)
+4. **CUISINES**: Privilégie les cuisines préférées de chaque personne
+5. **CALORIES**: Chaque repas doit environ atteindre cible journalière (divisée entre 5 repas)
+6. **INGRÉDIENTS**: Utilise MAX les ingrédients dispo (+ suggère achats complémentaires)
+7. **PRÉPARATION**: Respecte durée max prép (rapide/moyenne/longue)
 
-REPONSE: JSON ONLY
+## FORMAT RÉPONSE (JSON UNIQUEMENT, PAS DE TEXTE):
 {
   "semaine": [
     {
       "date": "2026-05-26",
       "jour": "Lundi",
-      "petit_dejeuner": "...",
+      "petit_dejeuner": "Description détaillée du plat + ingrédients clés",
       "collation_matin": "...",
       "dejeuner": "...",
       "collation_apres_midi": "...",
       "diner": "..."
     }
   ],
-  "achats": ["item1", "item2"]
+  "achats_recommandes": ["Ingrédient 1", "Ingrédient 2"]
 }`;
 
   return new Promise((resolve, reject) => {
