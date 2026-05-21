@@ -28,19 +28,34 @@ let scannedProductData = null;
  */
 async function fetchProductFromOpenFoodFacts(barcode) {
   try {
-    const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+    console.log("Fetching product for barcode:", barcode);
+
+    // Try world.openfoodfacts.org first
+    const url = `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`;
+    console.log("API URL:", url);
+
+    const response = await fetch(url);
+    console.log("API response status:", response.status);
+
     if (!response.ok) {
-      console.warn(`Product not found: ${barcode}`);
+      console.warn(`Product not found (${response.status}): ${barcode}`);
       return null;
     }
 
     const data = await response.json();
+    console.log("API response data:", data);
+
     if (data.status === 0) {
-      console.warn(`Product not found: ${barcode}`);
+      console.warn(`Product not found (status 0): ${barcode}`);
       return null;
     }
 
     const product = data.product;
+    if (!product) {
+      console.warn("No product object in response");
+      return null;
+    }
+
     return {
       name: product.product_name || product.generic_name || "Produit inconnu",
       calories: product.nutriments?.["energy-kcal"] || null,
@@ -52,6 +67,8 @@ async function fetchProductFromOpenFoodFacts(barcode) {
     };
   } catch (err) {
     console.error("OpenFoodFacts API error:", err);
+    console.error("Error type:", err.constructor.name);
+    console.error("Error message:", err.message);
     return null;
   }
 }
@@ -517,9 +534,11 @@ function setupEventHandlers() {
 
   // Scanner buttons
   document.getElementById("btn-start-scanner").addEventListener("click", function() {
-    startScanner();
-    document.getElementById("btn-start-scanner").style.display = "none";
+    const container = document.getElementById("scanner-container");
+    container.style.display = "block";
+    this.style.display = "none";
     document.getElementById("btn-stop-scanner").style.display = "inline-block";
+    startScanner();
   });
 
   document.getElementById("btn-stop-scanner").addEventListener("click", function() {
