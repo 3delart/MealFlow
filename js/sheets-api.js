@@ -6,7 +6,7 @@
 // Configuration constants
 // User must replace these with their actual values from Google Cloud Console
 const SHEET_ID_DEFAULT = "1Dg9d-XIHzPqQIi4wZ2bTbnmHUKkn_V-IRzMOtRzQjOI";
-const SHEET_API_KEY_DEFAULT = "AlzaSyDZxRe3JtjbbqN9orW0xFCosxO4_3o6h74";
+const SHEET_API_KEY_DEFAULT = "AIzaSyDZxRe3JtjbbqN9orW0xFCosxO4_3o6h74";
 
 /**
  * Get Sheet ID from localStorage or fallback to default
