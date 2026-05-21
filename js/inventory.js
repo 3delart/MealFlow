@@ -106,7 +106,7 @@ function startScanner() {
       inputStream: {
         name: "Live",
         type: "LiveStream",
-        target: video,
+        target: "#scanner-video",
         constraints: {
           width: 400,
           height: 400,
