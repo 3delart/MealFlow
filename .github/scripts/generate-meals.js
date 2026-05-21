@@ -112,7 +112,7 @@ async function generateMealPlan(profiles, inventory) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 2000,
+      max_tokens: 4000,
       messages: [{ role: "user", content: prompt }]
     });
 
@@ -147,16 +147,20 @@ async function generateMealPlan(profiles, inventory) {
           }
 
           const content = response.content[0].text;
+          console.log(`[Claude] Content length: ${content.length}, First 300 chars: ${content.substring(0, 300)}`);
 
           // Strip markdown code fence if present
           let jsonStr = content.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+          console.log(`[Claude] After strip length: ${jsonStr.length}`);
 
           // Try to parse as-is first
           try {
-            resolve(JSON.parse(jsonStr));
+            const parsed = JSON.parse(jsonStr);
+            console.log(`[Claude] Direct parse succeeded`);
+            resolve(parsed);
             return;
           } catch (e) {
-            // Fallback: extract first JSON object
+            console.log(`[Claude] Direct parse failed: ${e.message}`);
           }
 
           // Fallback: extract first { ... } block
@@ -166,7 +170,13 @@ async function generateMealPlan(profiles, inventory) {
             return;
           }
 
-          resolve(JSON.parse(match[0]));
+          console.log(`[Claude] Regex match length: ${match[0].length}`);
+          try {
+            resolve(JSON.parse(match[0]));
+          } catch (e) {
+            console.log(`[Claude] Regex parse failed: ${e.message}, attempting to find nested JSON...`);
+            reject(e);
+          }
         } catch (e) {
           console.log(`[Error] Parse failed. Body preview: ${body.substring(0, 200)}`);
           reject(e);
