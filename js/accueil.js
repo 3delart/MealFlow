@@ -8,11 +8,13 @@
    STATE
    ============================================================================ */
 
-/** @type {{ florian: Object|null, naomi: Object|null }} */
 const AccueilState = {
   profiles: { florian: null, naomi: null },
-  todayMeals: [],         // Array of meal names planned for today
-  caloriesConsumed: 0,    // Will be populated from Courses tab (future)
+  todayMeals: [
+    // Structure: { mealType, name, estimatedKcal, eaten, actualKcal, timestamp }
+  ],
+  caloriesConsumed: 0,    // Will be populated from localStorage + Grignottage
+  grignottageCalories: 0, // Calories from scanned snacks today
   lastDateChecked: null,  // ISO date string to detect midnight rollover
 };
 
@@ -39,6 +41,17 @@ function getLocaleDateFr() {
     month: "long",
   });
 }
+
+/**
+ * Meal types with emoji and estimated base calories
+ */
+const MEAL_TIMES = [
+  { type: "petit_dejeuner", label: "Petit-déj", emoji: "🌅", estimatedKcal: 400 },
+  { type: "collation_matin", label: "Collation matin", emoji: "🥤", estimatedKcal: 150 },
+  { type: "dejeuner", label: "Déjeuner", emoji: "🍽️", estimatedKcal: 700 },
+  { type: "collation_apres_midi", label: "Collation après-midi", emoji: "🥪", estimatedKcal: 150 },
+  { type: "diner", label: "Dîner", emoji: "🌙", estimatedKcal: 600 },
+];
 
 /* ============================================================================
    RENDERING
@@ -129,86 +142,136 @@ function renderProgressCircle(percentage) {
 }
 
 /**
- * Renders the "TODAY'S OBJECTIVES" section.
- * Shows a card per user with calorie goal, consumed, and progress bar.
- * Also shows meals planned today if available.
+ * Renders the meals section with today's 5 meals and action buttons.
  */
-function renderObjectives() {
-  const container = document.getElementById("objectives-content");
+function renderMeals() {
+  const container = document.getElementById("meals-container");
   if (!container) return;
 
   // Clear previous content
   container.innerHTML = "";
 
-  const users = ["florian", "naomi"];
-
-  // Check if any profile data available
-  const hasAnyData = users.some(u => AccueilState.profiles[u] !== null);
-
-  if (!hasAnyData) {
+  if (AccueilState.todayMeals.length === 0) {
     container.innerHTML = `
-      <p class="loading-text">
-        Données non disponibles — configurez votre Google Sheet dans js/sheets-api.js
-      </p>`;
+      <div style="text-align: center; padding: var(--spacing-lg); color: var(--color-text-light);">
+        <p>📋 Aucun repas planifié pour aujourd'hui</p>
+        <p style="font-size: var(--font-size-small);">Génère une semaine dans la page Planning</p>
+      </div>`;
     return;
   }
 
-  users.forEach(user => {
-    const profile = AccueilState.profiles[user];
-    const displayName = user.charAt(0).toUpperCase() + user.slice(1);
-    const target = profile && profile.objectifKcal ? Number(profile.objectifKcal) : 0;
+  const mealsHtml = AccueilState.todayMeals
+    .map(meal => {
+      const displayKcal = meal.actualKcal || meal.estimatedKcal;
+      const eatenClass = meal.eaten ? "eaten" : "";
 
-    // For now, consumed is global (future: per-user tracking)
-    const currentUser = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
-    const consumed = user === currentUser ? AccueilState.caloriesConsumed : 0;
+      return `
+        <div class="meal-card ${eatenClass}" data-meal-type="${meal.mealType}">
+          <div class="meal-info">
+            <div style="display: flex; align-items: center;">
+              <span class="meal-time-icon">${meal.emoji}</span>
+              <div>
+                <p class="meal-name">${meal.label}</p>
+                <p class="meal-kcal">${displayKcal} kcal</p>
+              </div>
+            </div>
+          </div>
+          <div class="meal-actions">
+            <button class="btn-meal btn-recette" onclick="showRecipe('${meal.mealType}')">
+              📖
+            </button>
+            <button class="btn-meal btn-mange" onclick="toggleMealEaten('${meal.mealType}')">
+              ${meal.eaten ? "✓" : "Mangé"}
+            </button>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
 
-    const pct = target > 0 ? Math.min(Math.round((consumed / target) * 100), 100) : 0;
-    const barWidth = Math.min(pct, 100);
+  container.innerHTML = mealsHtml;
+}
 
-    const card = document.createElement("div");
-    card.className = `objective-card ${user}`;
+/**
+ * Toggles "eaten" state for a meal and updates localStorage.
+ */
+function toggleMealEaten(mealType) {
+  const meal = AccueilState.todayMeals.find(m => m.mealType === mealType);
+  if (!meal) return;
 
-    // Header: name + badge
-    const headerHtml = `
-      <div class="objective-card-header">
-        <span class="objective-user-name">${displayName}</span>
-        <span class="objective-badge">${pct}%</span>
-      </div>`;
+  meal.eaten = !meal.eaten;
 
-    // Calories consumed / target
-    const calorieHtml = `
-      <p class="objective-calories">
-        <strong>${consumed.toLocaleString("fr-FR")}</strong> / ${target > 0 ? target.toLocaleString("fr-FR") : "—"} kcal
-      </p>`;
+  // Recalculate consumed calories
+  AccueilState.caloriesConsumed = AccueilState.todayMeals
+    .filter(m => m.eaten)
+    .reduce((sum, m) => sum + (m.actualKcal || m.estimatedKcal), 0);
 
-    // Progress bar
-    const barHtml = `
-      <div class="objective-progress-bar-wrap">
-        <div class="objective-progress-bar" style="width: ${barWidth}%"></div>
-      </div>`;
+  // Persist to localStorage
+  saveMealsState();
 
-    // Meals today (only for current user)
-    let mealsHtml = "";
-    if (user === currentUser && AccueilState.todayMeals.length > 0) {
-      const chipsHtml = AccueilState.todayMeals
-        .map(m => `<li class="meal-chip">${m}</li>`)
-        .join("");
-      mealsHtml = `
-        <div class="today-meals">
-          <h4>Repas prévus aujourd'hui</h4>
-          <ul class="meal-chip-list">${chipsHtml}</ul>
-        </div>`;
-    } else if (user === currentUser) {
-      mealsHtml = `
-        <div class="today-meals">
-          <h4>Repas prévus aujourd'hui</h4>
-          <p class="no-meals-text">Aucun repas planifié pour aujourd'hui.</p>
-        </div>`;
-    }
+  // Update UI
+  renderMeals();
+  updateProgressDisplay();
+}
 
-    card.innerHTML = headerHtml + calorieHtml + barHtml + mealsHtml;
-    container.appendChild(card);
-  });
+/**
+ * Shows recipe (placeholder — can link to Sheets or open modal).
+ */
+function showRecipe(mealType) {
+  const meal = AccueilState.todayMeals.find(m => m.mealType === mealType);
+  if (!meal) return;
+
+  // TODO: Link to Recipes tab or show modal with recipe details
+  alert(`Recette: ${meal.name}\n(Détails à venir)`);
+}
+
+/**
+ * Updates the progress circle + caption after calories change.
+ */
+function updateProgressDisplay() {
+  const user = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
+  const profile = AccueilState.profiles[user];
+  const target = profile && profile.objectifKcal ? Number(profile.objectifKcal) : 0;
+  const pct = target > 0 ? (AccueilState.caloriesConsumed / target) * 100 : 0;
+  renderProgressCircle(pct);
+}
+
+/**
+ * Saves meals state (eaten status) to localStorage.
+ */
+function saveMealsState() {
+  const today = getTodayISO();
+  const stateToSave = AccueilState.todayMeals.map(m => ({
+    mealType: m.mealType,
+    eaten: m.eaten,
+    actualKcal: m.actualKcal,
+  }));
+  localStorage.setItem(`mealflow:meals:${today}`, JSON.stringify(stateToSave));
+  localStorage.setItem(`mealflow:consumed:${today}`, String(AccueilState.caloriesConsumed));
+}
+
+/**
+ * Loads meals state (eaten status) from localStorage.
+ */
+function loadMealsState() {
+  const today = getTodayISO();
+  const savedState = localStorage.getItem(`mealflow:meals:${today}`);
+  const savedConsumed = localStorage.getItem(`mealflow:consumed:${today}`);
+
+  if (savedState) {
+    const stateArray = JSON.parse(savedState);
+    stateArray.forEach(saved => {
+      const meal = AccueilState.todayMeals.find(m => m.mealType === saved.mealType);
+      if (meal) {
+        meal.eaten = saved.eaten;
+        meal.actualKcal = saved.actualKcal || meal.estimatedKcal;
+      }
+    });
+  }
+
+  if (savedConsumed) {
+    AccueilState.caloriesConsumed = Number(savedConsumed);
+  }
 }
 
 /* ============================================================================
@@ -243,8 +306,7 @@ async function loadProfilsData() {
 }
 
 /**
- * Loads the Planning tab and finds meals scheduled for today.
- * Populates AccueilState.todayMeals.
+ * Loads the Planning tab and builds todayMeals array for today.
  */
 async function loadPlanningData() {
   if (!window.SheetsAPI) return;
@@ -254,11 +316,44 @@ async function loadPlanningData() {
     const objects = window.SheetsAPI.rowsToObjects(rows);
     const todayISO = getTodayISO();
 
-    // Expected columns: date (YYYY-MM-DD), repas, recette, ...
-    AccueilState.todayMeals = objects
-      .filter(row => (row.date || "").trim() === todayISO)
-      .map(row => row.recette || row.repas || "")
-      .filter(Boolean);
+    // Find today's row by matching date column
+    const todayRow = objects.find(row => {
+      const rowDate = (row.Date || row.date || "").trim();
+      return rowDate === todayISO;
+    });
+
+    if (!todayRow) {
+      console.warn("Accueil: No Planning row for today");
+      AccueilState.todayMeals = [];
+      return;
+    }
+
+    // Build meals array from columns: Petit-déj, Collation_matin, Déjeuner, etc.
+    AccueilState.todayMeals = MEAL_TIMES.map(mealDef => {
+      const columnName = mealDef.type.split("_").map((w, i) =>
+        i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w
+      ).join("-");
+      // Try different column name variations
+      const mealName = todayRow["Petit-déj"] !== undefined && mealDef.type === "petit_dejeuner" ? todayRow["Petit-déj"] :
+                       todayRow["Collation_matin"] !== undefined && mealDef.type === "collation_matin" ? todayRow["Collation_matin"] :
+                       todayRow["Déjeuner"] !== undefined && mealDef.type === "dejeuner" ? todayRow["Déjeuner"] :
+                       todayRow["Collation_après-midi"] !== undefined && mealDef.type === "collation_apres_midi" ? todayRow["Collation_après-midi"] :
+                       todayRow["Diner"] !== undefined && mealDef.type === "diner" ? todayRow["Diner"] :
+                       "";
+
+      return {
+        mealType: mealDef.type,
+        label: mealDef.label,
+        emoji: mealDef.emoji,
+        name: mealName || mealDef.label,
+        estimatedKcal: mealDef.estimatedKcal,
+        actualKcal: null,
+        eaten: false,
+        timestamp: null,
+      };
+    });
+
+    console.log(`Accueil: Loaded ${AccueilState.todayMeals.length} meals for today`);
   } catch (err) {
     console.warn("Accueil: Could not load Planning tab:", err.message);
     AccueilState.todayMeals = [];
@@ -279,11 +374,6 @@ async function updateProgressFromSheets() {
    SEARCH
    ============================================================================ */
 
-/**
- * Initializes the recipe search input.
- * Searches within today's meals and profile data as a basic MVP.
- * Full search against Sheets planned for a future task.
- */
 function initializeSearch() {
   const input = document.getElementById("search-meals");
   const results = document.getElementById("search-results");
@@ -298,23 +388,22 @@ function initializeSearch() {
       return;
     }
 
-    // Search within today's meals as a basic demo
+    // Search within today's meals
     const matches = AccueilState.todayMeals.filter(m =>
-      m.toLowerCase().includes(query)
+      m.name.toLowerCase().includes(query) || m.label.toLowerCase().includes(query)
     );
 
     if (matches.length === 0) {
       results.innerHTML = `<div class="search-result-item">Aucun résultat pour "${query}"</div>`;
     } else {
       results.innerHTML = matches
-        .map(m => `<div class="search-result-item">${m}</div>`)
+        .map(m => `<div class="search-result-item">${m.emoji} ${m.name}</div>`)
         .join("");
     }
 
     results.classList.remove("hidden");
   });
 
-  // Hide results when clicking elsewhere
   document.addEventListener("click", function (e) {
     if (!input.contains(e.target) && !results.contains(e.target)) {
       results.classList.add("hidden");
@@ -343,10 +432,6 @@ function checkDateChange() {
    INITIALIZATION
    ============================================================================ */
 
-/**
- * Main initialization function.
- * Loads data, renders all sections, and sets up event listeners.
- */
 async function initAccueil() {
   AccueilState.lastDateChecked = getTodayISO();
 
@@ -356,51 +441,52 @@ async function initAccueil() {
     window.UserContext.initializeUserToggle();
   }
 
-  // Render greeting immediately with whatever state we have
+  // Render greeting immediately
   renderGreeting();
 
   // Show 0% circle while data loads
   renderProgressCircle(0);
 
-  // Render placeholder objectives
-  renderObjectives();
+  // Render placeholder meals
+  renderMeals();
 
   // Load data in parallel
   await Promise.all([
     loadProfilsData(),
     loadPlanningData(),
-    updateProgressFromSheets(),
   ]);
+
+  // Load saved meals state (eaten/calories) from localStorage
+  loadMealsState();
 
   // Re-render with real data
   renderGreeting();
+  renderMeals();
+  updateProgressDisplay();
 
-  const user = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
-  const profile = AccueilState.profiles[user];
-  const target = profile && profile.objectifKcal ? Number(profile.objectifKcal) : 0;
-  const pct = target > 0 ? (AccueilState.caloriesConsumed / target) * 100 : 0;
-
-  renderProgressCircle(pct);
-  renderObjectives();
-
-  // Initialize search after data is loaded
+  // Initialize search (searches within meal names)
   initializeSearch();
+
+  // Initialize Grignottage button
+  initializeGrignottageButton();
+}
+
+/**
+ * Placeholder: initializes Grignottage button for adding snacks.
+ * Full integration deferred until Grignottage feature is built.
+ */
+function initializeGrignottageButton() {
+  // TODO: Wire up Grignottage button when feature is ready
 }
 
 /* ============================================================================
    EVENT LISTENERS
    ============================================================================ */
 
-// Re-render when user is switched (without full page reload for smoother UX)
 document.addEventListener("userChanged", function () {
-  const user = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
-  const profile = AccueilState.profiles[user];
-  const target = profile && profile.objectifKcal ? Number(profile.objectifKcal) : 0;
-  const pct = target > 0 ? (AccueilState.caloriesConsumed / target) * 100 : 0;
-
   renderGreeting();
-  renderProgressCircle(pct);
-  renderObjectives();
+  updateProgressDisplay();
+  // Meals stay the same (they're per-day, not per-user)
 });
 
 // Check for midnight rollover every minute
