@@ -609,10 +609,26 @@ async function onBarcodeDetected(barcode) {
 
       const name = product.product_name || product.generic_name || barcode;
       const kcal = product.nutriments?.["energy-kcal"] || product.nutriments?.["energy-kcal_100g"] || 0;
+      const brand = product.brands || "—";
+      const quantity = product.quantity || "—";
+      const categories = product.categories || "—";
 
-      console.log(`Parsed: name="${name}", kcal=${kcal}, brands="${product.brands}", categories="${product.categories}"`);
+      console.log(`Parsed: name="${name}", kcal=${kcal}, brands="${brand}", quantity="${quantity}", categories="${categories}"`);
 
       nameEl.textContent = name;
+
+      // Display brand
+      const brandEl = document.getElementById("result-brand");
+      if (brandEl) brandEl.textContent = `Marque: ${brand}`;
+
+      // Display quantity
+      const qtyEl = document.getElementById("result-quantity");
+      if (qtyEl) qtyEl.textContent = `Quantité: ${quantity}`;
+
+      // Display category/packaging
+      const catEl = document.getElementById("result-category");
+      if (catEl) catEl.textContent = `Type: ${categories}`;
+
       kcalEl.value = Math.round(kcal);
       kcalEl.focus();
     } else {
