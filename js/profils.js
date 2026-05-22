@@ -416,6 +416,29 @@ function renderProfileCard(userId) {
 // ============================================================================
 
 /**
+ * Opens modal in "new profile" mode
+ */
+function openNewProfileModal() {
+  const form = document.getElementById("edit-profile-form");
+
+  // Clear all form fields
+  form.reset();
+  form.dataset.userId = "new";
+  form.dataset.mode = "new";
+
+  // Clear cuisine checkboxes
+  document.querySelectorAll('input[name="cuisine-checkbox"]').forEach(cb => cb.checked = false);
+
+  // Update modal title
+  const titleEl = document.querySelector(".modal-dialog h2") || document.querySelector(".modal-dialog h3");
+  if (titleEl) titleEl.textContent = "Ajouter un profil";
+
+  // Show modal
+  const modal = document.getElementById("modal-edit-profile");
+  modal.classList.add("open");
+}
+
+/**
  * Open the edit modal for a given user.
  * @param {string} userId - Lowercase user ID (e.g., "florian")
  */
@@ -498,9 +521,11 @@ function saveProfileData(userId, formData) {
 
   const updatedProfile = {
     ...profilesData[userId],
+    User: userId,
     Taille_cm: formData["Taille_cm"],
     Poids_kg: formData["Poids_kg"],
     Âge: formData["Âge"],
+    Sexe: formData["Sexe"],
     Activité: formData["Activité"],
     Objectif: formData["Objectif"],
     Régime: formData["Régime"],
@@ -508,7 +533,8 @@ function saveProfileData(userId, formData) {
     Durée_max_prep: formData["Durée_max_prep"],
     Cuisines_JSON: JSON.stringify(cuisines),
     Allergies_JSON: JSON.stringify(allergies),
-    Aversions_JSON: JSON.stringify(aversions)
+    Aversions_JSON: JSON.stringify(aversions),
+    Calories_cible: formData["Calories_cible"]
   };
 
   // Save to localStorage
@@ -518,6 +544,83 @@ function saveProfileData(userId, formData) {
   profilesData[userId] = updatedProfile;
 
   console.log(`Profile saved for user: ${userId}`);
+
+  // Sync to Sheets if authenticated
+  if (typeof isAuthenticated === "function" && isAuthenticated()) {
+    syncProfileToSheets(userId, updatedProfile);
+  }
+}
+
+/**
+ * Sync profile data to Google Sheets (new or update existing)
+ * @param {string} userId
+ * @param {object} profile - Complete profile object with Calories_cible
+ */
+async function syncProfileToSheets(userId, profile) {
+  if (!window.SheetsAPI) {
+    console.warn("Profils: SheetsAPI not available, skipping Sheets sync");
+    return;
+  }
+
+  try {
+    const token = window.getAccessToken ? window.getAccessToken() : null;
+    if (!token) {
+      console.warn("Profils: No OAuth token, cannot sync to Sheets");
+      return;
+    }
+
+    // Check if profile exists in Sheets (by User column)
+    const existingRows = await window.SheetsAPI.readSheetTab("Profils");
+    const objects = window.SheetsAPI.rowsToObjects(existingRows);
+    const existingProfile = objects.find(p => (p.User || "").toLowerCase() === userId.toLowerCase());
+
+    if (existingProfile) {
+      // Update existing profile row
+      const rowNum = objects.indexOf(existingProfile) + 2; // +2 for header row
+
+      // Update key columns
+      const updates = {
+        "C": profile.Taille_cm,
+        "D": profile.Poids_kg,
+        "E": profile.Âge,
+        "F": profile.Sexe,
+        "G": profile.Activité,
+        "H": profile.Objectif,
+        "I": profile.Régime,
+        "O": profile.Calories_cible
+      };
+
+      for (const [col, value] of Object.entries(updates)) {
+        const range = `Profils!${col}${rowNum}`;
+        await window.SheetsAPI.updateSheetCell(range, value, token);
+      }
+      console.log(`Profils: Updated ${userId} in Sheets`);
+    } else {
+      // Add new profile row
+      const row = [
+        userId,
+        profile.Prénom || userId,
+        profile.Taille_cm,
+        profile.Poids_kg,
+        profile.Âge,
+        profile.Sexe,
+        profile.Activité,
+        profile.Objectif,
+        profile.Régime,
+        profile.Allergies_JSON,
+        profile.Aversions_JSON,
+        profile.Cuisines_JSON,
+        profile.Niveau_culinaire,
+        profile.Durée_max_prep,
+        profile.Calories_cible
+      ];
+
+      await window.SheetsAPI.appendRowWithToken("Profils", row, token);
+      console.log(`Profils: Added ${userId} to Sheets`);
+    }
+  } catch (err) {
+    console.error("Profils: Failed to sync to Sheets:", err);
+  }
 }
 
 /**
@@ -591,6 +694,7 @@ function setupModalHandlers() {
       "Taille_cm": document.getElementById("field-taille").value,
       "Poids_kg": document.getElementById("field-poids").value,
       "Âge": document.getElementById("field-age").value,
+      "Sexe": document.getElementById("field-sexe").value,
       "Activité": document.getElementById("field-activite").value,
       "Objectif": document.getElementById("field-objectif").value,
       "Régime": document.getElementById("field-regime").value,
@@ -603,10 +707,25 @@ function setupModalHandlers() {
 
     // Validate required fields
     if (!formData["Taille_cm"] || !formData["Poids_kg"] || !formData["Âge"] ||
-        !formData["Activité"] || !formData["Objectif"]) {
+        !formData["Sexe"] || !formData["Activité"] || !formData["Objectif"]) {
       alert("Veuillez remplir tous les champs obligatoires.");
       return;
     }
+
+    // Calculate Calories_cible
+    const heightCm = parseFloat(formData.Taille_cm);
+    const weightKg = parseFloat(formData.Poids_kg);
+    const ageYears = parseFloat(formData.Âge);
+    const sex = formData.Sexe;
+    const activity = formData.Activité;
+    const objectif = formData.Objectif;
+
+    const bmr = Utils.calculateBMR(weightKg, heightCm, ageYears, sex);
+    const tdee = Utils.calculateTDEE(bmr, activity);
+    const caloriesCible = Utils.calculateObjectiveCalories(tdee, objectif);
+
+    formData.Calories_cible = caloriesCible;
+    console.log(`Calculated: BMR=${bmr.toFixed(0)}, TDEE=${tdee.toFixed(0)}, Calories_cible=${caloriesCible}`);
 
     // Save data
     saveProfileData(userId, formData);
