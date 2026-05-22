@@ -156,53 +156,79 @@ function writeSheetTab(tabName, rows) {
 }
 
 /**
- * Update a single cell in a Sheets via Google API.
+ * Update a single cell in Sheets via Google API (requires OAuth2 token).
  * @param {string} range - Cell range (e.g., "Inventory!G2")
  * @param {string} value - Value to set
+ * @param {string} accessToken - OAuth2 access token (optional, uses getAccessToken() if available)
  * @returns {Promise<void>}
  */
-async function updateSheetCell(range, value) {
+async function updateSheetCell(range, value, accessToken) {
   const sheetId = getSheetId();
-  const apiKey = getApiKey();
+  const token = accessToken || (typeof getAccessToken === 'function' ? getAccessToken() : null);
 
-  if (!sheetId || !apiKey) {
-    throw new Error("Sheet ID or API Key not configured");
+  if (!sheetId) {
+    throw new Error("Sheet ID not configured");
   }
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}`;
+  if (!token) {
+    console.warn("updateSheetCell: No access token available, skipping update");
+    return;
+  }
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED`;
   const response = await fetch(url, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({ values: [[value]] })
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to update cell: ${response.statusText}`);
+    const error = await response.json();
+    console.error(`Sheets API update error: ${error.error?.message || response.statusText}`);
+    throw new Error(`Failed to update cell: ${error.error?.message || response.statusText}`);
   }
+
+  console.log(`Updated cell ${range} to "${value}"`);
 }
 
 /**
- * Clear a range in Sheets via Google API.
+ * Clear a range in Sheets via Google API (requires OAuth2 token).
  * @param {string} range - Range to clear (e.g., "Inventory!A2:L2")
+ * @param {string} accessToken - OAuth2 access token (optional, uses getAccessToken() if available)
  * @returns {Promise<void>}
  */
-async function clearSheetRange(range) {
+async function clearSheetRange(range, accessToken) {
   const sheetId = getSheetId();
-  const apiKey = getApiKey();
+  const token = accessToken || (typeof getAccessToken === 'function' ? getAccessToken() : null);
 
-  if (!sheetId || !apiKey) {
-    throw new Error("Sheet ID or API Key not configured");
+  if (!sheetId) {
+    throw new Error("Sheet ID not configured");
   }
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}:clear?key=${apiKey}`;
+  if (!token) {
+    console.warn("clearSheetRange: No access token available, skipping delete");
+    return;
+  }
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}:clear`;
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" }
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    }
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to clear range: ${response.statusText}`);
+    const error = await response.json();
+    console.error(`Sheets API clear error: ${error.error?.message || response.statusText}`);
+    throw new Error(`Failed to clear range: ${error.error?.message || response.statusText}`);
   }
+
+  console.log(`Cleared range ${range}`);
 }
 
 // Export all functions to the window object so they can be used globally (in browser)
