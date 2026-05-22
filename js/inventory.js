@@ -211,6 +211,15 @@ function stopScanner() {
 }
 
 /**
+ * Find existing item by barcode in inventory (including soft-deleted with Qty=0)
+ * @param {string} barcode
+ * @returns {object|null}
+ */
+function findItemByBarcode(barcode) {
+  return inventoryData.find(i => i.Barcode === barcode);
+}
+
+/**
  * Process detected barcode: fetch product data, populate form
  * @param {string} barcode
  */
@@ -235,8 +244,11 @@ async function processBarcodeDetection(barcode) {
   // Show form section
   document.getElementById("add-item-section").style.display = "block";
 
-  // Populate form
-  document.getElementById("field-product-name").value = product.name;
+  // Check if we have this product in inventory (even with Qty=0)
+  const existingItem = findItemByBarcode(barcode);
+
+  // Populate form (use existing item data if available, API as fallback)
+  document.getElementById("field-product-name").value = existingItem?.Produit || product.name;
 
   // Warn if quantity looks suspicious
   if (product.quantity > 100) {
@@ -245,8 +257,10 @@ async function processBarcodeDetection(barcode) {
   }
 
   document.getElementById("field-quantity").value = product.quantity || 1;
-  document.getElementById("field-unit").value = product.unit || "pièce";
-  document.getElementById("field-category").value = product.category || "Autres";
+  // Use existing item's unit/category/price if available, otherwise API defaults
+  document.getElementById("field-unit").value = existingItem?.Unité || product.unit || "pièce";
+  document.getElementById("field-category").value = existingItem?.Catégorie || product.category || "Autres";
+  document.getElementById("field-price").value = existingItem?.Prix || "";
   scannedProductData = product;
 
   // Show product info
