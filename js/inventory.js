@@ -345,7 +345,7 @@ async function addItem(item) {
 
   // Check if product exists by barcode
   if (barcode) {
-    const existing = inventoryData.find(i => i.Barcode === barcode && !i.Consommé);
+    const existing = inventoryData.find(i => i.Barcode === barcode && (parseFloat(i.Qty) || 0) > 0);
     if (existing) {
       // Product exists, add to quantity
       const existingQty = parseFloat(existing.Qty) || 0;
