@@ -437,21 +437,22 @@ async function addItem(item) {
 }
 
 /**
- * Mark item as consumed (updates Sheets if available)
+ * Mark item as consumed (sets Qty to 0, preserves data)
  * @param {string} itemId
  */
 async function markConsumed(itemId) {
   const item = inventoryData.find(i => i.id === itemId);
   if (!item) return;
 
-  item.Consommé = true;
+  // Set quantity to 0 instead of deleting
+  item.Qty = "0";
   saveInventory();
 
   // Update Sheets if row number is available
   if (item.sheetRowNumber && window.SheetsAPI) {
     try {
-      const range = `Inventory!G${item.sheetRowNumber}`; // Column G is "Consommé"
-      await window.SheetsAPI.updateSheetCell(range, "TRUE");
+      const range = `Inventory!B${item.sheetRowNumber}`; // Column B is "Qty"
+      await window.SheetsAPI.updateSheetCell(range, "0");
       console.log(`Marked as consumed in Sheets: row ${item.sheetRowNumber}`);
     } catch (err) {
       console.warn(`Failed to update Sheets for item ${itemId}:`, err);
@@ -462,24 +463,25 @@ async function markConsumed(itemId) {
 }
 
 /**
- * Delete item from inventory (removes from Sheets if available)
+ * Delete item from inventory (sets Qty to 0, preserves data)
  * @param {string} itemId
  */
 async function deleteItem(itemId) {
   const item = inventoryData.find(i => i.id === itemId);
-  const hadSheetRow = item && item.sheetRowNumber;
+  if (!item) return;
 
-  inventoryData = inventoryData.filter(i => i.id !== itemId);
+  // Set quantity to 0 instead of deleting row
+  item.Qty = "0";
   saveInventory();
 
-  // Delete from Sheets if row number is available
-  if (hadSheetRow && window.SheetsAPI) {
+  // Update Sheets if row number is available
+  if (item.sheetRowNumber && window.SheetsAPI) {
     try {
-      const range = `Inventory!A${item.sheetRowNumber}:L${item.sheetRowNumber}`;
-      await window.SheetsAPI.clearSheetRange(range);
-      console.log(`Deleted from Sheets: row ${item.sheetRowNumber}`);
+      const range = `Inventory!B${item.sheetRowNumber}`; // Column B is "Qty"
+      await window.SheetsAPI.updateSheetCell(range, "0");
+      console.log(`Deleted from inventory: row ${item.sheetRowNumber}`);
     } catch (err) {
-      console.warn(`Failed to delete from Sheets for item ${itemId}:`, err);
+      console.warn(`Failed to update Sheets for item ${itemId}:`, err);
     }
   }
 
@@ -498,8 +500,8 @@ function renderInventory() {
   const filterValue = document.getElementById("filter-category").value;
 
   const filtered = filterValue
-    ? inventoryData.filter(item => item.Catégorie === filterValue && !item.Consommé)
-    : inventoryData.filter(item => !item.Consommé);
+    ? inventoryData.filter(item => item.Catégorie === filterValue && (parseFloat(item.Qty) || 0) > 0)
+    : inventoryData.filter(item => (parseFloat(item.Qty) || 0) > 0);
 
   if (filtered.length === 0) {
     container.innerHTML = '<div class="inventory-empty">Aucun article</div>';
