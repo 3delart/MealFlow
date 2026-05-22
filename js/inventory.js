@@ -80,12 +80,14 @@ async function fetchProductFromOpenFoodFacts(barcode) {
     const categoriesStr = product.categories || "";
     const catLower = categoriesStr.toLowerCase();
 
-    // Priority mapping: check most specific first
+    // Priority mapping: check most specific first (Féculents/Starches BEFORE Légumes to avoid matching "blé")
     const categoryMap = [
+      // Starches FIRST (before vegetables)
+      { patterns: ["féculents", "riz", "pâtes", "pain", "pasta", "céréales"], category: "Féculents" },
       // Dairy
       { patterns: ["fromage", "yaourt", "lait", "beurre", "crème"], category: "Produits laitiers" },
-      // Vegetables (check before fruits to avoid confusion)
-      { patterns: ["maïs", "légume", "vegetable", "corn", "blé", "carotte", "brocoli", "épinard", "poele", "poêle"], category: "Légumes" },
+      // Vegetables (after starches to avoid "blé" confusion)
+      { patterns: ["maïs", "légume", "vegetable", "corn", "carotte", "brocoli", "épinard", "poele", "poêle"], category: "Légumes" },
       // Fruits
       { patterns: ["fruit", "pomme", "banane", "orange", "raisin"], category: "Fruits" },
       // Meat
@@ -94,14 +96,12 @@ async function fetchProductFromOpenFoodFacts(barcode) {
       { patterns: ["poisson", "fish", "saumon", "trout"], category: "Poissons" },
       // Eggs
       { patterns: ["œuf", "egg"], category: "Œufs" },
-      // Starches
-      { patterns: ["féculents", "riz", "pâtes", "pain", "pasta"], category: "Féculents" },
       // Canned/Conserves
       { patterns: ["conserve", "canned", "en boîte", "en conserve"], category: "Conserves" },
       // Spices & Condiments
       { patterns: ["épice", "condiment", "sauce", "sirop"], category: "Épices & Condiments" },
       // Drinks
-      { patterns: ["boisson", "drink", "jus", "lait"], category: "Boissons" }
+      { patterns: ["boisson", "drink", "jus"], category: "Boissons" }
     ];
 
     for (const map of categoryMap) {
@@ -232,6 +232,13 @@ async function processBarcodeDetection(barcode) {
 
   // Populate form
   document.getElementById("field-product-name").value = product.name;
+
+  // Warn if quantity looks suspicious
+  if (product.quantity > 100) {
+    console.warn(`⚠️ Suspicious quantity from API: ${product.quantity} ${product.unit}. User should verify.`);
+    status.textContent += ` ⚠️ Vérifiez la quantité`;
+  }
+
   document.getElementById("field-quantity").value = product.quantity || 1;
   document.getElementById("field-unit").value = product.unit || "pièce";
   document.getElementById("field-category").value = product.category || "Autres";
@@ -328,6 +335,14 @@ async function addItem(item) {
   const barcode = scannedProductData?.barcode || "";
   const quantity = parseFloat(item.quantity) || 0;
 
+  // Validate quantity (flag suspicious values)
+  if (quantity > 1000) {
+    const confirmed = confirm(`⚠️ Quantité suspecte: ${quantity} ${item.unit}\n\nContinuer?`);
+    if (!confirmed) {
+      return;
+    }
+  }
+
   // Check if product exists by barcode
   if (barcode) {
     const existing = inventoryData.find(i => i.Barcode === barcode && !i.Consommé);
@@ -345,11 +360,16 @@ async function addItem(item) {
       saveInventory();
 
       // Sync update to Sheets
-      if (typeof isAuthenticated === "function" && isAuthenticated()) {
-        const token = getAccessToken();
-        const range = `Inventory!B${existing.sheetRowNumber}`;
-        SheetsAPI.updateSheetCell(range, existing.Qty, token)
-          .catch(err => console.error("Failed to update Sheets:", err));
+      if (typeof isAuthenticated === "function" && isAuthenticated() && window.SheetsAPI) {
+        try {
+          const token = getAccessToken();
+          const range = `Inventory!B${existing.sheetRowNumber}`;
+          window.SheetsAPI.updateSheetCell(range, existing.Qty, token)
+            .then(() => console.log("Updated Sheets with new quantity"))
+            .catch(err => console.error("Failed to update Sheets:", err));
+        } catch (err) {
+          console.error("Error updating Sheets:", err);
+        }
       }
 
       scannedProductData = null;
