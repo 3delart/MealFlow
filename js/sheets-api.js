@@ -145,6 +145,24 @@ async function appendRowWithToken(tabName, row, accessToken) {
 }
 
 /**
+ * Append a consumption record to the History sheet
+ * @param {string} historyTab - The history sheet tab name (e.g., "History_florian" or "History_naomi")
+ * @param {string} date - The date of consumption
+ * @param {string} productName - Name of the product consumed
+ * @param {number} quantity - Quantity consumed
+ * @param {string} unit - Unit of measurement (e.g., "g", "ml", "piece")
+ * @param {number} caloriesPer100g - Calories per 100g/ml of the product
+ * @param {number} totalCalories - Total calories for this consumption
+ * @param {string} type - Type of consumption ("meal" or "grignottage")
+ * @param {string} accessToken - OAuth2 access token
+ * @returns {Promise<Object>} API response from appendRowWithToken
+ */
+async function appendConsumptionRecord(historyTab, date, productName, quantity, unit, caloriesPer100g, totalCalories, type, accessToken) {
+  const rowData = [date, productName, quantity, unit, caloriesPer100g, totalCalories, type];
+  return appendRowWithToken(historyTab, rowData, accessToken);
+}
+
+/**
  * Writes data to a Google Sheet tab
  * @param {string} tabName - The sheet tab name
  * @param {Array<Array>} rows - Array of rows to write
@@ -238,6 +256,7 @@ if (typeof window !== 'undefined') {
     rowsToObjects,
     writeSheetTab,
     appendRowWithToken,
+    appendConsumptionRecord,
     updateSheetCell,
     clearSheetRange
   };
