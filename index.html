@@ -8,11 +8,18 @@
   <link rel="stylesheet" href="css/accueil.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    .auth-buttons { position: fixed; top: 10px; right: 10px; display: flex; gap: 8px; z-index: 100; }
+  </style>
 </head>
 <body>
   <header>
     <div>
       <h1>🍽️ MealFlow</h1>
+    </div>
+    <div class="auth-buttons">
+      <div id="google-login-btn"></div>
+      <button id="google-logout-btn" type="button" class="btn btn-secondary" onclick="logoutGoogle()" style="display: none;">Logout</button>
     </div>
   </header>
 
@@ -100,6 +107,7 @@
   </nav>
 
   <script src="js/user-context.js"></script>
+  <script src="js/google-auth.js"></script>
   <script src="js/sheets-api.js"></script>
   <script src="js/accueil.js"></script>
 </body>
