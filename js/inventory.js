@@ -78,29 +78,35 @@ async function fetchProductFromOpenFoodFacts(barcode) {
     // Extract category from categories string
     let category = "Autres";
     const categoriesStr = product.categories || "";
-    const categoryMap = {
-      "fruits": "Fruits",
-      "légumes": "Légumes",
-      "produits laitiers": "Produits laitiers",
-      "fromage": "Produits laitiers",
-      "yaourt": "Produits laitiers",
-      "viandes": "Viandes",
-      "poissons": "Poissons",
-      "œufs": "Œufs",
-      "féculents": "Féculents",
-      "riz": "Féculents",
-      "pâtes": "Féculents",
-      "pain": "Féculents",
-      "conserves": "Conserves",
-      "conservé": "Conserves",
-      "épices": "Épices & Condiments",
-      "condiments": "Épices & Condiments",
-      "boissons": "Boissons"
-    };
+    const catLower = categoriesStr.toLowerCase();
 
-    for (const [key, value] of Object.entries(categoryMap)) {
-      if (categoriesStr.toLowerCase().includes(key)) {
-        category = value;
+    // Priority mapping: check most specific first
+    const categoryMap = [
+      // Dairy
+      { patterns: ["fromage", "yaourt", "lait", "beurre", "crème"], category: "Produits laitiers" },
+      // Vegetables (check before fruits to avoid confusion)
+      { patterns: ["maïs", "légume", "vegetable", "corn", "blé", "carotte", "brocoli", "épinard", "poele", "poêle"], category: "Légumes" },
+      // Fruits
+      { patterns: ["fruit", "pomme", "banane", "orange", "raisin"], category: "Fruits" },
+      // Meat
+      { patterns: ["viande", "meat", "poulet", "boeuf", "porc"], category: "Viandes" },
+      // Fish
+      { patterns: ["poisson", "fish", "saumon", "trout"], category: "Poissons" },
+      // Eggs
+      { patterns: ["œuf", "egg"], category: "Œufs" },
+      // Starches
+      { patterns: ["féculents", "riz", "pâtes", "pain", "pasta"], category: "Féculents" },
+      // Canned/Conserves
+      { patterns: ["conserve", "canned", "en boîte", "en conserve"], category: "Conserves" },
+      // Spices & Condiments
+      { patterns: ["épice", "condiment", "sauce", "sirop"], category: "Épices & Condiments" },
+      // Drinks
+      { patterns: ["boisson", "drink", "jus", "lait"], category: "Boissons" }
+    ];
+
+    for (const map of categoryMap) {
+      if (map.patterns.some(p => catLower.includes(p))) {
+        category = map.category;
         break;
       }
     }
@@ -280,7 +286,9 @@ async function loadInventory() {
         Catégorie: row["Catégorie"] || "Autres",
         Date_ajout: row["Date_ajout"] || Utils.getTodayISO(),
         Péremption: row["Péremption"] || "",
-        Consommé: row["Consommé"] === "TRUE" || row["Consommé"] === true
+        Consommé: row["Consommé"] === "TRUE" || row["Consommé"] === true,
+        Barcode: row["Barcode"] || "",
+        Prix: row["Prix"] || ""
       }));
       console.log("Inventory loaded from Sheets:", inventoryData.length, "items");
       return;
@@ -313,19 +321,57 @@ function saveInventory() {
 }
 
 /**
- * Add new item to inventory
+ * Add new item to inventory (or add to existing if barcode exists)
  * @param {Object} item - Inventory item
  */
 async function addItem(item) {
+  const barcode = scannedProductData?.barcode || "";
+  const quantity = parseFloat(item.quantity) || 0;
+
+  // Check if product exists by barcode
+  if (barcode) {
+    const existing = inventoryData.find(i => i.Barcode === barcode && !i.Consommé);
+    if (existing) {
+      // Product exists, add to quantity
+      const existingQty = parseFloat(existing.Qty) || 0;
+      existing.Qty = (existingQty + quantity).toString();
+
+      // Update price if provided
+      if (item.price) {
+        existing.Prix = item.price;
+      }
+
+      console.log(`Added ${quantity} to existing ${existing.Produit}: new qty = ${existing.Qty}`);
+      saveInventory();
+
+      // Sync update to Sheets
+      if (typeof isAuthenticated === "function" && isAuthenticated()) {
+        const token = getAccessToken();
+        const range = `Inventory!B${existing.sheetRowNumber}`;
+        SheetsAPI.updateSheetCell(range, existing.Qty, token)
+          .catch(err => console.error("Failed to update Sheets:", err));
+      }
+
+      scannedProductData = null;
+      document.getElementById("add-item-form").reset();
+      document.getElementById("product-info").style.display = "none";
+      renderInventory();
+      return;
+    }
+  }
+
+  // New product - create new item
   const newItem = {
     id: Date.now(),
     Produit: item.product_name,
-    Qty: item.quantity,
+    Qty: quantity.toString(),
     Unité: item.unit,
     Catégorie: item.category,
     Date_ajout: Utils.getTodayISO(),
     Péremption: item.expiry_date,
     Consommé: false,
+    Barcode: barcode,
+    Prix: item.price || "",
     calories_per_100: scannedProductData?.calories || null,
     proteins: scannedProductData?.proteins || null,
     fats: scannedProductData?.fats || null,
@@ -347,6 +393,8 @@ async function addItem(item) {
       newItem.Date_ajout,
       newItem.Péremption,
       newItem.Consommé,
+      newItem.Barcode,
+      newItem.Prix,
       newItem.calories_per_100,
       newItem.proteins,
       newItem.fats,
@@ -638,7 +686,8 @@ function setupEventHandlers() {
       quantity: document.getElementById("field-quantity").value,
       unit: document.getElementById("field-unit").value,
       category: document.getElementById("field-category").value,
-      expiry_date: document.getElementById("field-expiry").value
+      expiry_date: document.getElementById("field-expiry").value,
+      price: document.getElementById("field-price").value || ""
     };
 
     if (!formData.product_name || !formData.quantity || !formData.unit || !formData.category || !formData.expiry_date) {
