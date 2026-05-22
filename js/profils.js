@@ -349,9 +349,15 @@ function renderProfileCard(userId) {
   metaGroup.className = "stat-group";
   metaGroup.appendChild(createStatItem("BMR", fmt(bmr, "kcal"), "Métabolisme de base"));
   metaGroup.appendChild(createStatItem("TDEE", fmt(tdee, "kcal"), "Dépense totale"));
-  metaGroup.appendChild(createStatItem("Objectif", fmt(calorieTarget, "kcal"), objectif));
   metaGroup.appendChild(createStatItem("Activité", activite));
   body.appendChild(createSection("Métabolisme", metaGroup));
+
+  // Objectif
+  const objGroup = document.createElement("div");
+  objGroup.className = "stat-group";
+  objGroup.appendChild(createStatItem("Objectif de base", objectif));
+  objGroup.appendChild(createStatItem("Cible quotidienne", fmt(calorieTarget, "kcal")));
+  body.appendChild(createSection("Objectif", objGroup));
 
   // Preferences
   const prefGroup = document.createElement("div");
@@ -429,9 +435,14 @@ function openNewProfileModal() {
   // Clear cuisine checkboxes
   document.querySelectorAll('input[name="cuisine-checkbox"]').forEach(cb => cb.checked = false);
 
+  // Show Prénom field for new profile
+  const premomGroup = document.getElementById("field-prenom-group");
+  if (premomGroup) premomGroup.style.display = "block";
+  const premomInput = document.getElementById("field-prenom");
+  if (premomInput) premomInput.required = true;
+
   // Update modal title
-  const titleEl = document.querySelector(".modal-dialog h2") || document.querySelector(".modal-dialog h3");
-  if (titleEl) titleEl.textContent = "Ajouter un profil";
+  document.getElementById("modal-title").textContent = "Ajouter un profil";
 
   // Show modal
   const modal = document.getElementById("modal-edit-profile");
@@ -460,11 +471,18 @@ function openEditModal(userId) {
   document.getElementById("field-taille").value = profile["Taille_cm"] || "";
   document.getElementById("field-poids").value = profile["Poids_kg"] || "";
   document.getElementById("field-age").value = profile["Âge"] || "";
+  document.getElementById("field-sexe").value = profile["Sexe"] || "";
   document.getElementById("field-activite").value = profile["Activité"] || "";
   document.getElementById("field-objectif").value = profile["Objectif"] || "";
   document.getElementById("field-regime").value = profile["Régime"] || "";
   document.getElementById("field-niveau").value = profile["Niveau_culinaire"] || "";
   document.getElementById("field-duree").value = profile["Durée_max_prep"] || "";
+
+  // Hide Prénom field in edit mode
+  const premomGroup = document.getElementById("field-prenom-group");
+  if (premomGroup) premomGroup.style.display = "none";
+  const premomInput = document.getElementById("field-prenom");
+  if (premomInput) premomInput.required = false;
 
   // Check appropriate cuisine checkboxes
   const cuisines = parseArrayField(profile["Cuisines_JSON"]);
@@ -480,8 +498,9 @@ function openEditModal(userId) {
   const aversions = parseArrayField(profile["Aversions_JSON"]);
   document.getElementById("field-aversions").value = aversions.join(", ");
 
-  // Store current user ID in form for submission handler
+  // Store current user ID and mode in form for submission handler
   form.dataset.userId = userId;
+  form.dataset.mode = "edit";
 
   // Show modal
   modal.classList.add("open");
@@ -522,6 +541,7 @@ function saveProfileData(userId, formData) {
   const updatedProfile = {
     ...profilesData[userId],
     User: userId,
+    Prénom: formData["Prénom"],
     Taille_cm: formData["Taille_cm"],
     Poids_kg: formData["Poids_kg"],
     Âge: formData["Âge"],
@@ -679,7 +699,19 @@ function setupModalHandlers() {
   form.addEventListener("submit", function(e) {
     e.preventDefault();
 
-    const userId = form.dataset.userId;
+    let userId = form.dataset.userId;
+    const mode = form.dataset.mode || "edit";
+
+    // Handle new profile mode
+    if (mode === "new" || userId === "new") {
+      const prenom = document.getElementById("field-prenom").value.trim();
+      if (!prenom) {
+        alert("Veuillez entrer un prénom/nom d'utilisateur.");
+        return;
+      }
+      userId = prenom.toLowerCase().split(/\s+/)[0]; // Use first word, lowercase
+    }
+
     if (!userId) {
       console.error("Form user ID not set");
       return;
@@ -691,6 +723,7 @@ function setupModalHandlers() {
 
     // Collect form data
     const formData = {
+      "Prénom": mode === "new" ? document.getElementById("field-prenom").value : (profilesData[userId]?.Prénom || userId),
       "Taille_cm": document.getElementById("field-taille").value,
       "Poids_kg": document.getElementById("field-poids").value,
       "Âge": document.getElementById("field-age").value,
@@ -736,13 +769,18 @@ function setupModalHandlers() {
     // Re-render profiles
     const container = document.getElementById("profiles-container");
     container.innerHTML = "";
-    const orderedUsers = ["florian", "naomi"];
+    const preferredOrder = ["florian", "naomi"];
+    const orderedUsers = preferredOrder.filter(u => profilesData[u]);
+    // Add any new profiles not in preferred order
+    Object.keys(profilesData).forEach(u => {
+      if (!orderedUsers.includes(u)) {
+        orderedUsers.push(u);
+      }
+    });
     orderedUsers.forEach(u => {
-      if (profilesData[u]) {
-        const card = renderProfileCard(u);
-        if (card) {
-          container.appendChild(card);
-        }
+      const card = renderProfileCard(u);
+      if (card) {
+        container.appendChild(card);
       }
     });
 

@@ -30,6 +30,12 @@
       <button class="modal-close" aria-label="Fermer">&times;</button>
       <h2 id="modal-title">Modification du profil</h2>
       <form id="edit-profile-form" class="edit-profile-form">
+        <!-- Name (new profile only) -->
+        <div class="form-group" id="field-prenom-group" style="display: none;">
+          <label for="field-prenom">Prénom / Nom d'utilisateur</label>
+          <input type="text" id="field-prenom" name="Prénom" placeholder="ex. Florian">
+        </div>
+
         <!-- Measurements -->
         <fieldset>
           <legend>Mensurations</legend>
