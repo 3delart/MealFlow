@@ -546,9 +546,124 @@ function initializeGrignottageMode() {
         if (pickSection) pickSection.classList.remove("hidden");
         // Stop scanner when switching away from scan mode
         stopScanner();
+        // Populate inventory list for pick mode
+        pickInventoryProduct();
       }
     });
   });
+}
+
+/**
+ * Populates the pick-mode-section with active inventory items.
+ * Creates a dropdown/list of products with Qty > 0.
+ * On product select: logs selection and prepares for renderGrignottageForm (Task 5).
+ */
+function pickInventoryProduct() {
+  const inventoryList = document.getElementById("inventory-list");
+  if (!inventoryList) return;
+
+  // Get active items from inventory
+  if (!window.InventoryAPI || !window.InventoryAPI.getActiveItems) {
+    inventoryList.innerHTML = '<div style="color: var(--color-text-light); padding: var(--spacing-md);">❌ Inventaire non disponible</div>';
+    console.warn("pickInventoryProduct: InventoryAPI.getActiveItems not available");
+    return;
+  }
+
+  const activeItems = window.InventoryAPI.getActiveItems();
+
+  if (activeItems.length === 0) {
+    inventoryList.innerHTML = '<div style="color: var(--color-text-light); padding: var(--spacing-md);">📭 Aucun produit en inventaire</div>';
+    return;
+  }
+
+  // Build dropdown/list of products grouped by category
+  let html = '<div style="display: flex; flex-direction: column; gap: var(--spacing-md);">';
+  let currentCategory = null;
+
+  activeItems.forEach(item => {
+    // Add category header if changed
+    if (item.category !== currentCategory) {
+      if (currentCategory !== null) {
+        html += '</div>'; // Close previous category group
+      }
+      currentCategory = item.category;
+      html += `<div style="margin-top: 8px;"><div style="font-weight: bold; color: var(--color-primary); font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px;">${item.category}</div>`;
+    }
+
+    // Product item
+    const calorieInfo = item.calories_per_100 ? ` | ${item.calories_per_100} kcal/100` : '';
+    html += `
+      <div style="
+        padding: var(--spacing-md);
+        margin: 6px 0;
+        background-color: var(--color-bg);
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      "
+      class="inventory-pick-item"
+      data-item-id="${item.id}"
+      data-item-name="${item.name}"
+      onclick="selectProductForGrignottage(this)">
+        <strong style="display: block; margin-bottom: 4px;">${item.name}</strong>
+        <div style="font-size: 0.85em; color: var(--color-text-light);">
+          ${item.qty} ${item.unit}${calorieInfo}
+        </div>
+      </div>
+    `;
+  });
+
+  if (currentCategory !== null) {
+    html += '</div>'; // Close last category group
+  }
+  html += '</div>';
+
+  inventoryList.innerHTML = html;
+
+  // Add hover effects
+  document.querySelectorAll('.inventory-pick-item').forEach(el => {
+    el.addEventListener('mouseenter', function() {
+      this.style.backgroundColor = 'var(--color-primary)';
+      this.style.color = 'white';
+    });
+    el.addEventListener('mouseleave', function() {
+      this.style.backgroundColor = 'var(--color-bg)';
+      this.style.color = 'inherit';
+    });
+  });
+}
+
+/**
+ * Handles product selection in pick mode.
+ * Calls renderGrignottageForm (to be created in Task 5) with selected product data.
+ * For now, logs selection and shows alert.
+ * @param {HTMLElement} element - The clicked product element
+ */
+function selectProductForGrignottage(element) {
+  const itemId = element.getAttribute('data-item-id');
+  const itemName = element.getAttribute('data-item-name');
+
+  if (!window.InventoryAPI) {
+    console.error("selectProductForGrignottage: InventoryAPI not available");
+    return;
+  }
+
+  // Find full item data
+  const allItems = window.InventoryAPI.getData();
+  const selectedProduct = allItems.find(i => i.id === itemId);
+
+  if (!selectedProduct) {
+    console.error(`selectProductForGrignottage: Item ${itemId} not found`);
+    return;
+  }
+
+  console.log("Selected product for grignottage:", selectedProduct);
+
+  // TODO (Task 5): Call renderGrignottageForm(selectedProduct) once it's created
+  // For now, just show alert and log
+  alert(`Sélectionné: ${itemName}`);
+  console.log("Preparing grignottage form for product:", selectedProduct);
 }
 
 /**

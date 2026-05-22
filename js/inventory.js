@@ -987,6 +987,35 @@ window.InventoryAPI = {
       const isActive = activeOnly ? (parseFloat(item.Qty) || 0) > 0 : true;
       return matches && isActive;
     });
+  },
+
+  /**
+   * Get all inventory items with Qty > 0, sorted by category then name
+   * Returns only essential fields: name, barcode, category, calories_per_100, unit
+   * Parses Qty string to number for comparison
+   * @returns {array} Active items with selected fields
+   */
+  getActiveItems: () => {
+    return inventoryData
+      .filter(item => {
+        const qtyNum = parseFloat(item.Qty) || 0;
+        return qtyNum > 0;
+      })
+      .map(item => ({
+        id: item.id,
+        name: item.Produit,
+        barcode: item.Barcode,
+        category: item.Catégorie,
+        calories_per_100: item.calories_per_100,
+        unit: item.Unité,
+        qty: parseFloat(item.Qty) || 0
+      }))
+      .sort((a, b) => {
+        if (a.category !== b.category) {
+          return a.category.localeCompare(b.category, 'fr');
+        }
+        return a.name.localeCompare(b.name, 'fr');
+      });
   }
 };
 
