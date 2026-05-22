@@ -504,6 +504,44 @@ function checkDateChange() {
    INITIALIZATION
    ============================================================================ */
 
+/**
+ * Ensures the History sheet for the current user exists.
+ * If the sheet doesn't exist, creates it with the header row.
+ * @param {string} user - The current user (e.g., "florian" or "naomi")
+ * @param {string} token - OAuth2 access token
+ * @returns {Promise<void>}
+ */
+async function ensureHistorySheetExists(user, token) {
+  const sheetName = `History_${user}`;
+
+  try {
+    // Attempt to read the sheet to check if it exists
+    await readSheetTab(sheetName);
+    console.log(`Accueil: History sheet "${sheetName}" already exists`);
+  } catch (error) {
+    // Sheet doesn't exist, create it with header row
+    console.log(`Accueil: Creating history sheet "${sheetName}"`);
+
+    const headerRow = [
+      "Date",
+      "Product",
+      "Quantity",
+      "Unit",
+      "Calories_per_100g",
+      "Total_calories",
+      "Type"
+    ];
+
+    try {
+      await appendRowWithToken(sheetName, headerRow, token);
+      console.log(`Accueil: History sheet "${sheetName}" created successfully`);
+    } catch (appendError) {
+      console.error(`Accueil: Failed to create history sheet "${sheetName}":`, appendError);
+      // Don't throw - user can still use app, just won't sync to Sheets
+    }
+  }
+}
+
 async function initAccueil() {
   AccueilState.lastDateChecked = getTodayISO();
 
@@ -535,6 +573,15 @@ async function initAccueil() {
   renderGreeting();
   renderMeals();
   updateProgressDisplay();
+
+  // Ensure History sheet exists for current user
+  const currentUser = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
+  const accessToken = getAccessToken();
+  if (accessToken) {
+    await ensureHistorySheetExists(currentUser, accessToken);
+  } else {
+    console.warn("Accueil: No OAuth token available. History sheet sync disabled.");
+  }
 
   // Initialize search (searches within meal names)
   initializeSearch();
