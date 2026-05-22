@@ -266,16 +266,25 @@ function updateProgressDisplay() {
 
 /**
  * Saves meals state (eaten status) to localStorage, separated by user and date.
+ * Includes quantity and unit for snacks (grignottage items).
  */
 function saveMealsState() {
   try {
     const user = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
     const today = getTodayISO();
-    const stateToSave = AccueilState.todayMeals.map(m => ({
-      mealType: m.mealType,
-      eaten: m.eaten,
-      actualKcal: m.actualKcal,
-    }));
+    const stateToSave = AccueilState.todayMeals.map(m => {
+      const saved = {
+        mealType: m.mealType,
+        eaten: m.eaten,
+        actualKcal: m.actualKcal,
+      };
+      // Include quantity and unit for snacks
+      if (m.mealType === "grignottage" && m.quantity !== undefined && m.unit) {
+        saved.quantity = m.quantity;
+        saved.unit = m.unit;
+      }
+      return saved;
+    });
     localStorage.setItem(`mealflow:meals:${user}:${today}`, JSON.stringify(stateToSave));
     localStorage.setItem(`mealflow:consumed:${user}:${today}`, String(AccueilState.caloriesConsumed));
   } catch (err) {
@@ -285,6 +294,7 @@ function saveMealsState() {
 
 /**
  * Loads meals state (eaten status) from localStorage, separated by user and date.
+ * Restores quantity and unit for snacks (grignottage items).
  */
 function loadMealsState() {
   const user = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
@@ -300,6 +310,11 @@ function loadMealsState() {
         if (meal) {
           meal.eaten = saved.eaten;
           meal.actualKcal = saved.actualKcal || meal.estimatedKcal;
+          // Restore quantity and unit for snacks
+          if (meal.mealType === "grignottage" && saved.quantity !== undefined && saved.unit) {
+            meal.quantity = saved.quantity;
+            meal.unit = saved.unit;
+          }
         }
       });
     } catch (err) {
