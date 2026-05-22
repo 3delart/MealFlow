@@ -763,17 +763,95 @@ function createInventoryItemElement(item) {
   const actionsDiv = document.createElement("div");
   actionsDiv.className = "inventory-item-actions";
 
+  const editBtn = document.createElement("button");
+  editBtn.className = "btn-edit";
+  editBtn.textContent = "✏️ Corriger";
+  editBtn.addEventListener("click", () => openEditModal(item));
+
   const consumeBtn = document.createElement("button");
   consumeBtn.className = "btn-consume";
   consumeBtn.textContent = "✓ Consommer/Supprimer";
   consumeBtn.addEventListener("click", () => reduceQuantity(item.id, item.Qty, item.Produit));
 
+  actionsDiv.appendChild(editBtn);
   actionsDiv.appendChild(consumeBtn);
 
   div.appendChild(mainDiv);
   div.appendChild(actionsDiv);
 
   return div;
+}
+
+// ============================================================================
+// EDIT MODAL
+// ============================================================================
+
+/**
+ * Open edit modal and populate with item data
+ * @param {object} item - Item to edit
+ */
+function openEditModal(item) {
+  const modal = document.getElementById("edit-modal");
+  document.getElementById("edit-product-name").value = item.Produit;
+  document.getElementById("edit-quantity").value = item.Qty;
+  document.getElementById("edit-unit").value = item.Unité;
+  document.getElementById("edit-date-added").value = item.Date_ajout;
+  document.getElementById("edit-expiry").value = item.Péremption;
+  document.getElementById("edit-price").value = item.Prix || "";
+  modal.setAttribute("aria-hidden", "false");
+  modal.classList.remove("hidden");
+  modal.setAttribute("data-item-id", item.id);
+}
+
+/**
+ * Close edit modal
+ */
+function closeEditModal() {
+  const modal = document.getElementById("edit-modal");
+  modal.setAttribute("aria-hidden", "true");
+  modal.classList.add("hidden");
+  modal.removeAttribute("data-item-id");
+}
+
+/**
+ * Save edited item
+ */
+async function saveEditedItem(e) {
+  e.preventDefault();
+
+  const itemId = document.getElementById("edit-modal").getAttribute("data-item-id");
+  const item = inventoryData.find(i => i.id === itemId);
+  if (!item) return;
+
+  const updatedData = {
+    Qty: document.getElementById("edit-quantity").value,
+    Unité: document.getElementById("edit-unit").value,
+    Date_ajout: document.getElementById("edit-date-added").value,
+    Péremption: document.getElementById("edit-expiry").value,
+    Prix: document.getElementById("edit-price").value || ""
+  };
+
+  Object.assign(item, updatedData);
+  saveInventory();
+
+  // Sync to Sheets if authenticated and row number exists
+  if (typeof isAuthenticated === "function" && isAuthenticated() && item.sheetRowNumber) {
+    const token = getAccessToken();
+    const sheetRange = `Inventory!D${item.sheetRowNumber}`;
+    try {
+      await SheetsAPI.updateSheetCell(sheetRange, item.Qty, token);
+      await SheetsAPI.updateSheetCell(`Inventory!E${item.sheetRowNumber}`, item.Unité, token);
+      await SheetsAPI.updateSheetCell(`Inventory!F${item.sheetRowNumber}`, item.Date_ajout, token);
+      await SheetsAPI.updateSheetCell(`Inventory!G${item.sheetRowNumber}`, item.Péremption, token);
+      await SheetsAPI.updateSheetCell(`Inventory!H${item.sheetRowNumber}`, item.Prix, token);
+      console.log("Item updated in Sheets");
+    } catch (err) {
+      console.error("Failed to update Sheets:", err);
+    }
+  }
+
+  closeEditModal();
+  renderInventory();
 }
 
 // ============================================================================
@@ -831,6 +909,14 @@ function setupEventHandlers() {
 
   // Category filter
   document.getElementById("filter-category").addEventListener("change", renderInventory);
+
+  // Edit form submission
+  document.getElementById("edit-form").addEventListener("submit", saveEditedItem);
+
+  // Close modal when clicking outside
+  document.getElementById("edit-modal").addEventListener("click", function(e) {
+    if (e.target === this) closeEditModal();
+  });
 }
 
 /**
