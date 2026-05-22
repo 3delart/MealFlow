@@ -678,7 +678,7 @@ function createInventoryItemElement(item) {
     div.classList.add("expiring-soon");
   }
 
-  // Header: name + category
+  // Header: name + price
   const headerDiv = document.createElement("div");
   headerDiv.className = "inventory-item-header";
 
@@ -686,12 +686,12 @@ function createInventoryItemElement(item) {
   nameH3.className = "inventory-item-name";
   nameH3.textContent = item.Produit;
 
-  const categorySpan = document.createElement("span");
-  categorySpan.className = "inventory-item-category";
-  categorySpan.textContent = item.Catégorie;
+  const priceSpan = document.createElement("span");
+  priceSpan.className = "inventory-item-price";
+  priceSpan.textContent = item.Prix ? `${item.Prix}€` : "—";
 
   headerDiv.appendChild(nameH3);
-  headerDiv.appendChild(categorySpan);
+  headerDiv.appendChild(priceSpan);
 
   // Content: quantity, calories, macros, allergens
   const contentDiv = document.createElement("div");

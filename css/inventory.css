@@ -303,13 +303,12 @@ section h2 {
   margin: 0;
 }
 
-.inventory-item-category {
+.inventory-item-price {
   display: inline-block;
-  font-size: 11px;
-  padding: 2px 8px;
-  background-color: var(--color-bg);
-  color: var(--color-text-light);
-  border-radius: 12px;
+  font-size: 14px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  padding: 0;
 }
 
 .inventory-item-content {
