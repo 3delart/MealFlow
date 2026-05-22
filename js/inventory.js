@@ -273,6 +273,69 @@ async function processBarcodeDetection(barcode) {
 // ============================================================================
 
 /**
+ * Auto-sort Inventory sheet by Catégorie column
+ * @param {string} accessToken - OAuth2 access token
+ */
+async function sortSheetByCategory(accessToken) {
+  if (!window.SheetsAPI || !accessToken) return;
+
+  try {
+    const sheetId = window.SheetsAPI.getSheetId ? window.SheetsAPI.getSheetId() : null;
+    if (!sheetId) {
+      console.warn("Sheet ID not available for sorting");
+      return;
+    }
+
+    // Get current sheet data to find last row
+    const rows = await window.SheetsAPI.readSheetTab("Inventory");
+    if (!rows || rows.length < 2) return; // Header only
+
+    const lastRow = rows.length;
+
+    // Construct batchUpdate request to sort by Catégorie (column C = index 2)
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`;
+    const body = {
+      requests: [
+        {
+          sortRange: {
+            range: {
+              sheetId: 0, // Assuming "Inventory" is first sheet
+              startRowIndex: 1, // Skip header
+              endRowIndex: lastRow,
+              startColumnIndex: 0,
+              endColumnIndex: 13 // All columns A-M
+            },
+            sortSpecs: [
+              {
+                dimensionIndex: 2, // Column C (Catégorie)
+                sortOrder: "ASCENDING"
+              }
+            ]
+          }
+        }
+      ]
+    };
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (response.ok) {
+      console.log("Inventory sorted by Catégorie");
+    } else {
+      console.warn("Failed to sort Inventory sheet:", response.statusText);
+    }
+  } catch (err) {
+    console.error("Error sorting sheet:", err);
+  }
+}
+
+/**
  * Load inventory from Sheets "Inventory" tab.
  * Falls back to localStorage if Sheets unavailable.
  * @returns {Promise<void>}
@@ -284,18 +347,23 @@ async function loadInventory() {
 
     if (objects.length > 0) {
       // Row 0 is header, data starts at row 1
+      // New column order: Barcode, Produit, Catégorie, Qty, Unité, Date_ajout, Péremption, Prix, Calories_per_100, Proteins, Fats, Carbs, Allergens
       inventoryData = objects.map((row, idx) => ({
         id: `sheet_${idx + 2}`, // Store actual Sheets row number (1-indexed + header)
         sheetRowNumber: idx + 2,
+        Barcode: row["Code barre"] || row["Barcode"] || "",
         Produit: row["Produit"] || "",
+        Catégorie: row["Catégorie"] || "Autres",
         Qty: row["Qty"] || "",
         Unité: row["Unité"] || "g",
-        Catégorie: row["Catégorie"] || "Autres",
         Date_ajout: row["Date_ajout"] || Utils.getTodayISO(),
         Péremption: row["Péremption"] || "",
-        Consommé: row["Consommé"] === "TRUE" || row["Consommé"] === true,
-        Barcode: row["Barcode"] || "",
-        Prix: row["Prix"] || ""
+        Prix: row["Prix"] || "",
+        calories_per_100: row["Calories_per_100"] || "",
+        proteins: row["Proteins"] || "",
+        fats: row["Fats"] || "",
+        carbs: row["Carbs"] || "",
+        allergens: row["Allergens"] || ""
       }));
       console.log("Inventory loaded from Sheets:", inventoryData.length, "items");
       return;
@@ -405,15 +473,15 @@ async function addItem(item) {
   // Sync to Sheets if authenticated
   if (typeof isAuthenticated === "function" && isAuthenticated()) {
     const token = getAccessToken();
+    // New column order: Barcode, Produit, Catégorie, Qty, Unité, Date_ajout, Péremption, Prix, Calories_per_100, Proteins, Fats, Carbs, Allergens
     const row = [
+      newItem.Barcode,
       newItem.Produit,
+      newItem.Catégorie,
       newItem.Qty,
       newItem.Unité,
-      newItem.Catégorie,
       newItem.Date_ajout,
       newItem.Péremption,
-      newItem.Consommé,
-      newItem.Barcode,
       newItem.Prix,
       newItem.calories_per_100,
       newItem.proteins,
@@ -423,7 +491,11 @@ async function addItem(item) {
     ];
 
     SheetsAPI.appendRowWithToken("Inventory", row, token)
-      .then(() => console.log("Item synced to Sheets"))
+      .then(() => {
+        console.log("Item synced to Sheets");
+        // Auto-sort by Catégorie after add
+        sortSheetByCategory(token);
+      })
       .catch(err => console.error("Failed to sync to Sheets:", err));
   }
 
