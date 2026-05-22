@@ -70,12 +70,6 @@ async function loadProfiles() {
     const rows = await SheetsAPI.readSheetTab("Profils");
     const objects = SheetsAPI.rowsToObjects(rows);
 
-    if (objects.length === 0) {
-      console.warn("Profils: empty sheet response, using fallback data");
-      useFallbackProfiles();
-      return;
-    }
-
     profilesData = {};
     objects.forEach(row => {
       const userId = (row["User"] || "").toLowerCase().trim();
@@ -646,8 +640,22 @@ async function syncProfileToSheets(userId, profile) {
 /**
  * Load profile data from localStorage if available, otherwise use Sheets data.
  * Call this during initialization to merge localStorage overrides.
+ * Only keeps overrides for profiles that still exist in Sheets.
  */
 function loadProfileOverrides() {
+  // Clean up stale localStorage entries (profiles deleted from Sheets)
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith("mealflow_profile_")) {
+      const userId = key.replace("mealflow_profile_", "");
+      if (!profilesData[userId]) {
+        localStorage.removeItem(key);
+        console.log(`Profils: Cleaned up stale localStorage for ${userId}`);
+      }
+    }
+  }
+
+  // Load valid localStorage overrides
   Object.keys(profilesData).forEach(userId => {
     const stored = localStorage.getItem(`mealflow_profile_${userId}`);
     if (stored) {
