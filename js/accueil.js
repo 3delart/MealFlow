@@ -519,6 +519,36 @@ function initializeGrignottageButton() {
   if (btn) {
     btn.addEventListener("click", openGrignottageModal);
   }
+
+  // Initialize radio button handlers for mode selection
+  initializeGrignottageMode();
+}
+
+/**
+ * Initializes grignottage mode radio button handlers.
+ * Toggles visibility between scan and pick sections.
+ */
+function initializeGrignottageMode() {
+  const radios = document.querySelectorAll('input[name="grignottage-mode"]');
+  radios.forEach(radio => {
+    radio.addEventListener("change", (e) => {
+      const mode = e.target.value;
+      const scanSection = document.getElementById("scanner-mode-section");
+      const pickSection = document.getElementById("pick-mode-section");
+
+      if (mode === "scan") {
+        if (scanSection) scanSection.classList.remove("hidden");
+        if (pickSection) pickSection.classList.add("hidden");
+        // Start scanner when switching to scan mode
+        startScanner();
+      } else if (mode === "pick") {
+        if (scanSection) scanSection.classList.add("hidden");
+        if (pickSection) pickSection.classList.remove("hidden");
+        // Stop scanner when switching away from scan mode
+        stopScanner();
+      }
+    });
+  });
 }
 
 /**
@@ -530,7 +560,12 @@ function openGrignottageModal() {
 
   modal.classList.remove("hidden");
   modal.setAttribute("aria-hidden", "false");
-  startScanner();
+
+  // Check which mode is currently selected
+  const selectedMode = document.querySelector('input[name="grignottage-mode"]:checked');
+  if (selectedMode && selectedMode.value === "scan") {
+    startScanner();
+  }
 }
 
 /**
@@ -590,11 +625,21 @@ function stopScanner() {
 }
 
 /**
- * Called when a barcode is detected. Fetches nutrition data from Open Food Facts.
+ * Called when a barcode is detected in scan mode.
+ * Delegates to scanGrignottageProduct to handle the scanning.
  */
 async function onBarcodeDetected(barcode) {
   console.log(`Barcode detected: ${barcode}`);
+  await scanGrignottageProduct(barcode);
+}
 
+/**
+ * Scans a product from barcode in grignottage modal.
+ * Fetches from Open Food Facts API, auto-adds to inventory if needed,
+ * and renders the product form for quantity input.
+ * @param {string} barcode - Product barcode
+ */
+async function scanGrignottageProduct(barcode) {
   const resultDiv = document.getElementById("scanner-result");
   const nameEl = document.getElementById("result-name");
   const kcalEl = document.getElementById("result-kcal");
@@ -608,48 +653,63 @@ async function onBarcodeDetected(barcode) {
   resultDiv.classList.remove("hidden");
 
   try {
-    // Fetch from Open Food Facts API
-    const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+    // Fetch product from inventory.js function if available
+    let product = null;
+    if (window.fetchProductFromOpenFoodFacts) {
+      product = await window.fetchProductFromOpenFoodFacts(barcode);
+    } else {
+      console.warn("fetchProductFromOpenFoodFacts not available, falling back to inline fetch");
+      const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.product && data.status === 1) {
+          product = {
+            name: data.product.product_name || data.product.generic_name || barcode,
+            calories: data.product.nutriments?.["energy-kcal"] || data.product.nutriments?.["energy-kcal_100g"] || 0,
+            category: "Autres",
+            unit: "pièce",
+            quantity: 1
+          };
+        }
+      }
     }
-    const data = await response.json();
-    console.log("Open Food Facts API full response:", data);
 
-    if (data.product) {
-      const product = data.product;
-      console.log("Product object keys:", Object.keys(product));
-      console.log("Nutriments:", product.nutriments);
+    if (product) {
+      console.log("Product fetched:", product);
 
-      const name = product.product_name || product.generic_name || barcode;
-      const kcal = product.nutriments?.["energy-kcal"] || product.nutriments?.["energy-kcal_100g"] || 0;
-      const brand = product.brands || "—";
-      const quantity = product.quantity || "—";
-      const categories = product.categories || "—";
+      // Check if product already in inventory
+      if (window.InventoryAPI) {
+        const existing = window.InventoryAPI.searchByName(product.name, true);
+        if (existing.length > 0) {
+          console.log("Product found in inventory:", existing[0]);
+          showInventorySuggestions(product.name);
+        } else {
+          console.log("Product not in inventory, will auto-add if selected");
+        }
+      }
 
-      console.log(`Parsed: name="${name}", kcal=${kcal}, brands="${brand}", quantity="${quantity}", categories="${categories}"`);
+      // Display product info
+      nameEl.textContent = product.name;
 
-      // Show matching products from inventory
-      showInventorySuggestions(name);
-
-      nameEl.textContent = name;
-
-      // Display brand
+      // Display brand (if available)
       const brandEl = document.getElementById("result-brand");
-      if (brandEl) brandEl.textContent = `Marque: ${brand}`;
+      if (brandEl) brandEl.textContent = product.brand ? `Marque: ${product.brand}` : "—";
 
       // Display quantity
       const qtyEl = document.getElementById("result-quantity");
-      if (qtyEl) qtyEl.textContent = `Quantité: ${quantity}`;
+      if (qtyEl) qtyEl.textContent = `Quantité emballage: ${product.quantity} ${product.unit}`;
 
-      // Display category/packaging
+      // Display category
       const catEl = document.getElementById("result-category");
-      if (catEl) catEl.textContent = `Type: ${categories}`;
+      if (catEl) catEl.textContent = `Catégorie: ${product.category}`;
 
+      // Set calories (per 100g or total depending on API response)
+      const kcal = product.calories || 0;
       kcalEl.value = Math.round(kcal);
       kcalEl.focus();
     } else {
-      console.log("No product found in API response");
+      // Product not found in API
+      console.log("No product found in API for barcode:", barcode);
       nameEl.textContent = `Code ${barcode}`;
       kcalEl.value = "";
       kcalEl.focus();
