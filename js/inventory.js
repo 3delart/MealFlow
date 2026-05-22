@@ -223,12 +223,17 @@ async function processBarcodeDetection(barcode) {
   if (!product) {
     status.textContent = "❌ Produit non trouvé. Entrez manuellement.";
     status.classList.add("error");
+    // Show form for manual entry
+    document.getElementById("add-item-section").style.display = "block";
     return;
   }
 
   status.textContent = `✅ Produit trouvé: ${product.name}`;
   status.classList.remove("error");
   status.classList.add("success");
+
+  // Show form section
+  document.getElementById("add-item-section").style.display = "block";
 
   // Populate form
   document.getElementById("field-product-name").value = product.name;
@@ -565,13 +570,60 @@ async function deleteItem(itemId) {
 // ============================================================================
 
 /**
+ * Reduce quantity by user-specified amount
+ * @param {string} itemId
+ * @param {string} currentQty
+ * @param {string} productName
+ */
+async function reduceQuantity(itemId, currentQty, productName) {
+  const currentNum = parseFloat(currentQty) || 0;
+  const input = prompt(`Quantité à consommer/supprimer (max ${currentNum}):`);
+
+  if (input === null) return; // User cancelled
+
+  const reduceAmount = parseFloat(input);
+  if (isNaN(reduceAmount) || reduceAmount <= 0) {
+    alert("Quantité invalide");
+    return;
+  }
+
+  if (reduceAmount > currentNum) {
+    alert(`Quantité trop élevée. Max: ${currentNum}`);
+    return;
+  }
+
+  const item = inventoryData.find(i => i.id === itemId);
+  if (!item) return;
+
+  // Reduce quantity
+  const newQty = Math.max(0, currentNum - reduceAmount);
+  item.Qty = newQty.toString();
+
+  saveInventory();
+
+  // Update Sheets (column D is Qty)
+  if (item.sheetRowNumber && window.SheetsAPI) {
+    try {
+      const token = typeof getAccessToken === 'function' ? getAccessToken() : null;
+      const range = `Inventory!D${item.sheetRowNumber}`;
+      await window.SheetsAPI.updateSheetCell(range, newQty.toString(), token);
+      console.log(`Reduced ${productName} by ${reduceAmount}: new qty = ${newQty}`);
+    } catch (err) {
+      console.warn(`Failed to update Sheets for item ${itemId}:`, err);
+    }
+  }
+
+  renderInventory();
+}
+
+/**
  * Render inventory list, applying category filter
  */
 function renderInventory() {
   const container = document.getElementById("inventory-list");
   const filterValue = document.getElementById("filter-category").value;
 
-  const filtered = filterValue
+  let filtered = filterValue
     ? inventoryData.filter(item => item.Catégorie === filterValue && (parseFloat(item.Qty) || 0) > 0)
     : inventoryData.filter(item => (parseFloat(item.Qty) || 0) > 0);
 
@@ -580,8 +632,27 @@ function renderInventory() {
     return;
   }
 
+  // Sort by category, then by product name (alphabetically)
+  filtered.sort((a, b) => {
+    if (a.Catégorie !== b.Catégorie) {
+      return a.Catégorie.localeCompare(b.Catégorie, 'fr');
+    }
+    return a.Produit.localeCompare(b.Produit, 'fr');
+  });
+
   container.innerHTML = "";
+  let currentCategory = null;
+
   filtered.forEach(item => {
+    // Add category header if category changed
+    if (item.Catégorie !== currentCategory) {
+      currentCategory = item.Catégorie;
+      const catHeader = document.createElement("div");
+      catHeader.className = "category-header";
+      catHeader.textContent = currentCategory;
+      container.appendChild(catHeader);
+    }
+
     const itemEl = createInventoryItemElement(item);
     container.appendChild(itemEl);
   });
@@ -693,16 +764,10 @@ function createInventoryItemElement(item) {
 
   const consumeBtn = document.createElement("button");
   consumeBtn.className = "btn-consume";
-  consumeBtn.textContent = "✓ Consommé";
-  consumeBtn.addEventListener("click", () => markConsumed(item.id));
-
-  const deleteBtn = document.createElement("button");
-  deleteBtn.className = "btn-delete";
-  deleteBtn.textContent = "🗑️ Supprimer";
-  deleteBtn.addEventListener("click", () => deleteItem(item.id));
+  consumeBtn.textContent = "✓ Consommer/Supprimer";
+  consumeBtn.addEventListener("click", () => reduceQuantity(item.id, item.Qty, item.Produit));
 
   actionsDiv.appendChild(consumeBtn);
-  actionsDiv.appendChild(deleteBtn);
 
   div.appendChild(mainDiv);
   div.appendChild(actionsDiv);

@@ -252,6 +252,21 @@ section h2 {
   gap: var(--spacing-md);
 }
 
+.category-header {
+  font-size: 14px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  background-color: var(--color-bg);
+  padding: var(--spacing-md) 0;
+  border-bottom: 2px solid var(--color-primary);
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-sm);
+}
+
+.category-header:first-child {
+  margin-top: 0;
+}
+
 .inventory-item {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
