@@ -315,10 +315,16 @@ async function loadProfilsData() {
       const key = (profile.User || profile.nom || "").toLowerCase().trim();
       if (key === "florian" || key === "naomi") {
         console.log(`Accueil: Loaded profile ${key}:`, profile);
+        console.log(`Accueil: Profile ${key} Objectif value:`, profile.Objectif, "type:", typeof profile.Objectif);
         AccueilState.profiles[key] = profile;
       }
     });
     console.log("Accueil: Profiles loaded:", AccueilState.profiles);
+    Object.entries(AccueilState.profiles).forEach(([key, profile]) => {
+      if (profile) {
+        console.log(`Accueil: ${key} Objectif = ${profile.Objectif || "NULL"}`);
+      }
+    });
   } catch (err) {
     console.warn("Accueil: Could not load Profils tab:", err.message);
     // Leave profiles as null — UI will show placeholder
