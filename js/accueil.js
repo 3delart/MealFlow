@@ -84,8 +84,8 @@ function renderGreeting() {
 
   if (calorieObjectiveEl) {
     const profile = AccueilState.profiles[user];
-    if (profile && (profile.Objectif || profile.objectifKcal)) {
-      const kcal = Number(profile.Objectif || profile.objectifKcal) || 0;
+    if (profile && (profile.Calories_cible || profile.Objectif || profile.objectifKcal)) {
+      const kcal = Number(profile.Calories_cible || profile.Objectif || profile.objectifKcal) || 0;
       calorieObjectiveEl.textContent = `Objectif: ${kcal.toLocaleString("fr-FR")} kcal`;
     } else {
       calorieObjectiveEl.textContent = "Objectif: — kcal";
@@ -136,7 +136,7 @@ function renderProgressCircle(percentage) {
   if (circleCaption) {
     const user = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
     const profile = AccueilState.profiles[user];
-    const target = profile && (profile.Objectif || profile.objectifKcal) ? Number(profile.Objectif || profile.objectifKcal) : null;
+    const target = profile && (profile.Calories_cible || profile.Objectif || profile.objectifKcal) ? Number(profile.Calories_cible || profile.Objectif || profile.objectifKcal) : null;
     const consumed = AccueilState.caloriesConsumed;
 
     if (target) {
@@ -238,7 +238,7 @@ function showRecipe(mealType) {
 function updateProgressDisplay() {
   const user = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
   const profile = AccueilState.profiles[user];
-  const target = profile && (profile.Objectif || profile.objectifKcal) ? Number(profile.Objectif || profile.objectifKcal) : 0;
+  const target = profile && (profile.Calories_cible || profile.Objectif || profile.objectifKcal) ? Number(profile.Calories_cible || profile.Objectif || profile.objectifKcal) : 0;
   if (!profile || target === 0) {
     console.warn(`updateProgressDisplay: No valid target for ${user}. Set Objectif in Profils sheet.`);
   }
@@ -326,7 +326,7 @@ async function loadProfilsData() {
     Object.entries(AccueilState.profiles).forEach(([key, profile]) => {
       if (profile) {
         console.log(`Accueil: ${key} Objectif = ${profile.Objectif || "NULL"}`);
-        const numVal = Number(profile.Objectif || profile.objectifKcal || 0);
+        const numVal = Number(profile.Calories_cible || profile.Objectif || profile.objectifKcal || 0);
         if (isNaN(numVal) || numVal === 0) {
           console.warn(`Accueil: ${key} Objectif is ${numVal} - check Sheets has numeric value`);
         }
