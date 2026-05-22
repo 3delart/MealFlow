@@ -793,6 +793,7 @@ function createInventoryItemElement(item) {
 function openEditModal(item) {
   const modal = document.getElementById("edit-modal");
   document.getElementById("edit-product-name").value = item.Produit;
+  document.getElementById("edit-category").value = item.Catégorie;
   document.getElementById("edit-quantity").value = item.Qty;
   document.getElementById("edit-unit").value = item.Unité;
   document.getElementById("edit-date-added").value = item.Date_ajout;
@@ -824,6 +825,7 @@ async function saveEditedItem(e) {
   if (!item) return;
 
   const updatedData = {
+    Catégorie: document.getElementById("edit-category").value,
     Qty: document.getElementById("edit-quantity").value,
     Unité: document.getElementById("edit-unit").value,
     Date_ajout: document.getElementById("edit-date-added").value,
@@ -837,9 +839,9 @@ async function saveEditedItem(e) {
   // Sync to Sheets if authenticated and row number exists
   if (typeof isAuthenticated === "function" && isAuthenticated() && item.sheetRowNumber) {
     const token = getAccessToken();
-    const sheetRange = `Inventory!D${item.sheetRowNumber}`;
     try {
-      await SheetsAPI.updateSheetCell(sheetRange, item.Qty, token);
+      await SheetsAPI.updateSheetCell(`Inventory!C${item.sheetRowNumber}`, item.Catégorie, token);
+      await SheetsAPI.updateSheetCell(`Inventory!D${item.sheetRowNumber}`, item.Qty, token);
       await SheetsAPI.updateSheetCell(`Inventory!E${item.sheetRowNumber}`, item.Unité, token);
       await SheetsAPI.updateSheetCell(`Inventory!F${item.sheetRowNumber}`, item.Date_ajout, token);
       await SheetsAPI.updateSheetCell(`Inventory!G${item.sheetRowNumber}`, item.Péremption, token);
