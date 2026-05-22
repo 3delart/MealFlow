@@ -600,16 +600,23 @@ async function onBarcodeDetected(barcode) {
       throw new Error(`API error: ${response.status}`);
     }
     const data = await response.json();
+    console.log("Open Food Facts API full response:", data);
 
     if (data.product) {
       const product = data.product;
+      console.log("Product object keys:", Object.keys(product));
+      console.log("Nutriments:", product.nutriments);
+
       const name = product.product_name || product.generic_name || barcode;
       const kcal = product.nutriments?.["energy-kcal"] || product.nutriments?.["energy-kcal_100g"] || 0;
+
+      console.log(`Parsed: name="${name}", kcal=${kcal}, brands="${product.brands}", categories="${product.categories}"`);
 
       nameEl.textContent = name;
       kcalEl.value = Math.round(kcal);
       kcalEl.focus();
     } else {
+      console.log("No product found in API response");
       nameEl.textContent = `Code ${barcode}`;
       kcalEl.value = "";
       kcalEl.focus();
