@@ -642,7 +642,6 @@ function pickInventoryProduct() {
  */
 function selectProductForGrignottage(element) {
   const itemId = element.getAttribute('data-item-id');
-  const itemName = element.getAttribute('data-item-name');
 
   if (!window.InventoryAPI) {
     console.error("selectProductForGrignottage: InventoryAPI not available");
@@ -660,10 +659,8 @@ function selectProductForGrignottage(element) {
 
   console.log("Selected product for grignottage:", selectedProduct);
 
-  // TODO (Task 5): Call renderGrignottageForm(selectedProduct) once it's created
-  // For now, just show alert and log
-  alert(`Sélectionné: ${itemName}`);
-  console.log("Preparing grignottage form for product:", selectedProduct);
+  // Render the form for this product
+  renderGrignottageForm(selectedProduct);
 }
 
 /**
@@ -749,6 +746,150 @@ async function onBarcodeDetected(barcode) {
 }
 
 /**
+ * Renders the grignottage consumption form in the modal.
+ * Shows product info and form for quantity input with live calorie calculation.
+ * @param {Object} product - Product data with name, unit, calories_per_100, sheetRowNumber
+ * @param {string} mode - "scan" or "pick" to determine which container to use
+ */
+function renderGrignottageForm(product, mode = "pick") {
+  const containerId = mode === "scan" ? "grignottage-form-container-scan" : "grignottage-form-container-pick";
+  const formContainer = document.getElementById(containerId);
+  if (!formContainer) {
+    console.error(`renderGrignottageForm: ${containerId} not found`);
+    return;
+  }
+
+  const unit = product.unit || product.Unité || "g";
+  const caloriesPer100 = product.calories_per_100 || 0;
+  const productName = product.name || product.Produit || "Produit inconnu";
+
+  const html = `
+    <form id="grignottage-form" style="display: flex; flex-direction: column; gap: var(--spacing-md);">
+      <!-- Product Name (display only) -->
+      <div style="padding: var(--spacing-md); background-color: var(--color-bg); border-radius: 6px; border-left: 3px solid var(--color-primary);">
+        <label style="font-size: 0.9em; color: var(--color-text-light); display: block; margin-bottom: 4px;">Produit</label>
+        <div id="form-product-name" style="font-weight: bold; font-size: 1.1em;">${productName}</div>
+      </div>
+
+      <!-- Quantity Input -->
+      <div style="display: flex; gap: var(--spacing-md);">
+        <div style="flex: 1;">
+          <label for="form-quantity" style="font-size: 0.9em; color: var(--color-text-light); display: block; margin-bottom: 4px;">Quantité</label>
+          <input
+            type="number"
+            id="form-quantity"
+            min="0"
+            step="0.5"
+            placeholder="0"
+            required
+            style="
+              width: 100%;
+              padding: var(--spacing-sm) var(--spacing-md);
+              border: 1px solid var(--color-border);
+              border-radius: 4px;
+              font-size: 1em;
+              font-family: inherit;
+            "
+          />
+        </div>
+        <div style="flex: 0.8;">
+          <label for="form-unit" style="font-size: 0.9em; color: var(--color-text-light); display: block; margin-bottom: 4px;">Unité</label>
+          <select
+            id="form-unit"
+            style="
+              width: 100%;
+              padding: var(--spacing-sm) var(--spacing-md);
+              border: 1px solid var(--color-border);
+              border-radius: 4px;
+              font-size: 1em;
+              font-family: inherit;
+            "
+          >
+            <option value="g">g</option>
+            <option value="ml">ml</option>
+            <option value="litre">litre</option>
+            <option value="pièce">pièce</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Calories Info -->
+      <div style="display: flex; gap: var(--spacing-md); font-size: 0.9em;">
+        <div style="flex: 1; padding: var(--spacing-sm) var(--spacing-md); background-color: var(--color-bg); border-radius: 4px;">
+          <span style="color: var(--color-text-light); display: block; margin-bottom: 2px;">Kcal / 100</span>
+          <strong id="form-calories-per-100">${Math.round(caloriesPer100)}</strong>
+        </div>
+        <div style="flex: 1; padding: var(--spacing-sm) var(--spacing-md); background-color: var(--color-primary); border-radius: 4px; color: white;">
+          <span style="display: block; margin-bottom: 2px;">Kcal total</span>
+          <strong id="form-total-calories" style="font-size: 1.2em;">0</strong>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button
+        type="submit"
+        style="
+          padding: var(--spacing-md);
+          background-color: var(--color-primary);
+          color: white;
+          border: none;
+          border-radius: 6px;
+          font-weight: bold;
+          font-size: 1em;
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+        "
+      >
+        ✓ Ajouter à ma consommation
+      </button>
+    </form>
+  `;
+
+  formContainer.innerHTML = html;
+
+  // Store product data in a data attribute for addGrignottage to access
+  const form = document.getElementById("grignottage-form");
+  if (form) {
+    form.dataset.productData = JSON.stringify({
+      name: productName,
+      unit: unit,
+      calories_per_100: caloriesPer100,
+      sheetRowNumber: product.sheetRowNumber || null,
+      id: product.id || null
+    });
+
+    // Add event listeners
+    const quantityInput = document.getElementById("form-quantity");
+    const unitSelect = document.getElementById("form-unit");
+
+    if (quantityInput && unitSelect) {
+      const updateCalories = () => {
+        const qty = parseFloat(quantityInput.value) || 0;
+        const totalCalories = (caloriesPer100 / 100) * qty;
+        const totalEl = document.getElementById("form-total-calories");
+        if (totalEl) {
+          totalEl.textContent = Math.round(totalCalories);
+        }
+      };
+
+      quantityInput.addEventListener("input", updateCalories);
+      unitSelect.addEventListener("change", updateCalories);
+    }
+
+    // Add form submission listener
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      addGrignottage();
+    });
+
+    // Focus on quantity input
+    if (quantityInput) {
+      quantityInput.focus();
+    }
+  }
+}
+
+/**
  * Scans a product from barcode in grignottage modal.
  * Fetches from Open Food Facts API, auto-adds to inventory if needed,
  * and renders the product form for quantity input.
@@ -793,35 +934,33 @@ async function scanGrignottageProduct(barcode) {
       console.log("Product fetched:", product);
 
       // Check if product already in inventory
+      let existingItem = null;
       if (window.InventoryAPI) {
         const existing = window.InventoryAPI.searchByName(product.name, true);
         if (existing.length > 0) {
           console.log("Product found in inventory:", existing[0]);
-          showInventorySuggestions(product.name);
+          existingItem = existing[0];
         } else {
           console.log("Product not in inventory, will auto-add if selected");
         }
       }
 
-      // Display product info
-      nameEl.textContent = product.name;
+      // Prepare product object for renderGrignottageForm
+      // Use inventory item if found, otherwise use API data
+      const formProduct = existingItem || {
+        name: product.name,
+        Produit: product.name,
+        unit: product.unit || "g",
+        Unité: product.unit || "g",
+        calories_per_100: product.calories || 0,
+        category: product.category || "Autres",
+        sheetRowNumber: existingItem?.sheetRowNumber || null,
+        id: existingItem?.id || null
+      };
 
-      // Display brand (if available)
-      const brandEl = document.getElementById("result-brand");
-      if (brandEl) brandEl.textContent = product.brand ? `Marque: ${product.brand}` : "—";
-
-      // Display quantity
-      const qtyEl = document.getElementById("result-quantity");
-      if (qtyEl) qtyEl.textContent = `Quantité emballage: ${product.quantity} ${product.unit}`;
-
-      // Display category
-      const catEl = document.getElementById("result-category");
-      if (catEl) catEl.textContent = `Catégorie: ${product.category}`;
-
-      // Set calories (per 100g or total depending on API response)
-      const kcal = product.calories || 0;
-      kcalEl.value = Math.round(kcal);
-      kcalEl.focus();
+      // Hide old scanner result UI and show form
+      resultDiv.classList.add("hidden");
+      renderGrignottageForm(formProduct, "scan");
     } else {
       // Product not found in API
       console.log("No product found in API for barcode:", barcode);
@@ -873,7 +1012,7 @@ function showInventorySuggestions(productName) {
       border-left: 3px solid var(--color-primary);
       cursor: pointer;
       font-size: 13px;
-    " onclick="selectInventoryProduct('${item.id}', ${parseFloat(item.Qty)})">
+    " onclick="selectInventoryProduct('${item.id}')">
       <strong>${item.Produit}</strong>
       <div style="color: var(--color-text-light); font-size: 11px; margin-top: 2px;">
         ${item.Qty} ${item.Unité} | ${item.calories_per_100 ? item.calories_per_100 + ' kcal/100' : '—'}
@@ -886,9 +1025,8 @@ function showInventorySuggestions(productName) {
  * Selects an inventory product and pre-fills calories based on quantity.
  * User can still adjust before confirming.
  * @param {string} itemId
- * @param {number} availableQty - Total quantity available in inventory
  */
-function selectInventoryProduct(itemId, availableQty) {
+function selectInventoryProduct(itemId) {
   if (!window.InventoryAPI) return;
 
   const item = window.InventoryAPI.getData().find(i => i.id === itemId);
@@ -927,35 +1065,122 @@ function restartScanner() {
 }
 
 /**
- * Adds the scanned/entered calories to today's consumption.
+ * Adds grignottage from the consumption form.
+ * Creates a meal object, updates inventory, saves to History sheet, and updates state.
  */
-function addGrignottage() {
-  const nameEl = document.getElementById("result-name");
-  const kcalEl = document.getElementById("result-kcal");
-
-  const name = nameEl.textContent || "Snack";
-  const kcal = Number(kcalEl.value) || 0;
-
-  if (kcal < 1 || kcal > 10000) {
-    alert("Entrer une valeur entre 1 et 10000 kcal");
+async function addGrignottage() {
+  const form = document.getElementById("grignottage-form");
+  if (!form) {
+    console.error("addGrignottage: form not found");
     return;
   }
 
-  // Add to consumed calories
-  AccueilState.caloriesConsumed += kcal;
-  AccueilState.grignottageCalories += kcal;
+  // Get product data from form data attribute
+  let productData = {};
+  try {
+    productData = JSON.parse(form.dataset.productData || "{}");
+  } catch (err) {
+    console.error("addGrignottage: failed to parse product data:", err);
+    return;
+  }
 
-  // Save state
-  saveMealsState();
+  // Get form inputs
+  const quantityInput = document.getElementById("form-quantity");
+  const unitSelect = document.getElementById("form-unit");
 
-  // Update UI
-  updateProgressDisplay();
+  if (!quantityInput || !unitSelect) {
+    console.error("addGrignottage: form inputs not found");
+    return;
+  }
 
-  // Notify user
-  alert(`Ajouté: ${name} (+${kcal} kcal)`);
+  const quantity = parseFloat(quantityInput.value) || 0;
+  const unit = unitSelect.value || "g";
+  const caloriesPer100 = productData.calories_per_100 || 0;
+  const productName = productData.name || "Produit inconnu";
 
-  // Close modal
-  closeGrignottageModal();
+  // Validate quantity
+  if (quantity < 0.1 || quantity > 100000) {
+    alert("Entrer une quantité valide (> 0)");
+    return;
+  }
+
+  // Calculate total calories
+  const totalCalories = (caloriesPer100 / 100) * quantity;
+
+  if (totalCalories < 1) {
+    alert("Calories totales doivent être >= 1 kcal");
+    return;
+  }
+
+  try {
+    // Create snack item for todayMeals
+    const snackItem = {
+      mealType: "grignottage",
+      label: "Grignottage",
+      emoji: "🍪",
+      name: productName,
+      estimatedKcal: Math.round(totalCalories),
+      actualKcal: Math.round(totalCalories),
+      eaten: true,
+      timestamp: Date.now()
+    };
+
+    // Add to todayMeals
+    AccueilState.todayMeals.push(snackItem);
+    AccueilState.caloriesConsumed += Math.round(totalCalories);
+    AccueilState.grignottageCalories += Math.round(totalCalories);
+
+    // Note: Inventory quantity reduction is handled by the inventory page itself
+    // We log the consumption but don't auto-decrement inventory here
+    if (productData.sheetRowNumber) {
+      console.log(`addGrignottage: Consumed product at inventory row ${productData.sheetRowNumber}`);
+    }
+
+    // Save consumption to History sheet
+    if (window.SheetsAPI && window.SheetsAPI.appendConsumptionRecord) {
+      const user = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
+      const token = typeof getAccessToken === "function" ? getAccessToken() : null;
+      const historyTab = `History_${user}`;
+      const today = getTodayISO();
+
+      if (!token) {
+        console.warn("addGrignottage: No access token for History sheet, skipping");
+      } else {
+        try {
+          await window.SheetsAPI.appendConsumptionRecord(
+            historyTab,
+            today,
+            productName,
+            quantity,
+            unit,
+            caloriesPer100,
+            Math.round(totalCalories),
+            "grignottage",
+            token
+          );
+          console.log("addGrignottage: Saved to History sheet");
+        } catch (err) {
+          console.warn("addGrignottage: Failed to save to History sheet:", err);
+        }
+      }
+    }
+
+    // Save state to localStorage
+    saveMealsState();
+
+    // Update UI
+    renderMeals();
+    updateProgressDisplay();
+
+    // Notify user
+    alert(`Ajouté: ${productName} (${Math.round(totalCalories)} kcal)`);
+
+    // Close modal and reset form
+    closeGrignottageModal();
+  } catch (err) {
+    console.error("addGrignottage: Unexpected error:", err);
+    alert("Erreur lors de l'ajout du grignottage");
+  }
 }
 
 /* ============================================================================
