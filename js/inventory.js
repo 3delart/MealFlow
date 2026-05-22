@@ -59,8 +59,57 @@ async function fetchProductFromOpenFoodFacts(barcode) {
       return null;
     }
 
+    // Parse quantity to extract number and unit
+    let qty = 1;
+    let unit = "pièce";
+    const quantityStr = product.quantity || "";
+
+    const match = quantityStr.match(/^([\d.]+)\s*([a-zA-Z]+)$/);
+    if (match) {
+      qty = parseFloat(match[1]);
+      const unitStr = match[2].toLowerCase();
+      // Map common abbreviations to form options
+      if (unitStr.includes("ml")) unit = "ml";
+      else if (unitStr.includes("l")) unit = "litre";
+      else if (unitStr.includes("g")) unit = "g";
+      else unit = unitStr;
+    }
+
+    // Extract category from categories string
+    let category = "Autres";
+    const categoriesStr = product.categories || "";
+    const categoryMap = {
+      "fruits": "Fruits",
+      "légumes": "Légumes",
+      "produits laitiers": "Produits laitiers",
+      "fromage": "Produits laitiers",
+      "yaourt": "Produits laitiers",
+      "viandes": "Viandes",
+      "poissons": "Poissons",
+      "œufs": "Œufs",
+      "féculents": "Féculents",
+      "riz": "Féculents",
+      "pâtes": "Féculents",
+      "pain": "Féculents",
+      "conserves": "Conserves",
+      "conservé": "Conserves",
+      "épices": "Épices & Condiments",
+      "condiments": "Épices & Condiments",
+      "boissons": "Boissons"
+    };
+
+    for (const [key, value] of Object.entries(categoryMap)) {
+      if (categoriesStr.toLowerCase().includes(key)) {
+        category = value;
+        break;
+      }
+    }
+
     return {
       name: product.product_name || product.generic_name || "Produit inconnu",
+      quantity: qty,
+      unit: unit,
+      category: category,
       calories: product.nutriments?.["energy-kcal"] || null,
       proteins: product.nutriments?.proteins || null,
       fats: product.nutriments?.fat || null,
@@ -177,6 +226,9 @@ async function processBarcodeDetection(barcode) {
 
   // Populate form
   document.getElementById("field-product-name").value = product.name;
+  document.getElementById("field-quantity").value = product.quantity || 1;
+  document.getElementById("field-unit").value = product.unit || "pièce";
+  document.getElementById("field-category").value = product.category || "Autres";
   scannedProductData = product;
 
   // Show product info
