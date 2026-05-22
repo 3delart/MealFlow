@@ -509,6 +509,7 @@ async function addItem(item) {
   // Clear form
   document.getElementById("add-item-form").reset();
   document.getElementById("product-info").style.display = "none";
+  document.getElementById("add-item-section").style.display = "none"; // Hide form after add
 
   renderInventory();
 }
@@ -783,44 +784,14 @@ function createInventoryItemElement(item) {
  * Set up form and button event handlers
  */
 function setupEventHandlers() {
-  // UPC manual lookup
-  document.getElementById("btn-lookup-upc").addEventListener("click", async function() {
-    const upc = document.getElementById("field-upc").value.trim();
-    if (!upc) {
-      alert("Entrez un code-barres");
-      return;
-    }
-    const status = document.getElementById("scanner-status");
-    status.textContent = "⏳ Recherche produit...";
-    const product = await fetchProductFromOpenFoodFacts(upc);
-    if (!product) {
-      status.textContent = "❌ Produit non trouvé. Entrez manuellement.";
-      status.classList.add("error");
-      return;
-    }
-    status.textContent = `✅ Produit trouvé: ${product.name}`;
-    status.classList.remove("error");
-    status.classList.add("success");
-    document.getElementById("field-product-name").value = product.name;
-    scannedProductData = product;
-    const infoSection = document.getElementById("product-info");
-    infoSection.style.display = "grid";
-    if (product.calories) {
-      document.getElementById("info-calories").textContent = product.calories.toFixed(1) + " kcal";
-    }
-    if (product.proteins) {
-      document.getElementById("info-proteins").textContent = product.proteins.toFixed(1) + "g";
-    }
-    if (product.fats) {
-      document.getElementById("info-fats").textContent = product.fats.toFixed(1) + "g";
-    }
-    if (product.carbs) {
-      document.getElementById("info-carbs").textContent = product.carbs.toFixed(1) + "g";
-    }
-    document.getElementById("info-allergens").textContent = product.allergens;
-    const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 7);
-    document.getElementById("field-expiry").value = expiryDate.toISOString().split("T")[0];
+  // Populate category filter dynamically from inventory
+  const categories = [...new Set(inventoryData.map(i => i.Catégorie))].sort();
+  const filterSelect = document.getElementById("filter-category");
+  categories.forEach(cat => {
+    const option = document.createElement("option");
+    option.value = cat;
+    option.textContent = cat;
+    filterSelect.appendChild(option);
   });
 
   // Scanner buttons
