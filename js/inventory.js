@@ -427,11 +427,11 @@ async function addItem(item) {
       console.log(`Added ${quantity} to existing ${existing.Produit}: new qty = ${existing.Qty}`);
       saveInventory();
 
-      // Sync update to Sheets
+      // Sync update to Sheets (Qty is now in column D with new order)
       if (typeof isAuthenticated === "function" && isAuthenticated() && window.SheetsAPI) {
         try {
           const token = getAccessToken();
-          const range = `Inventory!B${existing.sheetRowNumber}`;
+          const range = `Inventory!D${existing.sheetRowNumber}`;
           window.SheetsAPI.updateSheetCell(range, existing.Qty, token)
             .then(() => console.log("Updated Sheets with new quantity"))
             .catch(err => console.error("Failed to update Sheets:", err));
@@ -520,10 +520,10 @@ async function markConsumed(itemId) {
   item.Qty = "0";
   saveInventory();
 
-  // Update Sheets if row number is available
+  // Update Sheets if row number is available (Qty is now column D with new order)
   if (item.sheetRowNumber && window.SheetsAPI) {
     try {
-      const range = `Inventory!B${item.sheetRowNumber}`; // Column B is "Qty"
+      const range = `Inventory!D${item.sheetRowNumber}`; // Column D is "Qty"
       await window.SheetsAPI.updateSheetCell(range, "0");
       console.log(`Marked as consumed in Sheets: row ${item.sheetRowNumber}`);
     } catch (err) {
@@ -546,10 +546,10 @@ async function deleteItem(itemId) {
   item.Qty = "0";
   saveInventory();
 
-  // Update Sheets if row number is available
+  // Update Sheets if row number is available (Qty is now column D with new order)
   if (item.sheetRowNumber && window.SheetsAPI) {
     try {
-      const range = `Inventory!B${item.sheetRowNumber}`; // Column B is "Qty"
+      const range = `Inventory!D${item.sheetRowNumber}`; // Column D is "Qty"
       await window.SheetsAPI.updateSheetCell(range, "0");
       console.log(`Deleted from inventory: row ${item.sheetRowNumber}`);
     } catch (err) {
