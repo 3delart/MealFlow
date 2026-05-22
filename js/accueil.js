@@ -239,6 +239,9 @@ function updateProgressDisplay() {
   const user = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
   const profile = AccueilState.profiles[user];
   const target = profile && (profile.Objectif || profile.objectifKcal) ? Number(profile.Objectif || profile.objectifKcal) : 0;
+  if (!profile || target === 0) {
+    console.warn(`updateProgressDisplay: No valid target for ${user}. Set Objectif in Profils sheet.`);
+  }
   const pct = target > 0 ? (AccueilState.caloriesConsumed / target) * 100 : 0;
   console.log(`updateProgressDisplay: user=${user}, target=${target}, consumed=${AccueilState.caloriesConsumed}, pct=${pct}%`);
   renderProgressCircle(pct);
@@ -323,10 +326,19 @@ async function loadProfilsData() {
     Object.entries(AccueilState.profiles).forEach(([key, profile]) => {
       if (profile) {
         console.log(`Accueil: ${key} Objectif = ${profile.Objectif || "NULL"}`);
+        const numVal = Number(profile.Objectif || profile.objectifKcal || 0);
+        if (isNaN(numVal) || numVal === 0) {
+          console.warn(`Accueil: ${key} Objectif is ${numVal} - check Sheets has numeric value`);
+        }
       }
     });
+    const foundProfiles = Object.values(AccueilState.profiles).filter(p => p !== null).length;
+    if (foundProfiles === 0) {
+      console.warn("Accueil: No profiles loaded! Check Sheets 'User' column matches 'florian' or 'naomi'");
+    }
   } catch (err) {
-    console.warn("Accueil: Could not load Profils tab:", err.message);
+    console.error("Accueil CRITICAL: Could not load Profils tab:", err.message);
+    console.error("This means profile.Objectif will be undefined and calorie target will show as 0");
     // Leave profiles as null — UI will show placeholder
   }
 }
@@ -615,6 +627,9 @@ async function onBarcodeDetected(barcode) {
 
       console.log(`Parsed: name="${name}", kcal=${kcal}, brands="${brand}", quantity="${quantity}", categories="${categories}"`);
 
+      // Show matching products from inventory
+      showInventorySuggestions(name);
+
       nameEl.textContent = name;
 
       // Display brand
@@ -646,6 +661,81 @@ async function onBarcodeDetected(barcode) {
   }
 
   stopScanner();
+}
+
+/**
+ * Shows matching inventory products when barcode result displayed.
+ * Called after API fetch to suggest existing products user already has.
+ * @param {string} productName - Name from API result
+ */
+function showInventorySuggestions(productName) {
+  if (!window.InventoryAPI) {
+    console.log("InventoryAPI not available, skipping suggestions");
+    return;
+  }
+
+  const suggestions = window.InventoryAPI.searchByName(productName, true);
+  const container = document.getElementById("inventory-suggestions");
+  if (!container) return;
+
+  if (suggestions.length === 0) {
+    container.innerHTML = "";
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="font-size: 12px; color: var(--color-text-light); margin-bottom: 8px;">
+      📦 Produits en inventaire qui correspondent:
+    </div>
+  ` + suggestions.map(item => `
+    <div style="
+      padding: 8px;
+      margin-bottom: 4px;
+      background-color: var(--color-bg);
+      border-radius: 4px;
+      border-left: 3px solid var(--color-primary);
+      cursor: pointer;
+      font-size: 13px;
+    " onclick="selectInventoryProduct('${item.id}', ${parseFloat(item.Qty)})">
+      <strong>${item.Produit}</strong>
+      <div style="color: var(--color-text-light); font-size: 11px; margin-top: 2px;">
+        ${item.Qty} ${item.Unité} | ${item.calories_per_100 ? item.calories_per_100 + ' kcal/100' : '—'}
+      </div>
+    </div>
+  `).join("");
+}
+
+/**
+ * Selects an inventory product and pre-fills calories based on quantity.
+ * User can still adjust before confirming.
+ * @param {string} itemId
+ * @param {number} availableQty - Total quantity available in inventory
+ */
+function selectInventoryProduct(itemId, availableQty) {
+  if (!window.InventoryAPI) return;
+
+  const item = window.InventoryAPI.getData().find(i => i.id === itemId);
+  if (!item) return;
+
+  // Pre-fill result elements
+  document.getElementById("result-name").textContent = item.Produit;
+  document.getElementById("result-brand").textContent = `Inventaire: ${item.Qty} ${item.Unité}`;
+
+  // If has calorie data, calculate total calories for available qty
+  if (item.calories_per_100) {
+    const caloriesPer100 = parseFloat(item.calories_per_100);
+    const totalQty = parseFloat(item.Qty);
+    const totalCalories = (totalQty * caloriesPer100) / 100;
+    document.getElementById("result-kcal").value = Math.round(totalCalories);
+    console.log(`Selected: ${item.Produit} - ${totalQty}${item.Unité} = ${Math.round(totalCalories)} kcal`);
+  } else {
+    document.getElementById("result-kcal").value = "";
+    document.getElementById("result-kcal").placeholder = `(${item.Produit} n'a pas données nutrition)`;
+  }
+
+  // Clear suggestions after selection
+  const container = document.getElementById("inventory-suggestions");
+  if (container) container.innerHTML = "";
 }
 
 /**

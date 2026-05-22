@@ -952,6 +952,45 @@ async function initializeInventory() {
 }
 
 // ============================================================================
+// EXPORT FOR OTHER PAGES (e.g., accueil.js grignottage)
+// ============================================================================
+
+/**
+ * Make inventory data accessible to other pages (home page grignottage scanner)
+ * Usage: window.InventoryAPI.getData(), window.InventoryAPI.findByBarcode(code)
+ */
+window.InventoryAPI = {
+  /**
+   * Get current inventory data array
+   */
+  getData: () => inventoryData,
+
+  /**
+   * Find item by barcode (including soft-deleted with Qty=0)
+   * @param {string} barcode
+   * @returns {object|null}
+   */
+  findByBarcode: (barcode) => {
+    return inventoryData.find(i => i.Barcode === barcode);
+  },
+
+  /**
+   * Search inventory by product name (case-insensitive)
+   * @param {string} query
+   * @param {boolean} activeOnly - only items with Qty > 0 (default true)
+   * @returns {array}
+   */
+  searchByName: (query, activeOnly = true) => {
+    const lowerQuery = (query || "").toLowerCase();
+    return inventoryData.filter(item => {
+      const matches = item.Produit.toLowerCase().includes(lowerQuery);
+      const isActive = activeOnly ? (parseFloat(item.Qty) || 0) > 0 : true;
+      return matches && isActive;
+    });
+  }
+};
+
+// ============================================================================
 // BOOT
 // ============================================================================
 
