@@ -171,13 +171,30 @@ function renderMeals() {
       const displayKcal = meal.actualKcal || meal.estimatedKcal;
       const eatenClass = meal.eaten ? "eaten" : "";
 
+      // For snacks (grignottage), display quantity with unit
+      let displayName = meal.name;
+      if (meal.mealType === "grignottage" && meal.quantity !== undefined && meal.unit) {
+        // Calculate quantity for display based on unit type
+        // If unit is ml/litre, show as ml; if g/pièce, show as-is
+        let displayQty = meal.quantity;
+        let displayUnit = meal.unit;
+
+        // Normalize litre to ml for display
+        if (meal.unit === "litre") {
+          displayQty = meal.quantity * 1000;
+          displayUnit = "ml";
+        }
+
+        displayName = `${meal.name} (${Math.round(displayQty)} ${displayUnit})`;
+      }
+
       return `
         <div class="meal-card ${eatenClass}" data-meal-type="${meal.mealType}">
           <div class="meal-info">
             <div style="display: flex; align-items: center;">
               <span class="meal-time-icon">${meal.emoji}</span>
               <div>
-                <p class="meal-name">${meal.name}</p>
+                <p class="meal-name">${displayName}</p>
                 <p class="meal-kcal">${displayKcal} kcal</p>
               </div>
             </div>
@@ -1119,6 +1136,8 @@ async function addGrignottage() {
       label: "Grignottage",
       emoji: "🍪",
       name: productName,
+      quantity: quantity,
+      unit: unit,
       estimatedKcal: Math.round(totalCalories),
       actualKcal: Math.round(totalCalories),
       eaten: true,
