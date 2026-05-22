@@ -248,30 +248,32 @@ function updateProgressDisplay() {
 }
 
 /**
- * Saves meals state (eaten status) to localStorage.
+ * Saves meals state (eaten status) to localStorage, separated by user and date.
  */
 function saveMealsState() {
   try {
+    const user = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
     const today = getTodayISO();
     const stateToSave = AccueilState.todayMeals.map(m => ({
       mealType: m.mealType,
       eaten: m.eaten,
       actualKcal: m.actualKcal,
     }));
-    localStorage.setItem(`mealflow:meals:${today}`, JSON.stringify(stateToSave));
-    localStorage.setItem(`mealflow:consumed:${today}`, String(AccueilState.caloriesConsumed));
+    localStorage.setItem(`mealflow:meals:${user}:${today}`, JSON.stringify(stateToSave));
+    localStorage.setItem(`mealflow:consumed:${user}:${today}`, String(AccueilState.caloriesConsumed));
   } catch (err) {
     console.warn("Could not save meals state to localStorage:", err);
   }
 }
 
 /**
- * Loads meals state (eaten status) from localStorage.
+ * Loads meals state (eaten status) from localStorage, separated by user and date.
  */
 function loadMealsState() {
+  const user = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
   const today = getTodayISO();
-  const savedState = localStorage.getItem(`mealflow:meals:${today}`);
-  const savedConsumed = localStorage.getItem(`mealflow:consumed:${today}`);
+  const savedState = localStorage.getItem(`mealflow:meals:${user}:${today}`);
+  const savedConsumed = localStorage.getItem(`mealflow:consumed:${user}:${today}`);
 
   if (savedState) {
     try {
@@ -786,9 +788,20 @@ function addGrignottage() {
    ============================================================================ */
 
 document.addEventListener("userChanged", function () {
+  // Reset meals state and reload for new user
+  AccueilState.caloriesConsumed = 0;
+  AccueilState.todayMeals.forEach(m => {
+    m.eaten = false;
+    m.actualKcal = null;
+  });
+
+  // Load the new user's meals state
+  loadMealsState();
+
+  // Update UI
   renderGreeting();
+  renderMeals();
   updateProgressDisplay();
-  // Meals stay the same (they're per-day, not per-user)
 });
 
 // Check for midnight rollover every minute
