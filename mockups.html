@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MealFlow V2 — Mockups</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #2e7d32;
+      --primary-light: #4caf50;
+      --primary-bg: #f1f8f1;
+      --primary-border: #c8e6c9;
+      --danger: #e74c3c;
+      --warning: #e67e22;
+      --success: #27ae60;
+      --text-primary: #222;
+      --text-secondary: #999;
+      --bg-light: #f5f5f5;
+      --bg-white: #fff;
+      --border-light: #eee;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-light);
+      color: var(--text-primary);
+      font-size: 16px;
+    }
+
+    .mockup-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-white);
+      border-bottom: 1px solid var(--border-light);
+      padding: 12px;
+      display: flex;
+      gap: 8px;
+      z-index: 200;
+      flex-wrap: wrap;
+    }
+
+    .mockup-nav button {
+      padding: 8px 12px;
+      border: 1px solid var(--primary-border);
+      background: var(--primary-bg);
+      color: var(--primary);
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9em;
+    }
+
+    .mockup-nav button.active {
+      background: var(--primary);
+      color: var(--bg-white);
+      border-color: var(--primary);
+    }
+
+    .page {
+      display: none;
+      margin-top: 60px;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    /* Header */
+    .app-header {
+      padding: 16px;
+      background: var(--bg-white);
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .app-header h1 {
+      font-size: 1.3em;
+      font-weight: 700;
+    }
+
+    .app-header p {
+      font-size: 0.85em;
+      color: var(--text-secondary);
+      margin: 4px 0 0;
+    }
+
+    .user-chip {
+      background: var(--primary);
+      color: var(--bg-white);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.85em;
+      font-weight: 600;
+    }
+
+    /* Content */
+    .page-content {
+      padding: 16px;
+      padding-bottom: 80px;
+    }
+
+    /* Components */
+    .btn {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: var(--bg-white);
+    }
+
+    .btn-primary:active {
+      background: #1b5e20;
+    }
+
+    .btn-secondary {
+      background: var(--primary-bg);
+      color: var(--primary);
+      border: 1px solid var(--primary-border);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: var(--bg-white);
+    }
+
+    .card {
+      background: var(--bg-white);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: flex-end;
+      padding: 16px;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--bg-white);
+      width: 100%;
+      border-radius: 16px 16px 0 0;
+      padding: 20px 16px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-title {
+      font-size: 1.2em;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .progress-circle {
+      width: 120px;
+      height: 120px;
+      margin: 20px auto;
+      display: block;
+    }
+
+    .progress-text {
+      text-align: center;
+      font-weight: 700;
+      font-size: 1.1em;
+      color: var(--primary);
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      font-size: 1em;
+      margin-top: 20px;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    .journal-entry {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 12px;
+      background: var(--bg-white);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border: 1px solid var(--border-light);
+    }
+
+    .entry-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+    }
+
+    .entry-emoji {
+      font-size: 1.3em;
+    }
+
+    .entry-name {
+      flex: 1;
+    }
+
+    .entry-time {
+      font-size: 0.85em;
+      color: var(--text-secondary);
+    }
+
+    .entry-details {
+      font-size: 0.85em;
+      color: var(--text-secondary);
+    }
+
+    .recipe-card {
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .recipe-card:active {
+      transform: scale(0.98);
+    }
+
+    .recipe-name {
+      font-weight: 700;
+      font-size: 1em;
+      margin-bottom: 6px;
+    }
+
+    .recipe-meta {
+      font-size: 0.85em;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .recipe-kcal {
+      font-size: 1em;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 6px;
+    }
+
+    .chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+
+    .chip {
+      display: inline-block;
+      background: var(--primary-bg);
+      color: var(--primary);
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 0.8em;
+    }
+
+    .planning-grid {
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    .planning-grid th {
+      background: var(--primary-bg);
+      padding: 8px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.9em;
+    }
+
+    .planning-grid td {
+      padding: 12px 8px;
+      border: 1px solid var(--border-light);
+      font-size: 0.9em;
+      cursor: pointer;
+      background: var(--bg-white);
+    }
+
+    .planning-grid td:hover {
+      background: var(--primary-bg);
+    }
+
+    .meal-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .meal-option {
+      padding: 12px;
+      font-size: 0.95em;
+    }
+
+    /* Nav Bottom */
+    .nav-bottom {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: var(--bg-white);
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      z-index: 100;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      font-size: 0.6em;
+      color: var(--text-secondary);
+      text-decoration: none;
+      flex: 1;
+      padding: 4px;
+      cursor: pointer;
+      background: none;
+      border: none;
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+    }
+
+    .nav-icon {
+      font-size: 1.5em;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--primary-border);
+      border-radius: 6px;
+      font-size: 1em;
+      margin-bottom: 8px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.9em;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text-primary);
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .expiry-warn {
+      color: var(--warning);
+      font-weight: 600;
+    }
+
+    .expiry-danger {
+      color: var(--danger);
+      font-weight: 600;
+    }
+
+    .history-item {
+      padding: 12px;
+      background: var(--bg-white);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      border-left: 3px solid var(--primary-bg);
+    }
+
+    .history-date {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .history-kcal {
+      font-size: 0.95em;
+      color: var(--primary);
+    }
+
+    .history-item.over {
+      border-left-color: var(--warning);
+    }
+
+    .history-item.over .history-kcal {
+      color: var(--warning);
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-nav">
+    <button class="active" onclick="switchPage('accueil')">🏠 Accueil</button>
+    <button onclick="switchPage('recettes')">📖 Recettes</button>
+    <button onclick="switchPage('planning')">📅 Planning</button>
+    <button onclick="switchPage('recette-jour')">🍽️ Recette du jour</button>
+    <button onclick="switchPage('inventaire')">📦 Inventaire</button>
+    <button onclick="switchPage('profils')">👤 Profils</button>
+    <button onclick="switchPage('courses')">🛒 Courses</button>
+  </div>
+
+  <!-- ACCUEIL PAGE -->
+  <div id="accueil" class="page active">
+    <div class="app-header">
+      <div>
+        <h1>Bonjour Florian</h1>
+        <p>lundi 26 mai 2026</p>
+      </div>
+      <div class="user-chip">F</div>
+    </div>
+
+    <div class="page-content">
+      <svg class="progress-circle" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="54" fill="none" stroke="#e0e0e0" stroke-width="8"/>
+        <circle cx="60" cy="60" r="54" fill="none" stroke="var(--primary)" stroke-width="8"
+                stroke-dasharray="169.6" stroke-dashoffset="84.8" stroke-linecap="round"/>
+        <text x="60" y="65" text-anchor="middle" font-size="20" font-weight="bold" fill="var(--text-primary)">50%</text>
+      </svg>
+      <div class="progress-text">1200 / 2200 kcal</div>
+
+      <h2>Journal du jour</h2>
+      <div class="journal-entry">
+        <div class="entry-header">
+          <span class="entry-emoji">🍽️</span>
+          <span class="entry-name">Pâtes Carbonara</span>
+          <span class="entry-time">12:30</span>
+        </div>
+        <div class="entry-details">250g · <strong>450 kcal</strong></div>
+      </div>
+
+      <div class="journal-entry">
+        <div class="entry-header">
+          <span class="entry-emoji">🥗</span>
+          <span class="entry-name">Salade Verte</span>
+          <span class="entry-time">14:15</span>
+        </div>
+        <div class="entry-details">150g · <strong>45 kcal</strong></div>
+      </div>
+
+      <div class="journal-entry">
+        <div class="entry-header">
+          <span class="entry-emoji">🥤</span>
+          <span class="entry-name">Jus d'Orange</span>
+          <span class="entry-time">15:00</span>
+        </div>
+        <div class="entry-details">250ml · <strong>112 kcal</strong></div>
+      </div>
+
+      <button class="btn btn-primary" onclick="openModal('meal-modal')" style="margin-top: 20px;">
+        🍴 J'ai mangé
+      </button>
+    </div>
+  </div>
+
+  <!-- RECETTES PAGE -->
+  <div id="recettes" class="page">
+    <div class="app-header">
+      <div>
+        <h1>📖 Recettes</h1>
+      </div>
+      <div class="user-chip">F</div>
+    </div>
+
+    <div class="page-content">
+      <input type="text" placeholder="Rechercher..." style="margin-bottom: 16px;">
+
+      <button class="btn btn-primary" style="margin-bottom: 20px;">➕ Ajouter une recette</button>
+
+      <div class="card recipe-card">
+        <div class="recipe-name">Pâtes Carbonara</div>
+        <div class="recipe-meta">⏱️ 20 min | 🍽️ 2 portions</div>
+        <div class="recipe-kcal">180 kcal/100g</div>
+        <div class="chips">
+          <span class="chip">rapide</span>
+          <span class="chip">omnivore</span>
+        </div>
+        <div class="recipe-meta">3 ingrédients</div>
+      </div>
+
+      <div class="card recipe-card">
+        <div class="recipe-name">Salade Niçoise</div>
+        <div class="recipe-meta">⏱️ 15 min | 🍽️ 4 portions</div>
+        <div class="recipe-kcal">95 kcal/100g</div>
+        <div class="chips">
+          <span class="chip">végétarien</span>
+        </div>
+        <div class="recipe-meta">6 ingrédients</div>
+      </div>
+
+      <div class="card recipe-card">
+        <div class="recipe-name">Omelette Fromage</div>
+        <div class="recipe-meta">⏱️ 10 min | 🍽️ 1 portion</div>
+        <div class="recipe-kcal">155 kcal/100g</div>
+        <div class="chips">
+          <span class="chip">rapide</span>
+          <span class="chip">omnivore</span>
+        </div>
+        <div class="recipe-meta">4 ingrédients</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLANNING PAGE -->
+  <div id="planning" class="page">
+    <div class="app-header">
+      <div>
+        <h1>📅 Planning</h1>
+      </div>
+      <div class="user-chip">F</div>
+    </div>
+
+    <div class="page-content">
+      <div style="text-align: center; margin-bottom: 20px; font-weight: 600;">
+        Semaine 22 (25-31 mai)
+      </div>
+
+      <table class="planning-grid">
+        <tr>
+          <th colspan="2">LUNDI 25</th>
+        </tr>
+        <tr>
+          <td><strong>Midi:</strong><br>Pâtes Carb.<br>(2 portions)</td>
+          <td><strong>Soir:</strong><br><em>Tap pour ajouter</em></td>
+        </tr>
+        <tr>
+          <th colspan="2">MARDI 26</th>
+        </tr>
+        <tr>
+          <td><strong>Midi:</strong><br>Salade<br>(4 portions)</td>
+          <td><strong>Soir:</strong><br>Omelette<br>(1 portion)</td>
+        </tr>
+        <tr>
+          <th colspan="2">MERCREDI 27</th>
+        </tr>
+        <tr>
+          <td colspan="2"><em style="color: var(--text-secondary);">Aucune recette planifiée</em></td>
+        </tr>
+      </table>
+
+      <button class="btn btn-primary" style="margin-bottom: 12px;">🛒 Générer liste de courses</button>
+      <button class="btn btn-secondary">👁️ Recette du jour</button>
+    </div>
+  </div>
+
+  <!-- RECETTE DU JOUR PAGE -->
+  <div id="recette-jour" class="page">
+    <div class="app-header">
+      <div>
+        <h1>🍽️ Recette du jour</h1>
+      </div>
+      <div class="user-chip">F</div>
+    </div>
+
+    <div class="page-content">
+      <div class="card" style="text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 8px;">MARDI 26 MAI</div>
+        <h2 style="margin: 0; font-size: 1.3em;">Pâtes Carbonara</h2>
+        <div class="recipe-meta" style="margin-top: 8px;">⏱️ 20 min | 🍽️ 2 portions | 180 kcal/100g</div>
+      </div>
+
+      <h2>Ingrédients</h2>
+      <ul style="padding-left: 20px; margin-bottom: 20px; line-height: 1.8;">
+        <li>400g — Pâtes</li>
+        <li>3 pièces — Œufs</li>
+        <li>150g — Lardons</li>
+        <li>100g — Crème fraîche</li>
+        <li>1 — Oignon</li>
+      </ul>
+
+      <h2>Étapes de Préparation</h2>
+      <ol style="padding-left: 20px; line-height: 2;">
+        <li>Cuire les pâtes</li>
+        <li>Faire revenir les lardons</li>
+        <li>Émincer l'oignon</li>
+        <li>Mélanger les œufs avec la crème fraîche</li>
+        <li>Incorporer les pâtes</li>
+        <li>Assaisonner et servir</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- INVENTAIRE PAGE -->
+  <div id="inventaire" class="page">
+    <div class="app-header">
+      <div>
+        <h1>📦 Inventaire</h1>
+      </div>
+      <div class="user-chip">F</div>
+    </div>
+
+    <div class="page-content">
+      <select style="margin-bottom: 16px;">
+        <option>Tous les articles</option>
+        <option>Fruits</option>
+        <option>Légumes</option>
+      </select>
+
+      <button class="btn btn-primary" style="margin-bottom: 20px;">📱 Scanner un Produit</button>
+
+      <div class="card">
+        <div style="font-weight: 600; margin-bottom: 4px;">Tomates Cerises</div>
+        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">250g · <span class="expiry-warn">expire dans 3 jours ⚠️</span></div>
+        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 8px;">18 kcal/100g · 2,50 EUR</div>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn btn-secondary" style="flex: 1; padding: 8px; font-size: 0.9em;">Consommer</button>
+          <button class="btn btn-secondary" style="flex: 1; padding: 8px; font-size: 0.9em;">Éditer</button>
+          <button class="btn btn-danger" style="flex: 1; padding: 8px; font-size: 0.9em;">🗑️</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight: 600; margin-bottom: 4px;">Œufs Bio</div>
+        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">12 pièces · expire dans 15 j</div>
+        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 8px;">155 kcal/100g · 4,50 EUR</div>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn btn-secondary" style="flex: 1; padding: 8px; font-size: 0.9em;">Consommer</button>
+          <button class="btn btn-secondary" style="flex: 1; padding: 8px; font-size: 0.9em;">Éditer</button>
+          <button class="btn btn-danger" style="flex: 1; padding: 8px; font-size: 0.9em;">🗑️</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight: 600; margin-bottom: 4px;">Lardons Fumés</div>
+        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">200g · <span class="expiry-danger">EXPIRÉ hier ❌</span></div>
+        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 8px;">375 kcal/100g · 3,20 EUR</div>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn btn-secondary" style="flex: 1; padding: 8px; font-size: 0.9em;">Consommer</button>
+          <button class="btn btn-secondary" style="flex: 1; padding: 8px; font-size: 0.9em;">Éditer</button>
+          <button class="btn btn-danger" style="flex: 1; padding: 8px; font-size: 0.9em;">🗑️</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight: 600; margin-bottom: 4px;">Crème Fraîche</div>
+        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">400ml · expire dans 5 jours</div>
+        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 8px;">340 kcal/100ml · 2,00 EUR</div>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn btn-secondary" style="flex: 1; padding: 8px; font-size: 0.9em;">Consommer</button>
+          <button class="btn btn-secondary" style="flex: 1; padding: 8px; font-size: 0.9em;">Éditer</button>
+          <button class="btn btn-danger" style="flex: 1; padding: 8px; font-size: 0.9em;">🗑️</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILS PAGE -->
+  <div id="profils" class="page">
+    <div class="app-header">
+      <div>
+        <h1>👤 Profils</h1>
+      </div>
+      <div class="user-chip">F</div>
+    </div>
+
+    <div class="page-content">
+      <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+        <button class="btn btn-primary" style="flex: 1; padding: 8px;">Profil</button>
+        <button class="btn btn-secondary" style="flex: 1; padding: 8px;">Historique</button>
+        <button class="btn btn-secondary" style="flex: 1; padding: 8px;">Stats</button>
+      </div>
+
+      <div class="card">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <div style="font-size: 0.8em; color: var(--text-secondary);">Taille</div>
+            <div style="font-size: 1.2em; font-weight: 700; color: var(--primary);">175 cm</div>
+          </div>
+          <div>
+            <div style="font-size: 0.8em; color: var(--text-secondary);">Poids</div>
+            <div style="font-size: 1.2em; font-weight: 700; color: var(--primary);">75 kg</div>
+          </div>
+          <div>
+            <div style="font-size: 0.8em; color: var(--text-secondary);">IMC</div>
+            <div style="font-size: 1.2em; font-weight: 700; color: var(--primary);">24.5</div>
+          </div>
+          <div>
+            <div style="font-size: 0.8em; color: var(--text-secondary);">BMR</div>
+            <div style="font-size: 1.2em; font-weight: 700; color: var(--primary);">1800</div>
+          </div>
+          <div>
+            <div style="font-size: 0.8em; color: var(--text-secondary);">TDEE</div>
+            <div style="font-size: 1.2em; font-weight: 700; color: var(--primary);">2700</div>
+          </div>
+          <div>
+            <div style="font-size: 0.8em; color: var(--text-secondary);">Objectif</div>
+            <div style="font-size: 1.2em; font-weight: 700; color: var(--primary);">2200</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-secondary" style="margin-top: 20px;">✏️ Éditer Profil</button>
+
+      <h2>Historique</h2>
+      <div class="history-item">
+        <div class="history-date">Lundi 26 mai 2026</div>
+        <div class="history-kcal">1346 kcal → <button style="background: none; border: none; color: var(--primary); cursor: pointer; text-decoration: underline;">Détails</button></div>
+      </div>
+
+      <div class="history-item over">
+        <div class="history-date">Dimanche 25 mai 2026</div>
+        <div class="history-kcal">1890 kcal (↑ objectif) → <button style="background: none; border: none; color: var(--warning); cursor: pointer; text-decoration: underline;">Détails</button></div>
+      </div>
+
+      <div class="history-item">
+        <div class="history-date">Samedi 24 mai 2026</div>
+        <div class="history-kcal">2100 kcal → <button style="background: none; border: none; color: var(--primary); cursor: pointer; text-decoration: underline;">Détails</button></div>
+      </div>
+
+      <div class="history-item">
+        <div class="history-date">Vendredi 23 mai 2026</div>
+        <div class="history-kcal">1750 kcal → <button style="background: none; border: none; color: var(--primary); cursor: pointer; text-decoration: underline;">Détails</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COURSES PAGE -->
+  <div id="courses" class="page">
+    <div class="app-header">
+      <div>
+        <h1>🛒 Courses</h1>
+      </div>
+      <div class="user-chip">F</div>
+    </div>
+
+    <div class="page-content">
+      <div style="text-align: center; margin-bottom: 20px; font-weight: 600;">
+        Semaine 22 (25-31 mai)
+      </div>
+
+      <button class="btn btn-secondary" style="margin-bottom: 20px;">🔄 Régénérer</button>
+
+      <h2>FRUITS</h2>
+      <div class="card">
+        <label><input type="checkbox"> Tomates Cerises — 250g</label>
+        <label><input type="checkbox"> Fraises — 500g</label>
+        <label><input type="checkbox"> Pommes — 3 pcs</label>
+      </div>
+
+      <h2>LÉGUMES</h2>
+      <div class="card">
+        <label><input type="checkbox"> Laitue — 1 pcs</label>
+        <label><input type="checkbox"> Oignons — 500g</label>
+        <label><input type="checkbox"> Poivrons Rouges — 2 pcs</label>
+      </div>
+
+      <h2>PRODUITS LAITIERS</h2>
+      <div class="card">
+        <label><input type="checkbox"> Lait — 1 litre</label>
+        <label><input type="checkbox"> Beurre — 250g</label>
+        <label><input type="checkbox"> Œufs — 12 pcs</label>
+        <label><input type="checkbox"> Fromage Camembert — 2 pcs</label>
+      </div>
+
+      <h2>VIANDES</h2>
+      <div class="card">
+        <label><input type="checkbox"> Lardons Fumés — 300g</label>
+        <label><input type="checkbox"> Poulet Fermier — 1 kg</label>
+      </div>
+
+      <h2>FÉCULENTS & AUTRES</h2>
+      <div class="card">
+        <label><input type="checkbox"> Pâtes — 500g</label>
+        <label><input type="checkbox"> Riz Blanc — 500g</label>
+        <label><input type="checkbox"> Crème Fraîche — 400ml</label>
+      </div>
+
+      <div class="card" style="background: var(--primary-bg); font-weight: 700; text-align: center; color: var(--primary);">
+        TOTAL ESTIMÉ: 87,50 EUR
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALS -->
+  <div id="meal-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-title">J'ai mangé</div>
+
+      <div class="meal-options">
+        <button class="btn btn-secondary">📱 Scanner un produit</button>
+        <button class="btn btn-secondary">📖 Choisir une recette</button>
+        <button class="btn btn-secondary">📦 Chercher dans l'inventaire</button>
+        <button class="btn btn-secondary">✏️ Saisie manuelle</button>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <div class="form-group">
+          <label>Quantité (grammes)</label>
+          <input type="number" placeholder="250">
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-primary">Ajouter au journal</button>
+          <button class="btn btn-secondary" onclick="closeModal('meal-modal')">Annuler</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAV BOTTOM (visible on all pages) -->
+  <div class="nav-bottom">
+    <button class="nav-item active" onclick="switchPage('accueil')">
+      <span class="nav-icon">🏠</span>Accueil
+    </button>
+    <button class="nav-item" onclick="switchPage('recettes')">
+      <span class="nav-icon">📖</span>Recettes
+    </button>
+    <button class="nav-item" onclick="switchPage('planning')">
+      <span class="nav-icon">📅</span>Planning
+    </button>
+    <button class="nav-item" onclick="switchPage('inventaire')">
+      <span class="nav-icon">📦</span>Inventaire
+    </button>
+    <button class="nav-item" onclick="switchPage('profils')">
+      <span class="nav-icon">👤</span>Profils
+    </button>
+  </div>
+
+  <script>
+    function switchPage(pageId) {
+      // Hide all pages
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      // Remove active from buttons
+      document.querySelectorAll('.mockup-nav button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+      // Show selected page
+      document.getElementById(pageId).classList.add('active');
+
+      // Mark buttons as active
+      event.target.classList.add('active');
+      const iconMap = {
+        'accueil': '🏠',
+        'recettes': '📖',
+        'planning': '📅',
+        'inventaire': '📦',
+        'profils': '👤',
+        'courses': '🛒',
+        'recette-jour': '🍽️'
+      };
+      document.querySelectorAll('.nav-item').forEach(n => {
+        if (n.textContent.includes(iconMap[pageId])) {
+          n.classList.add('active');
+        }
+      });
+    }
+
+    function openModal(modalId) {
+      document.getElementById(modalId).classList.add('show');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('show');
+    }
+
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.remove('show');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
