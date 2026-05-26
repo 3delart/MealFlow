@@ -139,20 +139,30 @@ One row per meal eaten. One tab per user.
 
 ### Shared Modules (js/)
 
-#### **auth.js** — OAuth2 Flow
+#### **auth.js** — OAuth2 Flow + Persistent Sessions
 **Exports:** `window.Auth = { ... }`
 
 **Methods:**
-- `init()` → Promise<email> — Check token, silent re-auth, return email or null
-- `showLoginButton()` — Render Google Sign-In button
-- `getToken()` — Return current OAuth2 access token
-- `logout()` — Clear token, reload
+- `init()` → Promise<email> — Load token from localStorage → attempt silent re-auth via Google GIS → refresh if expired → return email or null if no valid token
+- `showLoginButton()` — Render Google Sign-In button (shown only when not authenticated)
+- `getToken()` → string — Return current valid OAuth2 access token
+- `logout()` → void — Clear localStorage tokens, dispatch `auth-changed` event, reload page
+- `isAuthenticated()` → boolean — Check if valid token exists
 
-**Events:** Fires `auth-changed` event when auth state changes.
+**Events:** Fires `auth-changed` event when auth state changes (login/logout/token refresh).
+
+**Persistent Session Logic:**
+1. **On page load:** `Auth.init()` runs automatically
+2. **Token storage:** Access token + ID token stored in localStorage
+3. **Token expiry:** GIS library handles refresh automatically; if refresh fails, prompt user to login again
+4. **Cross-tab sync:** localStorage changes trigger `storage` event (other tabs detect logout)
+5. **Silent re-auth:** Use GIS `prompt=none` to refresh without user interaction
 
 **State:**
-- `localStorage.googleAccessToken` — OAuth2 access token
-- `localStorage.googleIdToken` — ID token
+- `localStorage.googleAccessToken` — OAuth2 access token (expires in ~1 hour)
+- `localStorage.googleIdToken` — ID token (longer-lived)
+- `localStorage.googleTokenExpiry` — Expiry timestamp (optional, for client-side checking)
+- `window.Auth._currentEmail` — In-memory cache of logged-in email
 
 ---
 
@@ -487,6 +497,49 @@ Additional links within pages:
 - Planning → "Recette du jour" link
 - Accueil modal → "Chercher dans l'inventaire"
 - Courses shown from Planning
+
+---
+
+## App Initialization (Persistent Authentication)
+
+**Every page (index.html, recettes.html, etc.) runs the same initialization sequence on load:**
+
+```javascript
+// 1. Load shared modules (in order)
+// <script src="js/google-auth.js"></script>
+// <script src="js/sheets-api.js"></script>
+// <script src="js/user-context.js"></script>
+// etc.
+
+// 2. Main app init (in page-specific script)
+(async () => {
+  // Try to restore session from localStorage
+  const email = await Auth.init();
+  
+  if (!email) {
+    // No token or token refresh failed → show login button
+    Auth.showLoginButton();
+    return;
+  }
+  
+  // Token exists and valid → load data
+  await UserContext.init(email);
+  
+  // Load read-only data (via API key)
+  await RecipesAPI.load();
+  await InventoryAPI.load();
+  
+  // Page now has all data + user profile + auth token ready
+  // Page-specific code renders UI
+})();
+```
+
+**Persistent Session Details:**
+- **First visit:** User logs in via Google OAuth → tokens stored in localStorage
+- **Second visit:** Page load → `Auth.init()` loads token from localStorage → attempts silent re-auth → if successful, user is logged back in without seeing login button
+- **Token expiry (1 hour):** GIS library automatically refreshes token in background
+- **Long session pause (>24 hours):** ID token expires → user must log in again (show login button)
+- **Logout:** User taps logout → tokens cleared from localStorage → page reloads → login button shown
 
 ---
 
