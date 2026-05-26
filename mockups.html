@@ -24,9 +24,10 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg-light);
+      background: linear-gradient(135deg, #f5f5f5 0%, #f9f9f9 100%);
       color: var(--text-primary);
       font-size: 16px;
+      line-height: 1.5;
     }
 
     .mockup-nav {
@@ -74,66 +75,79 @@
 
     /* Header */
     .app-header {
-      padding: 16px;
-      background: var(--bg-white);
+      padding: 18px 16px;
+      background: linear-gradient(135deg, var(--bg-white) 0%, #fcfcfc 100%);
       border-bottom: 1px solid var(--border-light);
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
     .app-header h1 {
-      font-size: 1.3em;
+      font-size: 1.35em;
       font-weight: 700;
+      background: linear-gradient(135deg, var(--primary) 0%, #1b5e20 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
     .app-header p {
       font-size: 0.85em;
       color: var(--text-secondary);
       margin: 4px 0 0;
+      font-weight: 500;
     }
 
     .user-chip {
-      background: var(--primary);
+      background: linear-gradient(135deg, var(--primary) 0%, #1b5e20 100%);
       color: var(--bg-white);
-      padding: 6px 12px;
+      padding: 8px 14px;
       border-radius: 20px;
-      font-size: 0.85em;
+      font-size: 0.9em;
       font-weight: 600;
+      box-shadow: 0 2px 4px rgba(46, 125, 50, 0.2);
     }
 
     /* Content */
     .page-content {
-      padding: 16px;
-      padding-bottom: 80px;
+      padding: 20px 16px;
+      padding-bottom: 90px;
     }
 
     /* Components */
     .btn {
       padding: 12px 16px;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       font-size: 0.95em;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.3s;
       width: 100%;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .btn-primary {
-      background: var(--primary);
+      background: linear-gradient(135deg, var(--primary) 0%, #1b5e20 100%);
       color: var(--bg-white);
     }
 
     .btn-primary:active {
-      background: #1b5e20;
+      transform: scale(0.98);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
 
     .btn-secondary {
       background: var(--primary-bg);
       color: var(--primary);
       border: 1px solid var(--primary-border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--primary-border);
     }
 
     .btn-danger {
@@ -143,10 +157,16 @@
 
     .card {
       background: var(--bg-white);
-      border-radius: 10px;
-      padding: 12px;
+      border-radius: 12px;
+      padding: 14px;
       margin-bottom: 12px;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+      box-shadow: 0 2px 8px rgba(46, 125, 50, 0.08);
+      transition: box-shadow 0.3s, transform 0.3s;
+    }
+
+    .card:hover {
+      box-shadow: 0 4px 12px rgba(46, 125, 50, 0.12);
+      transform: translateY(-1px);
     }
 
     .modal {
@@ -179,70 +199,102 @@
     }
 
     .progress-circle {
-      width: 120px;
-      height: 120px;
-      margin: 20px auto;
+      width: 140px;
+      height: 140px;
+      margin: 24px auto;
       display: block;
+      filter: drop-shadow(0 4px 12px rgba(46, 125, 50, 0.15));
     }
 
     .progress-text {
       text-align: center;
       font-weight: 700;
-      font-size: 1.1em;
+      font-size: 1.15em;
       color: var(--primary);
-      margin-bottom: 20px;
+      margin-bottom: 28px;
+      letter-spacing: 0.5px;
     }
 
     h2 {
-      font-size: 1em;
-      margin-top: 20px;
-      margin-bottom: 12px;
+      font-size: 1.05em;
+      margin-top: 24px;
+      margin-bottom: 14px;
       font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: 0.3px;
+    }
+
+    h2:first-child {
+      margin-top: 0;
     }
 
     .journal-entry {
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      padding: 12px;
+      gap: 8px;
+      padding: 14px;
       background: var(--bg-white);
-      border-radius: 8px;
-      margin-bottom: 8px;
-      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      margin-bottom: 10px;
+      border-left: 4px solid var(--primary);
+      box-shadow: 0 2px 6px rgba(46, 125, 50, 0.08);
+      transition: all 0.2s;
+    }
+
+    .journal-entry:hover {
+      box-shadow: 0 4px 10px rgba(46, 125, 50, 0.12);
+      transform: translateY(-1px);
     }
 
     .entry-header {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       font-weight: 600;
     }
 
     .entry-emoji {
-      font-size: 1.3em;
+      font-size: 1.4em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: var(--primary-bg);
+      border-radius: 8px;
     }
 
     .entry-name {
       flex: 1;
+      font-size: 0.98em;
     }
 
     .entry-time {
-      font-size: 0.85em;
+      font-size: 0.8em;
       color: var(--text-secondary);
+      font-weight: 500;
     }
 
     .entry-details {
       font-size: 0.85em;
       color: var(--text-secondary);
+      padding-left: 42px;
     }
 
     .recipe-card {
       cursor: pointer;
-      transition: transform 0.2s;
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
     }
 
     .recipe-card:active {
       transform: scale(0.98);
+    }
+
+    .recipe-info {
+      flex: 1;
     }
 
     .recipe-name {
@@ -254,30 +306,40 @@
     .recipe-meta {
       font-size: 0.85em;
       color: var(--text-secondary);
-      margin-bottom: 6px;
-    }
-
-    .recipe-kcal {
-      font-size: 1em;
-      font-weight: 700;
-      color: var(--primary);
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
 
     .chips {
       display: flex;
       gap: 6px;
       flex-wrap: wrap;
-      margin-bottom: 6px;
+      margin-bottom: 0;
     }
 
     .chip {
       display: inline-block;
       background: var(--primary-bg);
       color: var(--primary);
-      padding: 4px 10px;
-      border-radius: 16px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 0.75em;
+      font-weight: 500;
+    }
+
+    .detail-btn {
+      padding: 6px 10px;
+      background: var(--primary);
+      color: var(--bg-white);
+      border: none;
+      border-radius: 6px;
       font-size: 0.8em;
+      cursor: pointer;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+
+    .detail-btn:active {
+      opacity: 0.8;
     }
 
     .planning-grid {
@@ -324,28 +386,35 @@
       bottom: 0;
       left: 0;
       right: 0;
-      height: 56px;
-      background: var(--bg-white);
+      height: 60px;
+      background: linear-gradient(135deg, var(--bg-white) 0%, #fcfcfc 100%);
       border-top: 1px solid var(--border-light);
       display: flex;
       align-items: center;
       justify-content: space-around;
       z-index: 100;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
     }
 
     .nav-item {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 2px;
-      font-size: 0.6em;
+      gap: 3px;
+      font-size: 0.65em;
       color: var(--text-secondary);
       text-decoration: none;
       flex: 1;
-      padding: 4px;
+      padding: 6px 4px;
       cursor: pointer;
       background: none;
       border: none;
+      transition: all 0.3s;
+      font-weight: 500;
+    }
+
+    .nav-item:active {
+      transform: scale(0.95);
     }
 
     .nav-item.active {
@@ -353,7 +422,7 @@
     }
 
     .nav-icon {
-      font-size: 1.5em;
+      font-size: 1.6em;
     }
 
     input, select, textarea {
@@ -445,6 +514,10 @@
       </svg>
       <div class="progress-text">1200 / 2200 kcal</div>
 
+      <button class="btn btn-primary" onclick="openModal('meal-modal')" style="margin-bottom: 20px;">
+        🍴 J'ai mangé
+      </button>
+
       <h2>Journal du jour</h2>
       <div class="journal-entry">
         <div class="entry-header">
@@ -472,10 +545,6 @@
         </div>
         <div class="entry-details">250ml · <strong>112 kcal</strong></div>
       </div>
-
-      <button class="btn btn-primary" onclick="openModal('meal-modal')" style="margin-top: 20px;">
-        🍴 J'ai mangé
-      </button>
     </div>
   </div>
 
@@ -494,35 +563,38 @@
       <button class="btn btn-primary" style="margin-bottom: 20px;">➕ Ajouter une recette</button>
 
       <div class="card recipe-card">
-        <div class="recipe-name">Pâtes Carbonara</div>
-        <div class="recipe-meta">⏱️ 20 min | 🍽️ 2 portions</div>
-        <div class="recipe-kcal">180 kcal/100g</div>
-        <div class="chips">
-          <span class="chip">rapide</span>
-          <span class="chip">omnivore</span>
+        <div class="recipe-info">
+          <div class="recipe-name">Pâtes Carbonara</div>
+          <div class="recipe-meta">⏱️ 20 min</div>
+          <div class="chips">
+            <span class="chip">rapide</span>
+            <span class="chip">omnivore</span>
+          </div>
         </div>
-        <div class="recipe-meta">3 ingrédients</div>
+        <button class="detail-btn" onclick="alert('Détails: Pâtes Carbonara')">Détails</button>
       </div>
 
       <div class="card recipe-card">
-        <div class="recipe-name">Salade Niçoise</div>
-        <div class="recipe-meta">⏱️ 15 min | 🍽️ 4 portions</div>
-        <div class="recipe-kcal">95 kcal/100g</div>
-        <div class="chips">
-          <span class="chip">végétarien</span>
+        <div class="recipe-info">
+          <div class="recipe-name">Salade Niçoise</div>
+          <div class="recipe-meta">⏱️ 15 min</div>
+          <div class="chips">
+            <span class="chip">végétarien</span>
+          </div>
         </div>
-        <div class="recipe-meta">6 ingrédients</div>
+        <button class="detail-btn" onclick="alert('Détails: Salade Niçoise')">Détails</button>
       </div>
 
       <div class="card recipe-card">
-        <div class="recipe-name">Omelette Fromage</div>
-        <div class="recipe-meta">⏱️ 10 min | 🍽️ 1 portion</div>
-        <div class="recipe-kcal">155 kcal/100g</div>
-        <div class="chips">
-          <span class="chip">rapide</span>
-          <span class="chip">omnivore</span>
+        <div class="recipe-info">
+          <div class="recipe-name">Omelette Fromage</div>
+          <div class="recipe-meta">⏱️ 10 min</div>
+          <div class="chips">
+            <span class="chip">rapide</span>
+            <span class="chip">omnivore</span>
+          </div>
         </div>
-        <div class="recipe-meta">4 ingrédients</div>
+        <button class="detail-btn" onclick="alert('Détails: Omelette Fromage')">Détails</button>
       </div>
     </div>
   </div>
