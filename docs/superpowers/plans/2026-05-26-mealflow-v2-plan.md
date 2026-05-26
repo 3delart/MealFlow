@@ -2374,10 +2374,10 @@ git commit -m "feat: build Courses page with auto shopping list generation"
     <svg id="progress-circle"></svg>
     <div id="progress-text"></div>
 
-    <button class="btn btn-primary mt-2" id="log-meal-btn">🍴 J'ai mangé</button>
-
     <h2>Journal du jour</h2>
     <div id="journal-list"></div>
+
+    <button class="btn btn-primary mt-2" id="log-meal-btn">🍴 J'ai mangé</button>
   </div>
 
   <nav class="nav-bottom">
