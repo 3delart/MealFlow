@@ -387,6 +387,7 @@ async function loadInventory() {
         allergens: row["Allergens"] || ""
       }));
       console.log("Inventory loaded from Sheets:", inventoryData.length, "items");
+      mergeDuplicatesByBarcode();
       return;
     }
   } catch (err) {
@@ -403,6 +404,40 @@ async function loadInventory() {
       console.error("Failed to parse localStorage inventory:", err);
       inventoryData = [];
     }
+  }
+}
+
+/**
+ * Merge duplicate items with same barcode.
+ * Keeps first occurrence, adds quantities, updates sheet row.
+ */
+function mergeDuplicatesByBarcode() {
+  const seen = new Map();
+  const toRemove = [];
+
+  inventoryData.forEach((item, idx) => {
+    if (!item.Barcode) return; // Skip items without barcode
+
+    if (seen.has(item.Barcode)) {
+      const firstIdx = seen.get(item.Barcode);
+      const first = inventoryData[firstIdx];
+      const qty1 = parseFloat(first.Qty) || 0;
+      const qty2 = parseFloat(item.Qty) || 0;
+      first.Qty = (qty1 + qty2).toString();
+      toRemove.push(idx);
+      console.log(`Merged ${item.Produit}: ${qty1} + ${qty2} = ${first.Qty}`);
+    } else {
+      seen.set(item.Barcode, idx);
+    }
+  });
+
+  // Remove duplicates in reverse order (preserve indices)
+  toRemove.reverse().forEach(idx => {
+    inventoryData.splice(idx, 1);
+  });
+
+  if (toRemove.length > 0) {
+    console.log(`Inventory: merged ${toRemove.length} duplicate(s)`);
   }
 }
 
@@ -434,7 +469,7 @@ async function addItem(item) {
 
   // Check if product exists by barcode
   if (barcode) {
-    const existing = inventoryData.find(i => i.Barcode === barcode && (parseFloat(i.Qty) || 0) > 0);
+    const existing = inventoryData.find(i => i.Barcode === barcode);
     if (existing) {
       // Product exists, add to quantity
       const existingQty = parseFloat(existing.Qty) || 0;
