@@ -708,6 +708,8 @@ async function reduceQuantity(itemId, currentQty, productName) {
  */
 function renderInventory() {
   const container = document.getElementById("inventory-list");
+  if (!container) return;  // Not on inventory page
+
   const filterEl = document.getElementById("filter-category");
   const filterValue = filterEl ? filterEl.value : "";
 
