@@ -959,20 +959,28 @@ function setupEventHandlers() {
   }
 
   // Scanner buttons
-  document.getElementById("btn-start-scanner").addEventListener("click", function() {
-    this.style.display = "none";
-    document.getElementById("btn-stop-scanner").style.display = "inline-block";
-    startScanner();
-  });
+  const btnStartScanner = document.getElementById("btn-start-scanner");
+  const btnStopScanner = document.getElementById("btn-stop-scanner");
+  if (btnStartScanner) {
+    btnStartScanner.addEventListener("click", function() {
+      this.style.display = "none";
+      if (btnStopScanner) btnStopScanner.style.display = "inline-block";
+      startScanner();
+    });
+  }
 
-  document.getElementById("btn-stop-scanner").addEventListener("click", function() {
-    stopScanner();
-    document.getElementById("btn-start-scanner").style.display = "inline-block";
-    document.getElementById("btn-stop-scanner").style.display = "none";
-  });
+  if (btnStopScanner) {
+    btnStopScanner.addEventListener("click", function() {
+      stopScanner();
+      if (btnStartScanner) btnStartScanner.style.display = "inline-block";
+      this.style.display = "none";
+    });
+  }
 
   // Form submission
-  document.getElementById("add-item-form").addEventListener("submit", function(e) {
+  const addItemForm = document.getElementById("add-item-form");
+  if (addItemForm) {
+    addItemForm.addEventListener("submit", function(e) {
     e.preventDefault();
 
     const formData = {
@@ -991,18 +999,28 @@ function setupEventHandlers() {
 
     addItem(formData);
     renderInventory();
-  });
+    });
+  }
 
   // Category filter
-  document.getElementById("filter-category").addEventListener("change", renderInventory);
+  const filterCategoryEl = document.getElementById("filter-category");
+  if (filterCategoryEl) {
+    filterCategoryEl.addEventListener("change", renderInventory);
+  }
 
   // Edit form submission
-  document.getElementById("edit-form").addEventListener("submit", saveEditedItem);
+  const editForm = document.getElementById("edit-form");
+  if (editForm) {
+    editForm.addEventListener("submit", saveEditedItem);
+  }
 
   // Close modal when clicking outside
-  document.getElementById("edit-modal").addEventListener("click", function(e) {
-    if (e.target === this) closeEditModal();
-  });
+  const editModal = document.getElementById("edit-modal");
+  if (editModal) {
+    editModal.addEventListener("click", function(e) {
+      if (e.target === this) closeEditModal();
+    });
+  }
 }
 
 /**
