@@ -1,6 +1,7 @@
 // Module variables
 let mealPlan = [];
 let rollingWindow = [];
+let currentModalContext = { dateISO: null, mealTime: null };
 
 /**
  * Calculate rolling window of 7 days (today through today+6)
@@ -110,20 +111,224 @@ function renderMealPlan() {
 }
 
 /**
- * Open recipe picker modal for a specific day and meal time
+ * TASK 4 & 8: Open recipe picker modal for a specific day and meal time
+ * Populates modal with available recipes from window.recipesData
+ * Includes search/filter functionality
  * @param {string} dateISO - Date in ISO format (YYYY-MM-DD)
  * @param {string} mealTime - Meal time (Midi or Soir)
  */
 function openRecipePickerModal(dateISO, mealTime) {
-  // TODO: Implement recipe picker modal
-  console.log(`Opening recipe picker for ${dateISO} ${mealTime}`);
-  alert(`Recipe picker for ${dateISO} ${mealTime} - Coming soon`);
+  // Store context for selectRecipe()
+  currentModalContext = { dateISO, mealTime };
+
+  // Update modal title
+  const day = rollingWindow.find(d => d.dateISO === dateISO);
+  const dayLabel = day ? `${day.dayOfWeek} ${day.dateStr}` : dateISO;
+  document.getElementById("modal-title").textContent = `${mealTime} - ${dayLabel}`;
+
+  // Populate recipe options
+  const recipeOptionsContainer = document.getElementById("recipe-options");
+  if (!window.recipesData || Object.keys(window.recipesData).length === 0) {
+    recipeOptionsContainer.innerHTML = '<p style="text-align: center; color: var(--color-text-secondary);">Aucune recette disponible</p>';
+  } else {
+    renderRecipeOptions(Object.values(window.recipesData));
+  }
+
+  // Clear search input and show modal
+  const searchInput = document.getElementById("recipe-search-input");
+  searchInput.value = "";
+
+  // TASK 8: Setup search/filter listener
+  searchInput.addEventListener("input", filterRecipes);
+
+  document.getElementById("recipe-picker-modal").style.display = "flex";
+}
+
+/**
+ * TASK 8: Filter recipes by name as user types
+ * Called on search input change
+ */
+function filterRecipes(event) {
+  const query = event.target.value.toLowerCase().trim();
+
+  if (!window.recipesData) return;
+
+  // Filter recipes by name match
+  const allRecipes = Object.values(window.recipesData);
+  const filtered = allRecipes.filter(recipe =>
+    recipe.name.toLowerCase().includes(query)
+  );
+
+  // Re-render with filtered results
+  renderRecipeOptions(filtered);
+}
+
+/**
+ * TASK 4: Close recipe picker modal
+ */
+function closeRecipePickerModal() {
+  document.getElementById("recipe-picker-modal").style.display = "none";
+  currentModalContext = { dateISO: null, mealTime: null };
+}
+
+/**
+ * TASK 4: Render recipe options in the modal
+ * @param {Object[]} recipes - Array of recipe objects to display
+ */
+function renderRecipeOptions(recipes) {
+  const container = document.getElementById("recipe-options");
+
+  if (recipes.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--color-text-secondary);">Aucune recette trouvée</p>';
+    return;
+  }
+
+  container.innerHTML = recipes.map(recipe => `
+    <div class="recipe-option" onclick="selectRecipe('${escapeHTML(recipe.name)}')">
+      <div class="recipe-option-name">${escapeHTML(recipe.name)}</div>
+      <div class="recipe-option-description">${escapeHTML(recipe.description || "")}</div>
+    </div>
+  `).join("");
+}
+
+/**
+ * Helper function to escape HTML special characters
+ * @param {string} str - String to escape
+ * @returns {string} Escaped string
+ */
+function escapeHTML(str) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return str.replace(/[&<>"']/g, m => map[m]);
+}
+
+/**
+ * TASK 5: Save selected recipe to meal plan
+ * Updates mealPlan local state, closes modal, re-renders grid, syncs Courses list, and persists to Sheets
+ * @param {string} recipeName - Name of the selected recipe
+ */
+function selectRecipe(recipeName) {
+  const { dateISO, mealTime } = currentModalContext;
+
+  if (!dateISO || !mealTime) {
+    console.error("Invalid modal context");
+    return;
+  }
+
+  // Find or create meal plan entry for this date
+  let dayMeal = mealPlan.find(m => m.dateISO === dateISO);
+  if (!dayMeal) {
+    dayMeal = {
+      dateISO: dateISO,
+      Midi: "",
+      Soir: ""
+    };
+    mealPlan.push(dayMeal);
+  }
+
+  // Update the meal
+  dayMeal[mealTime] = recipeName;
+
+  console.log(`Selected recipe: ${recipeName} for ${dateISO} ${mealTime}`);
+
+  // Close modal and re-render
+  closeRecipePickerModal();
+  renderMealPlan();
+
+  // Sync Courses list and persist to Sheets
+  syncCoursesFromMealPlan();
+  savePlanningToSheets();
+}
+
+/**
+ * TASK 6: Sync Courses list from 7-day meal plan
+ * Aggregates ingredients from all selected recipes
+ * TODO: Update Courses tab when available
+ */
+function syncCoursesFromMealPlan() {
+  const allIngredients = {};
+
+  // Iterate through each day's meals
+  mealPlan.forEach(dayMeal => {
+    [dayMeal.Midi, dayMeal.Soir].forEach(recipeName => {
+      if (!recipeName) return;
+
+      // Find recipe in window.recipesData
+      const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
+      if (!recipe || !recipe.ingredients) return;
+
+      // Aggregate ingredients
+      recipe.ingredients.forEach(ing => {
+        const key = ing.name;
+        if (!allIngredients[key]) {
+          allIngredients[key] = {
+            name: ing.name,
+            totalQuantity: 0,
+            unit: ing.unit || "g",
+            calories_per_100: ing.calories_per_100 || 0
+          };
+        }
+        allIngredients[key].totalQuantity += parseFloat(ing.quantity) || 0;
+      });
+    });
+  });
+
+  // Log aggregated ingredients (TODO: sync to Courses sheet/tab)
+  console.log("Synced Courses list from meal plan:", Object.values(allIngredients));
+
+  // Store in window for access by Courses page
+  window.syncedCourses = Object.values(allIngredients);
+}
+
+/**
+ * TASK 7: Persist meal plan changes to Planning sheet
+ * Clears Planning tab and appends all 7 days' meals
+ */
+async function savePlanningToSheets() {
+  if (!window.SheetsAPI) {
+    console.warn("SheetsAPI not available, skipping Planning sync");
+    return;
+  }
+
+  try {
+    const token = window.getAccessToken ? window.getAccessToken() : null;
+    if (!token) {
+      console.warn("No OAuth token, skipping Planning sync");
+      return;
+    }
+
+    // Clear existing Planning sheet data (keep header)
+    await window.SheetsAPI.clearSheetRange("Planning!A2:C1000", token);
+
+    // Append each day's meals
+    for (const dayMeal of mealPlan) {
+      const row = [
+        dayMeal.dateISO,
+        dayMeal.Midi || "",
+        dayMeal.Soir || ""
+      ];
+      await window.SheetsAPI.appendRowWithToken("Planning", row, token);
+    }
+
+    console.log("Planning synced to Planning sheet");
+  } catch (err) {
+    console.error("Failed to sync planning to Sheets:", err);
+  }
 }
 
 async function initializePlanning() {
   UserContext.applyUserStyling();
   UserContext.initializeUserToggle();
   await loadMealPlan();
+  syncCoursesFromMealPlan();
+
+  // Setup beforeunload to persist before leaving page
+  window.addEventListener("beforeunload", savePlanningToSheets);
 }
 
 document.addEventListener("DOMContentLoaded", initializePlanning);
