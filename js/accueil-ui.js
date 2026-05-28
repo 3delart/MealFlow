@@ -288,21 +288,63 @@ async function submitConsommer(e) {
 }
 
 // TASK 6: Delete Consumption Function
-function deleteConsumption(index) {
+async function deleteConsumption(index) {
   if (confirm('Êtes-vous sûr de vouloir supprimer cette consommation ?')) {
-    if (todaysConsumptions[index]) {
-      window.caloriesConsumed = (window.caloriesConsumed || 0) - (todaysConsumptions[index].Kcal_total || 0);
+    const entry = todaysConsumptions[index];
+    if (!entry) return;
+
+    const user = getCurrentUser();
+    const today = getTodayISO();
+    const tabName = `History_${user}`;
+
+    // Remove from local state
+    if (entry) {
+      window.caloriesConsumed = (window.caloriesConsumed || 0) - (entry.Kcal_total || 0);
     }
     todaysConsumptions.splice(index, 1);
 
     // Persist deletion to localStorage
     try {
-      const user = getCurrentUser();
-      const today = getTodayISO();
       localStorage.setItem(`mealflow:consumptions:${user}:${today}`, JSON.stringify(todaysConsumptions));
       localStorage.setItem(`mealflow:consumed:${user}:${today}`, String(window.caloriesConsumed || 0));
     } catch (err) {
       console.warn("Could not save consumptions to localStorage:", err);
+    }
+
+    // Delete from Sheets
+    try {
+      const token = getAccessToken?.();
+      if (token && window.SheetsAPI) {
+        const rows = await window.SheetsAPI.readSheetTab(tabName);
+        const objects = window.SheetsAPI.rowsToObjects(rows);
+
+        // Filter out the deleted entry by matching Date, Time, and Product
+        const filtered = objects.filter(row => {
+          const rowDate = (row.Date || "").trim();
+          const rowTime = (row.Time || row.Heure || "").trim();
+          const rowProduct = (row.Product || row.Nom || "").trim();
+
+          return !(rowDate === today && rowTime === entry.Heure && rowProduct === entry.Nom);
+        });
+
+        // Clear data range and re-append filtered rows
+        await window.SheetsAPI.clearSheetRange(`${tabName}!A2:Z999`, token);
+
+        for (const obj of filtered) {
+          const row = [
+            obj.Date,
+            obj.Time || obj.Heure,
+            obj.Product || obj.Nom,
+            obj.Quantity || obj.Quantité,
+            obj.Unit || obj.Unité,
+            obj.Total_calories || obj.Kcal_total,
+            obj.Type
+          ];
+          await window.SheetsAPI.appendRowWithToken(tabName, row, token);
+        }
+      }
+    } catch (err) {
+      console.warn("Could not delete from Sheets:", err.message);
     }
 
     renderConsumptionLog();
