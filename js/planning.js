@@ -209,7 +209,8 @@ function escapeHTML(str) {
 
 /**
  * TASK 5: Save selected recipe to meal plan
- * Updates mealPlan local state, closes modal, re-renders grid, syncs Courses list, and persists to Sheets
+ * Updates mealPlan local state, closes modal, re-renders grid
+ * Calls syncCoursesFromMealPlan() and savePlanningToSheets()
  * @param {string} recipeName - Name of the selected recipe
  */
 function selectRecipe(recipeName) {
