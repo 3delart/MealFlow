@@ -454,3 +454,31 @@ body.user-naomi {
   width: 100%;
   height: 300px;
 }
+
+/* ============================================================================
+   CALORIE WHEEL
+   ============================================================================ */
+
+.accueil-wheel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  border: 4px solid green;
+  border-radius: var(--border-radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-fast);
+}
+
+#wheel-percentage {
+  font-size: 32px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+}
+
+#wheel-remaining {
+  font-size: var(--font-size-base);
+  color: var(--color-text-light);
+}

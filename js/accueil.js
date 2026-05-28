@@ -249,6 +249,38 @@ function updateProgressDisplay() {
 }
 
 /**
+ * Renders the calorie wheel: shows consumption percentage, remaining calories,
+ * and color-codes the wheel border (green/orange/red).
+ */
+function renderWheel() {
+  const consumed = todaysConsumptions.reduce((sum, c) => sum + c.kcal_total, 0);
+  const percentage = dailyGoal > 0 ? Math.round((consumed / dailyGoal) * 100) : 0;
+  const remaining = Math.max(0, dailyGoal - consumed);
+
+  const percentageEl = document.getElementById("wheel-percentage");
+  const remainingEl = document.getElementById("wheel-remaining");
+
+  if (percentageEl) {
+    percentageEl.textContent = `${percentage}%`;
+  }
+
+  if (remainingEl) {
+    remainingEl.textContent = `Remaining: ${remaining} kcal`;
+  }
+
+  const wheelContainer = document.querySelector(".accueil-wheel");
+  if (wheelContainer) {
+    if (percentage >= 100) {
+      wheelContainer.style.borderColor = "red";
+    } else if (percentage >= 80) {
+      wheelContainer.style.borderColor = "orange";
+    } else {
+      wheelContainer.style.borderColor = "green";
+    }
+  }
+}
+
+/**
  * Saves meals state (eaten status) to localStorage, separated by user and date.
  * Includes quantity and unit for snacks (grignottage items).
  */
@@ -560,6 +592,7 @@ async function initAccueil() {
   renderGreeting();
   renderMeals();
   updateProgressDisplay();
+  renderWheel();
 
   // Ensure History sheet exists for current user
   const accessToken = getAccessToken();
