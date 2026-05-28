@@ -955,8 +955,15 @@ async function saveEditedItem(e) {
  * Set up form and button event handlers
  */
 function setupEventHandlers() {
-  // Populate category filter dynamically from inventory
-  const categories = [...new Set(inventoryData.map(i => i.Catégorie))].sort();
+  // Populate category filter dynamically from inventory + auto-classification
+  const sheetCategories = [...new Set(inventoryData.map(i => i.Catégorie).filter(c => c))];
+  const autoCategories = [
+    "Féculents", "Fromage", "Produits laitiers", "Légumes", "Fruits",
+    "Viandes", "Poissons", "Œufs", "Conserves", "Épices & Condiments",
+    "Sauces", "Boissons"
+  ];
+  const categories = [...new Set([...sheetCategories, ...autoCategories])].sort();
+
   const filterSelect = document.getElementById("filter-category");
   if (filterSelect) {
     categories.forEach(cat => {
