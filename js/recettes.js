@@ -17,25 +17,51 @@ window.recipesData = recipesData;  // Expose globally for forms
 // ============================================================================
 
 /**
- * Load recipes from RecettesJSON!A1 sheet tab
+ * Safe JSON parse with fallback
+ * @param {string} str - JSON string
+ * @param {*} fallback - Value to return if parse fails
+ * @returns {*}
+ */
+function safeParseJSON(str, fallback) {
+  try {
+    return str ? JSON.parse(str) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * Load recipes from Recettes sheet tab (one row per recipe)
  * Falls back to localStorage if Sheets API unavailable
  * @returns {Promise<void>}
  */
 async function loadRecipes() {
   try {
-    const rows = await SheetsAPI.readSheetTab("RecettesJSON");
-    if (rows.length === 0) {
-      console.warn("RecettesJSON tab is empty");
-      recipesData = {};
-      return;
-    }
+    const rows = await SheetsAPI.readSheetTab("Recettes");
+    recipesData = {};
 
-    const jsonStr = rows[0][0] || "{}";
-    recipesData = JSON.parse(jsonStr);
+    // rows[0] is header row — skip it
+    rows.slice(1).forEach(row => {
+      const name = row[0] || "";
+      if (!name) return;
+
+      const id = generateRecipeID(name);
+      recipesData[id] = {
+        name: row[0] || "",
+        description: row[1] || "",
+        prep_minutes: parseInt(row[2]) || 0,
+        cook_minutes: parseInt(row[3]) || 0,
+        tags: row[4] ? row[4].split(",").map(t => t.trim()) : [],
+        ingredients: safeParseJSON(row[5], []),
+        steps: safeParseJSON(row[6], []),
+        kcal_per_100: parseFloat(row[7]) || 0
+      };
+    });
+
     window.recipesData = recipesData;
-    console.log("Recipes loaded from Sheets:", Object.keys(recipesData).length, "recipes");
+    console.log("Recipes loaded from Recettes:", Object.keys(recipesData).length, "recipes");
   } catch (err) {
-    console.warn("RecettesJSON: Sheets API unavailable, falling back to localStorage", err.message);
+    console.warn("Recettes: Sheets API unavailable, falling back to localStorage", err.message);
     loadRecipesFromLocalStorage();
   }
 }
@@ -69,12 +95,14 @@ function saveRecipesToLocalStorage() {
 }
 
 /**
- * Sync recipes to Google Sheets (RecettesJSON!A1)
+ * Sync recipes to Google Sheets (Recettes tab, one row per recipe)
+ * Clears existing data rows and re-appends all recipes
  * @returns {Promise<void>}
  */
 async function syncRecipesToSheets() {
   if (!window.SheetsAPI) {
     console.warn("SheetsAPI not available, skipping Sheets sync");
+    saveRecipesToLocalStorage();
     return;
   }
 
@@ -86,9 +114,26 @@ async function syncRecipesToSheets() {
       return;
     }
 
-    const jsonStr = JSON.stringify(recipesData);
-    await window.SheetsAPI.updateSheetCell("RecettesJSON!A1", jsonStr, token);
-    console.log("Recipes synced to Sheets");
+    // Clear existing data rows (keep header)
+    await window.SheetsAPI.clearSheetRange("Recettes!A2:H1000", token);
+
+    // Append one row per recipe
+    for (const recipe of Object.values(recipesData)) {
+      const cals = calculateRecipeCalories(recipe.ingredients || []);
+      const row = [
+        recipe.name,
+        recipe.description || "",
+        recipe.prep_minutes || 0,
+        recipe.cook_minutes || 0,
+        (recipe.tags || []).join(", "),
+        JSON.stringify(recipe.ingredients || []),
+        JSON.stringify(recipe.steps || []),
+        cals.kcal_per_100
+      ];
+      await window.SheetsAPI.appendRowWithToken("Recettes", row, token);
+    }
+
+    console.log("Recipes synced to Recettes sheet");
   } catch (err) {
     console.error("Failed to sync recipes to Sheets:", err);
     saveRecipesToLocalStorage();
