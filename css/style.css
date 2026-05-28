@@ -949,3 +949,228 @@ tbody tr:hover {
     page-break-after: always;
   }
 }
+
+/* ============================================================================
+   RECIPE CARDS & MODALS
+   ============================================================================ */
+
+/* Recipe Cards */
+.recipes-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.recipe-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.recipe-card:hover {
+  background: var(--color-bg);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.recipe-card h3 {
+  margin: 0 0 8px 0;
+  color: var(--color-primary);
+  font-size: 18px;
+}
+
+.recipe-card p {
+  margin: 4px 0;
+  color: var(--color-text-light);
+  font-size: 14px;
+}
+
+.recipe-card-meta {
+  display: flex;
+  gap: 12px;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.recipe-card-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.recipe-card-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.recipe-card-buttons button {
+  flex: 1;
+  padding: 8px;
+  font-size: 13px;
+}
+
+/* Modal styles */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.open {
+  display: flex;
+}
+
+.modal-content {
+  background-color: var(--color-surface);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--spacing-xl);
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--color-text);
+}
+
+.modal-close {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--color-text-light);
+  line-height: 1;
+  padding: 4px;
+  transition: color var(--transition-fast);
+}
+
+.modal-close:hover {
+  color: var(--color-text);
+}
+
+/* Modal form styles */
+#recipe-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#recipe-form label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+#recipe-form input,
+#recipe-form textarea,
+#recipe-form select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+#recipe-form textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Ingredients table */
+.ingredients-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.ingredients-table th,
+.ingredients-table td {
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.ingredients-table th {
+  background: var(--color-bg);
+  font-weight: bold;
+}
+
+.ingredients-table input {
+  width: 100%;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.ingredients-table button {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* Steps list */
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.step-row {
+  display: flex;
+  gap: 8px;
+}
+
+.step-row input {
+  flex: 1;
+}
+
+.step-row button {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* Calorie display */
+.calorie-summary {
+  background: var(--color-bg);
+  padding: 12px;
+  border-radius: 4px;
+  border-left: 3px solid var(--color-primary);
+  font-size: 14px;
+  margin: 8px 0;
+}
+
+.calorie-summary strong {
+  color: var(--color-primary);
+}

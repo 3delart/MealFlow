@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recettes — MealFlow</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>🍽️ MealFlow</h1>
+    </div>
+    <div class="auth-buttons">
+      <div id="google-login-btn"></div>
+      <button id="google-logout-btn" type="button" class="btn btn-secondary" onclick="logoutGoogle()" style="display: none;">Logout</button>
+    </div>
+  </header>
+
+  <main id="main-content" class="container">
+    <header class="page-header">
+      <h1>Recettes</h1>
+      <button id="btn-add-recipe" class="btn btn-primary" style="position: absolute; top: 20px; right: 20px;">
+        ➕ Ajouter recette
+      </button>
+    </header>
+
+    <div id="recipes-container" class="recipes-list">
+      <!-- Recipe cards inserted here -->
+    </div>
+  </main>
+
+  <!-- Create/Edit Modal -->
+  <div id="modal-recipe-form" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-form-title">Nouvelle recette</h2>
+        <button class="modal-close">✕</button>
+      </div>
+      <form id="recipe-form">
+        <!-- Form fields filled in Task 2 -->
+      </form>
+    </div>
+  </div>
+
+  <!-- View Modal (Read-only) -->
+  <div id="modal-recipe-view" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-view-title">Recette</h2>
+        <button class="modal-close">✕</button>
+      </div>
+      <div id="recipe-view-content">
+        <!-- Recipe details inserted here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="nav-bottom" aria-label="Navigation principale">
+    <a href="index.html" class="nav-item">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Accueil</span>
+    </a>
+    <a href="planning.html" class="nav-item">
+      <span class="nav-icon">📅</span>
+      <span class="nav-label">Planning</span>
+    </a>
+    <a href="courses.html" class="nav-item">
+      <span class="nav-icon">🛒</span>
+      <span class="nav-label">Courses</span>
+    </a>
+    <a href="inventory.html" class="nav-item">
+      <span class="nav-icon">📦</span>
+      <span class="nav-label">Inventaire</span>
+    </a>
+    <a href="profils.html" class="nav-item">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profils</span>
+    </a>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="js/sheets-api.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/user-context.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/recettes-utils.js"></script>
+  <script src="js/recettes.js"></script>
+  <script src="js/recettes-forms.js"></script>
+</body>
+</html>
