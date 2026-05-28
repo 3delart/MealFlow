@@ -60,7 +60,7 @@ function loadTodayHistory() {
   if (!user) return;
 
   const tabName = `History_${user}`;
-  SheetsAPI.readTab(tabName).then(rows => {
+  SheetsAPI.readSheetTab(tabName).then(rows => {
     if (!rows) {
       todayConsumptions = [];
       return;
