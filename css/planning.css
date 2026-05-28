@@ -9,9 +9,87 @@ main {
 .meal-plan {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: 0;
 }
 
+/* 7×2 Grid Layout */
+.meal-plan-header {
+  display: grid;
+  grid-template-columns: 120px 1fr 1fr;
+  gap: var(--spacing-sm);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-bottom: 2px solid var(--color-border);
+  padding: var(--spacing-md);
+  font-weight: bold;
+  border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+}
+
+.meal-header-cell {
+  text-align: center;
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.meal-plan-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 1fr;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-top: none;
+}
+
+.meal-plan-row:last-child {
+  border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
+}
+
+.meal-day-label {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.meal-cell {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 14px;
+}
+
+.meal-cell:hover {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: white;
+}
+
+.meal-empty {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--color-text-secondary);
+}
+
+.recipe-name {
+  font-weight: 500;
+  color: var(--color-text);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+/* Legacy meal day styles (kept for compatibility) */
 .meal-day {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -46,6 +124,20 @@ main {
 }
 
 @media (max-width: 768px) {
+  .meal-plan-header,
+  .meal-plan-row {
+    grid-template-columns: 80px 1fr 1fr;
+  }
+
+  .meal-day-label {
+    font-size: 12px;
+  }
+
+  .meal-cell {
+    min-height: 50px;
+    font-size: 13px;
+  }
+
   .meals-grid {
     grid-template-columns: 1fr;
   }

@@ -60,35 +60,64 @@ async function loadMealPlan() {
   renderMealPlan();
 }
 
+/**
+ * Render 7×2 meal plan grid (7 days × 2 meals: Midi/Soir)
+ * Shows recipe names or "+" for empty cells
+ */
 function renderMealPlan() {
   const container = document.getElementById("meal-plan");
   if (!container) return;
 
+  // Display loading if meal plan is empty
   if (mealPlan.length === 0) {
     container.innerHTML = `
       <div style="text-align: center; padding: 40px; color: #999;">
-        <p>📋 Pas de planning. Clique "Régénérer semaine"</p>
+        <p>📋 Chargement...</p>
       </div>
     `;
     return;
   }
 
-  container.innerHTML = mealPlan
-    .map(
-      (day) => `
-    <div class="meal-day">
-      <h3>${day.Jour} - ${day.Date}</h3>
-      <div class="meals-grid">
-        <div class="meal"><strong>🌅</strong> ${day["Petit-déj"] || "-"}</div>
-        <div class="meal"><strong>🥤</strong> ${day["Collation_matin"] || "-"}</div>
-        <div class="meal"><strong>🍽️</strong> ${day["Déjeuner"] || "-"}</div>
-        <div class="meal"><strong>🥪</strong> ${day["Collation_après-midi"] || "-"}</div>
-        <div class="meal"><strong>🌙</strong> ${day["Diner"] || "-"}</div>
-      </div>
+  // Build header row with MIDI/SOIR columns
+  let html = `
+    <div class="meal-plan-header">
+      <div class="meal-header-day"></div>
+      <div class="meal-header-cell">🌅 MIDI</div>
+      <div class="meal-header-cell">🌙 SOIR</div>
     </div>
-  `
-    )
-    .join("");
+  `;
+
+  // Create 7 rows (one per day)
+  rollingWindow.forEach((day, index) => {
+    const dayMeal = mealPlan.find(m => m.dateISO === day.dateISO);
+    const midiRecipe = dayMeal ? (dayMeal.Midi || "") : "";
+    const soirRecipe = dayMeal ? (dayMeal.Soir || "") : "";
+
+    html += `
+      <div class="meal-plan-row">
+        <div class="meal-day-label">${day.dayOfWeek}<br>${day.dateStr}</div>
+        <div class="meal-cell ${midiRecipe ? "recipe-name" : "meal-empty"}" onclick="openRecipePickerModal('${day.dateISO}', 'Midi')">
+          ${midiRecipe || "+"}
+        </div>
+        <div class="meal-cell ${soirRecipe ? "recipe-name" : "meal-empty"}" onclick="openRecipePickerModal('${day.dateISO}', 'Soir')">
+          ${soirRecipe || "+"}
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+/**
+ * Open recipe picker modal for a specific day and meal time
+ * @param {string} dateISO - Date in ISO format (YYYY-MM-DD)
+ * @param {string} mealTime - Meal time (Midi or Soir)
+ */
+function openRecipePickerModal(dateISO, mealTime) {
+  // TODO: Implement recipe picker modal
+  console.log(`Opening recipe picker for ${dateISO} ${mealTime}`);
+  alert(`Recipe picker for ${dateISO} ${mealTime} - Coming soon`);
 }
 
 async function initializePlanning() {
