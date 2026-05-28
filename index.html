@@ -68,7 +68,7 @@
     </div>
 
     <div class="progress-circle-section">
-      <svg id="progress-circle" class="progress-circle" viewBox="0 0 120 120" aria-label="Calories consommées aujourd'hui" role="img">
+      <svg id="calorie-wheel" class="progress-circle" viewBox="0 0 120 120" aria-label="Calories consommées aujourd'hui" role="img">
         <circle class="circle-bg" cx="60" cy="60" r="54" />
         <circle class="circle-progress" cx="60" cy="60" r="54" id="circle-path" />
         <text class="circle-label" x="60" y="52" id="progress-percent">0%</text>
@@ -78,13 +78,30 @@
 
     <div class="meals-section">
       <div class="grignottage-banner">
-        <button id="grignottage-btn" class="btn btn-primary-outline">
-          🍪 Grignottage — Scanner
+        <button id="consume-btn" class="btn btn-primary">
+          ➕ Ajouter une consommation
         </button>
       </div>
 
       <div class="meals-list" id="meals-container">
         <p class="loading-text">Chargement repas du jour...</p>
+      </div>
+
+      <div class="consumption-log-section">
+        <h3>Consommations aujourd'hui</h3>
+        <table class="consumption-log">
+          <thead>
+            <tr>
+              <th>Heure</th>
+              <th>Aliment</th>
+              <th>Quantité</th>
+              <th>Calories</th>
+            </tr>
+          </thead>
+          <tbody id="log-body">
+            <tr><td colspan="4" style="text-align: center; color: var(--color-text-light);">Aucune consommation</td></tr>
+          </tbody>
+        </table>
       </div>
 
       <div id="scanner-modal" class="modal hidden" aria-hidden="true">
