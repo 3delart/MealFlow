@@ -411,11 +411,11 @@ async function loadInventory() {
         Date_ajout: row["Date_ajout"] || Utils.getTodayISO(),
         Péremption: row["Péremption"] || "",
         Prix: row["Prix"] || "",
-        calories_per_100: row["Calories_per_100"] || "",
-        proteins: row["Proteins"] || "",
-        fats: row["Fats"] || "",
-        carbs: row["Carbs"] || "",
-        allergens: row["Allergens"] || ""
+        calories_per_100: parseFloat(row["calories_per_100"]) || 0,
+        proteins: parseFloat(row["proteins"]) || 0,
+        fats: parseFloat(row["fats"]) || 0,
+        carbs: parseFloat(row["carbs"]) || 0,
+        allergens: row["allergens"] || ""
       }));
       console.log("Inventory loaded from Sheets:", inventoryData.length, "items");
       mergeDuplicatesByBarcode();
