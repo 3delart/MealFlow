@@ -47,7 +47,7 @@ function renderGreeting() {
   if (user) {
     document.getElementById('greeting').textContent = `Bonjour ${user}`;
   }
-  document.getElementById('date-today').textContent = Utils.getLocaleDateFr(Utils.getTodayISO());
+  document.getElementById('date-today').textContent = formatDate(getTodayISO());
 
   // Fill daily goal
   if (window.dailyGoal) {
