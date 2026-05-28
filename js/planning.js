@@ -50,12 +50,20 @@ async function loadMealPlan() {
       console.log(`Planning: loaded ${mealPlan.length} days from Sheets`);
     } else {
       console.log("Planning: empty, using fallback");
-      mealPlan = [];
+      mealPlan = rollingWindow.map(dayInfo => ({
+        ...dayInfo,
+        Midi: null,
+        Soir: null
+      }));
     }
   } catch (error) {
     console.error("Error reading planning:", error);
     // Offline fallback
-    mealPlan = [];
+    mealPlan = rollingWindow.map(dayInfo => ({
+      ...dayInfo,
+      Midi: null,
+      Soir: null
+    }));
   }
 
   renderMealPlan();
