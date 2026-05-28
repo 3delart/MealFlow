@@ -134,6 +134,28 @@ async function fetchProductFromOpenFoodFacts(barcode) {
 }
 
 // ============================================================================
+// UI HELPERS
+// ============================================================================
+
+/**
+ * Toggle manual form visibility
+ */
+function toggleManualForm() {
+  const form = document.getElementById("add-item-section");
+  if (form.style.display === "none") {
+    form.style.display = "block";
+    // Reset form fields
+    document.getElementById("add-item-form").reset();
+    scannedProductData = null;
+    document.getElementById("product-info").style.display = "none";
+    // Focus on product name field
+    document.getElementById("field-product-name").focus();
+  } else {
+    form.style.display = "none";
+  }
+}
+
+// ============================================================================
 // BARCODE SCANNER
 // ============================================================================
 
