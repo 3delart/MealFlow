@@ -26,14 +26,37 @@ function addIngredientRow(productName = "", quantity = "", unit = "g", calories 
   const tbody = document.getElementById("ingredients-tbody");
   const row = document.createElement("tr");
 
-  // Product cell with autocomplete
+  // Product cell with autocomplete dropdown
   const productCell = document.createElement("td");
+  productCell.style.position = "relative";
+
   const productInput = document.createElement("input");
   productInput.type = "text";
   productInput.value = productName;
   productInput.placeholder = "Produit";
   productInput.addEventListener("input", debounceIngredientAutocomplete);
   productCell.appendChild(productInput);
+
+  // Dropdown for suggestions
+  const dropdown = document.createElement("div");
+  dropdown.className = "ingredient-dropdown";
+  dropdown.style.position = "absolute";
+  dropdown.style.top = "100%";
+  dropdown.style.left = "0";
+  dropdown.style.right = "0";
+  dropdown.style.backgroundColor = "#fff";
+  dropdown.style.border = "1px solid #ddd";
+  dropdown.style.borderRadius = "4px";
+  dropdown.style.maxHeight = "150px";
+  dropdown.style.overflowY = "auto";
+  dropdown.style.zIndex = "10";
+  dropdown.style.display = "none";
+  dropdown.style.marginTop = "2px";
+  productCell.appendChild(dropdown);
+
+  // Store dropdown reference in input for easy access
+  productInput.dataset.dropdown = productCell.querySelector(".ingredient-dropdown");
+  productInput.dataset.row = row;
 
   // Quantity cell
   const qtyCell = document.createElement("td");
@@ -109,19 +132,68 @@ function updateIngredientCalories(input) {
 
   const row = input.closest("tr");
   const calSpan = row.querySelector("td:nth-child(4) span");
+  const dropdown = input.dataset.dropdown ? document.querySelector(`td:has(input[value="${input.value}"])?.querySelector(".ingredient-dropdown")` : null;
 
+  // Get actual dropdown element from row
+  const dropdownEl = row.querySelector(".ingredient-dropdown");
+
+  // Show/populate dropdown if there are matches
   if (matches.length > 0) {
-    const match = matches[0];
-    calSpan.textContent = match.calories_per_100;
-    calSpan.dataset.caloriesPer100 = match.calories_per_100;
+    dropdownEl.innerHTML = "";
+    matches.slice(0, 5).forEach(match => {
+      const item = document.createElement("div");
+      item.style.padding = "8px 12px";
+      item.style.cursor = "pointer";
+      item.style.borderBottom = "1px solid #eee";
+      item.style.fontSize = "13px";
+      item.textContent = `${match.name} (${match.calories_per_100} kcal)`;
+
+      item.addEventListener("mouseover", () => {
+        item.style.backgroundColor = "#f0f0f0";
+      });
+      item.addEventListener("mouseout", () => {
+        item.style.backgroundColor = "transparent";
+      });
+
+      item.addEventListener("click", function(e) {
+        e.stopPropagation();
+        input.value = match.name;
+        calSpan.textContent = match.calories_per_100;
+        calSpan.dataset.caloriesPer100 = match.calories_per_100;
+        dropdownEl.style.display = "none";
+        updateCalories();
+      });
+
+      dropdownEl.appendChild(item);
+    });
+    dropdownEl.style.display = "block";
+
+    // Auto-select first match if only one
+    if (matches.length === 1) {
+      const match = matches[0];
+      calSpan.textContent = match.calories_per_100;
+      calSpan.dataset.caloriesPer100 = match.calories_per_100;
+    }
   } else {
     // No match found, show placeholder
     calSpan.textContent = "?";
     calSpan.dataset.caloriesPer100 = 0;
+    dropdownEl.style.display = "none";
   }
 
   updateCalories();
 }
+
+/**
+ * Close ingredient dropdown when clicking elsewhere
+ */
+document.addEventListener("click", function(e) {
+  if (!e.target.closest("td")) {
+    document.querySelectorAll(".ingredient-dropdown").forEach(dd => {
+      dd.style.display = "none";
+    });
+  }
+});
 
 /**
  * Update total calories display based on current ingredients
