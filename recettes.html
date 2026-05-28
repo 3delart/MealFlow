@@ -38,7 +38,80 @@
         <button class="modal-close">✕</button>
       </div>
       <form id="recipe-form">
-        <!-- Form fields filled in Task 2 -->
+        <!-- Name -->
+        <div>
+          <label for="field-recipe-name">Nom de la recette *</label>
+          <input type="text" id="field-recipe-name" required placeholder="Pâtes carbonara">
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label for="field-description">Description</label>
+          <textarea id="field-description" placeholder="Une recette délicieuse..."></textarea>
+        </div>
+
+        <!-- Times -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label for="field-prep-min">Préparation (min) *</label>
+            <input type="number" id="field-prep-min" required min="0" value="15">
+          </div>
+          <div>
+            <label for="field-cook-min">Cuisson (min) *</label>
+            <input type="number" id="field-cook-min" required min="0" value="20">
+          </div>
+        </div>
+
+        <!-- Tags -->
+        <div>
+          <label for="field-tags">Tags (séparés par virgule)</label>
+          <input type="text" id="field-tags" placeholder="italien, rapide, végétarien">
+        </div>
+
+        <!-- Ingredients -->
+        <div>
+          <label>Ingrédients *</label>
+          <table class="ingredients-table">
+            <thead>
+              <tr>
+                <th>Produit</th>
+                <th>Quantité</th>
+                <th>Unité</th>
+                <th>Cal/100</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="ingredients-tbody">
+              <!-- Rows added dynamically -->
+            </tbody>
+          </table>
+          <button type="button" id="btn-add-ingredient" class="btn btn-secondary">
+            ➕ Ajouter ingrédient
+          </button>
+        </div>
+
+        <!-- Steps -->
+        <div>
+          <label>Étapes *</label>
+          <div class="steps-list" id="steps-list">
+            <!-- Rows added dynamically -->
+          </div>
+          <button type="button" id="btn-add-step" class="btn btn-secondary">
+            ➕ Ajouter une étape
+          </button>
+        </div>
+
+        <!-- Calorie summary -->
+        <div class="calorie-summary">
+          <strong>🔥 Calories:</strong> <span id="calorie-total">0</span> kcal total /
+          <span id="calorie-per-100">0</span> kcal/100g
+        </div>
+
+        <!-- Buttons -->
+        <div style="display: flex; gap: 12px; margin-top: 20px;">
+          <button type="button" id="btn-cancel-recipe" class="btn btn-secondary">Annuler</button>
+          <button type="submit" id="btn-save-recipe" class="btn btn-primary">Créer la recette</button>
+        </div>
       </form>
     </div>
   </div>
