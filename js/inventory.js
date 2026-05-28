@@ -142,14 +142,23 @@ async function fetchProductFromOpenFoodFacts(barcode) {
  */
 function toggleManualForm() {
   const form = document.getElementById("add-item-section");
-  if (form.style.display === "none") {
+  if (!form) {
+    console.error("add-item-section not found");
+    return;
+  }
+
+  const isHidden = form.style.display === "none" || !form.offsetParent;
+  if (isHidden) {
     form.style.display = "block";
     // Reset form fields
-    document.getElementById("add-item-form").reset();
+    const addForm = document.getElementById("add-item-form");
+    if (addForm) addForm.reset();
     scannedProductData = null;
-    document.getElementById("product-info").style.display = "none";
+    const productInfo = document.getElementById("product-info");
+    if (productInfo) productInfo.style.display = "none";
     // Focus on product name field
-    document.getElementById("field-product-name").focus();
+    const nameField = document.getElementById("field-product-name");
+    if (nameField) nameField.focus();
   } else {
     form.style.display = "none";
   }
