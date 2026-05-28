@@ -12,7 +12,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadRecipes();
   await loadInventory();
 
-  await initAccueil();
+  await window.initAccueil();
+  await initAccueilUI();
 
   // Event listeners for Consommer modal
   document.getElementById('consommer-btn').addEventListener('click', openConsommerModal);
@@ -24,12 +25,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('auth-changed', async (e) => {
     if (e.detail.email) {
       await UserContext.init(e.detail.email);
-      initAccueil();
+      await window.initAccueil();
+      await initAccueilUI();
     }
   });
 });
 
-async function initAccueil() {
+async function initAccueilUI() {
   renderGreeting();
   await loadTodayHistory();
   renderConsumptionLog();
