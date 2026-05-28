@@ -1,6 +1,7 @@
 // js/accueil-ui.js
-let todayHistory = [];
+let todayConsumptions = [];
 let selectedMealData = null;
+let selectedProduct = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const email = await Auth.init();
@@ -13,29 +14,34 @@ document.addEventListener('DOMContentLoaded', async () => {
   await RecipesAPI.load();
   await InventoryAPI.load();
 
-  renderGreeting();
-  await loadTodayHistory();
-  renderProgress();
-  renderJournal();
+  initAccueil();
 
-  document.getElementById('log-meal-btn').addEventListener('click', openMealModal);
-  document.getElementById('cancel-meal-btn').addEventListener('click', closeMealModal);
-  document.getElementById('meal-form').addEventListener('submit', handleLogMeal);
+  // Event listeners for Manger modal
+  document.getElementById('manger-btn').addEventListener('click', openMangerModal);
+  document.getElementById('close-manger-modal').addEventListener('click', closeMangerModal);
+  document.getElementById('manger-form').addEventListener('submit', submitManger);
+  document.getElementById('manger-qty').addEventListener('input', updateMangerPreview);
 
-  document.querySelectorAll('.meal-option').forEach(btn => {
-    btn.addEventListener('click', () => selectMealOption(btn.dataset.option));
-  });
+  // Event listeners for Consommer modal
+  document.getElementById('consommer-btn').addEventListener('click', openConsommerModal);
+  document.getElementById('close-consommer-modal').addEventListener('click', closeConsommerModal);
+  document.getElementById('consommer-form').addEventListener('submit', submitConsommer);
+  document.getElementById('consommer-qty').addEventListener('input', updateConsommerPreview);
+  document.getElementById('consommer-product').addEventListener('change', updateConsommerPreview);
 
   window.addEventListener('auth-changed', async (e) => {
     if (e.detail.email) {
       await UserContext.init(e.detail.email);
-      renderGreeting();
-      await loadTodayHistory();
-      renderProgress();
-      renderJournal();
+      initAccueil();
     }
   });
 });
+
+function initAccueil() {
+  renderGreeting();
+  loadTodayHistory();
+  renderConsumptionLog();
+}
 
 function renderGreeting() {
   const profile = UserContext.getCurrentProfile();
@@ -45,219 +51,230 @@ function renderGreeting() {
   document.getElementById('date-today').textContent = Utils.getLocaleDateFr(Utils.getTodayISO());
 }
 
-async function loadTodayHistory() {
-  const user = UserContext.getCurrentUser();
-  if (!user) return;
+function loadTodayHistory() {
+  const email = UserContext.getCurrentEmail();
+  if (!email) return;
 
-  const tabName = `History_${user}`;
-  const rows = await SheetsAPI.readTab(tabName);
-  if (!rows) {
-    todayHistory = [];
+  const tabName = `History_${email}`;
+  SheetsAPI.readTab(tabName).then(rows => {
+    if (!rows) {
+      todayConsumptions = [];
+      return;
+    }
+
+    const today = Utils.getTodayISO();
+    const history = SheetsAPI.rowsToObjects(rows);
+    todayConsumptions = history.filter(h => h.Date === today).reverse();
+  });
+}
+
+// TASK 6: renderConsumptionLog - render table from todaysConsumptions
+function renderConsumptionLog() {
+  const tbody = document.getElementById('log-body');
+  tbody.innerHTML = '';
+
+  if (todayConsumptions.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--color-text-light);">Aucune consommation</td></tr>';
     return;
   }
 
-  const today = Utils.getTodayISO();
-  const history = SheetsAPI.rowsToObjects(rows);
-  todayHistory = history.filter(h => h.Date === today).reverse();
-}
-
-function renderProgress() {
-  const profile = UserContext.getCurrentProfile();
-  if (!profile) return;
-
-  const target = profile.calorieTarget;
-  const consumed = todayHistory.reduce((sum, h) => sum + (parseInt(h.Kcal_total) || 0), 0);
-  const percent = Math.min((consumed / target) * 100, 100);
-
-  const svg = document.getElementById('progress-circle');
-  const radius = 45;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - percent / 100);
-
-  svg.setAttribute('viewBox', '0 0 120 120');
-  svg.setAttribute('width', '120');
-  svg.setAttribute('height', '120');
-
-  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  bg.setAttribute('cx', '60');
-  bg.setAttribute('cy', '60');
-  bg.setAttribute('r', radius);
-  bg.setAttribute('fill', 'none');
-  bg.setAttribute('stroke', 'var(--primary-border)');
-  bg.setAttribute('stroke-width', '8');
-  svg.appendChild(bg);
-
-  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  circle.setAttribute('cx', '60');
-  circle.setAttribute('cy', '60');
-  circle.setAttribute('r', radius);
-  circle.setAttribute('fill', 'none');
-  circle.setAttribute('stroke', percent > 100 ? 'var(--warning)' : 'var(--primary)');
-  circle.setAttribute('stroke-width', '8');
-  circle.setAttribute('stroke-dasharray', circumference);
-  circle.setAttribute('stroke-dashoffset', offset);
-  circle.setAttribute('transform', 'rotate(-90 60 60)');
-  svg.appendChild(circle);
-
-  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-  text.setAttribute('x', '60');
-  text.setAttribute('y', '65');
-  text.setAttribute('text-anchor', 'middle');
-  text.setAttribute('font-size', '20');
-  text.setAttribute('font-weight', 'bold');
-  text.textContent = `${Math.round(percent)}%`;
-  svg.appendChild(text);
-
-  document.getElementById('progress-text').textContent = `${consumed} / ${target} kcal`;
-}
-
-function renderJournal() {
-  const list = document.getElementById('journal-list');
-  list.innerHTML = '';
-
-  if (todayHistory.length === 0) {
-    list.innerHTML = '<p style="color: var(--text-secondary);">Aucune entrée aujourd\'hui</p>';
-    return;
-  }
-
-  todayHistory.forEach(entry => {
-    const emoji = entry.Type === 'recette' ? '🍽️' : entry.Type === 'scanner' ? '📱' : entry.Type === 'inventaire' ? '📦' : '✏️';
-    const card = document.createElement('div');
-    card.className = 'card journal-entry';
-    card.innerHTML = `
-      <div class="entry-header">
-        <span class="entry-emoji">${emoji}</span>
-        <span class="entry-name">${entry.Nom}</span>
-        <span class="entry-time">${entry.Heure}</span>
-      </div>
-      <div class="entry-details">${entry.Quantité} ${entry.Unité} · <strong>${entry.Kcal_total} kcal</strong></div>
+  todayConsumptions.forEach((entry, index) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${entry.Heure || ''}</td>
+      <td>${entry.Nom || ''}</td>
+      <td>${entry.Quantité || ''} ${entry.Unité || ''}</td>
+      <td>${entry.Kcal_total || '0'}</td>
+      <td><button class="btn btn-delete" onclick="deleteConsumption(${index})">✕</button></td>
     `;
-    list.appendChild(card);
+    tbody.appendChild(row);
   });
 }
 
-function openMealModal() {
-  document.getElementById('log-meal-modal').classList.remove('hidden');
-}
+// TASK 4: Manger Modal Functions
+function openMangerModal() {
+  const modal = document.getElementById('manger-modal');
+  const select = document.getElementById('manger-meal');
 
-function closeMealModal() {
-  document.getElementById('log-meal-modal').classList.add('hidden');
-  document.getElementById('meal-form-container').classList.add('hidden');
-  document.getElementById('meal-form').reset();
-  selectedMealData = null;
-}
-
-async function selectMealOption(option) {
-  const container = document.getElementById('meal-form-container');
-  container.classList.remove('hidden');
-
-  if (option === 'scanner') {
-    startScanner();
-  } else if (option === 'recipe') {
-    showRecipePicker();
-  } else if (option === 'inventory') {
-    showInventoryPicker();
-  } else if (option === 'manual') {
-    showManualEntry();
-  }
-}
-
-function showRecipePicker() {
+  // Populate meals dropdown from RecipesAPI
+  select.innerHTML = '<option value="">-- Sélectionner --</option>';
   const recipes = RecipesAPI.getRecipeList();
-  const html = recipes.map(r => `
-    <div class="picker-item" data-id="${r.id}">
-      <div>${r.name}</div>
-      <div style="font-size: 0.8em; color: var(--text-secondary);">${Math.round(r.kcalPer100g)} kcal/100g</div>
-    </div>
-  `).join('');
-
-  const container = document.querySelector('.meal-options');
-  container.innerHTML = html;
-  container.querySelectorAll('.picker-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const recipeId = item.dataset.id;
-      selectedMealData = { type: 'recipe', id: recipeId };
-      document.getElementById('meal-qty').focus();
-    });
+  recipes.forEach(r => {
+    const option = document.createElement('option');
+    option.value = r.id;
+    option.textContent = r.name;
+    select.appendChild(option);
   });
+
+  modal.classList.remove('hidden');
 }
 
-function showInventoryPicker() {
-  const items = InventoryAPI.getActiveItems();
-  const html = items.map(i => `
-    <div class="picker-item" data-id="${i.ID}">
-      <div>${i.Produit}</div>
-      <div style="font-size: 0.8em; color: var(--text-secondary);">${i.Qty} ${i.Unité} · ${i.Kcal_per_100} kcal/100g</div>
+function closeMangerModal() {
+  document.getElementById('manger-modal').classList.add('hidden');
+  document.getElementById('manger-form').reset();
+  document.getElementById('manger-preview').innerHTML = '';
+}
+
+function updateMangerPreview() {
+  const mealSelect = document.getElementById('manger-meal');
+  const qtyInput = document.getElementById('manger-qty');
+  const previewBox = document.getElementById('manger-preview');
+
+  if (!mealSelect.value || !qtyInput.value) {
+    previewBox.innerHTML = '';
+    return;
+  }
+
+  const recipe = RecipesAPI.getRecipe(mealSelect.value);
+  const qty = parseFloat(qtyInput.value);
+  const kcalPer100g = RecipesAPI.calcKcalPer100g(mealSelect.value);
+  const totalKcal = Utils.calcPortionKcal(qty, kcalPer100g);
+
+  previewBox.innerHTML = `
+    <div style="padding: 12px; background-color: var(--color-bg); border-radius: 6px;">
+      <p style="margin: 0; font-size: 0.9em;"><strong>${recipe.name}</strong></p>
+      <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${qty}g · ${totalKcal} kcal</p>
     </div>
-  `).join('');
-
-  const container = document.querySelector('.meal-options');
-  container.innerHTML = html;
-  container.querySelectorAll('.picker-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const itemId = item.dataset.id;
-      selectedMealData = { type: 'inventory', id: itemId };
-      document.getElementById('meal-qty').focus();
-    });
-  });
+  `;
 }
 
-function showManualEntry() {
-  document.getElementById('meal-kcal-label').classList.remove('hidden');
-  document.getElementById('meal-kcal').classList.remove('hidden');
-  selectedMealData = { type: 'manual' };
-}
-
-async function handleLogMeal(e) {
+async function submitManger(e) {
   e.preventDefault();
 
-  if (!selectedMealData) return;
+  const mealSelect = document.getElementById('manger-meal');
+  const qtyInput = document.getElementById('manger-qty');
 
-  const qty = parseFloat(document.getElementById('meal-qty').value);
+  if (!mealSelect.value || !qtyInput.value) {
+    Utils.showToast('Veuillez remplir tous les champs', 'error');
+    return;
+  }
+
+  const recipe = RecipesAPI.getRecipe(mealSelect.value);
+  const qty = parseFloat(qtyInput.value);
+  const kcalPer100g = RecipesAPI.calcKcalPer100g(mealSelect.value);
+  const totalKcal = Math.round(Utils.calcPortionKcal(qty, kcalPer100g));
+
   const now = new Date();
   const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const date = Utils.getTodayISO();
 
-  let kcal = 0;
-  let name = '';
-  let type = selectedMealData.type;
-  let recipeId = '';
-  let unit = 'g';
-
-  if (type === 'recipe') {
-    const recipe = RecipesAPI.getRecipe(selectedMealData.id);
-    name = recipe.name;
-    const kcalPer100g = RecipesAPI.calcKcalPer100g(selectedMealData.id);
-    kcal = Utils.calcPortionKcal(qty, kcalPer100g);
-    recipeId = selectedMealData.id;
-  } else if (type === 'inventory') {
-    const item = InventoryAPI.getActiveItems().find(i => i.ID === selectedMealData.id);
-    name = item.Produit;
-    kcal = Utils.calcPortionKcal(qty, parseFloat(item.Kcal_per_100));
-    unit = item.Unité;
-  } else if (type === 'manual') {
-    name = 'Saisie manuelle';
-    kcal = parseFloat(document.getElementById('meal-kcal').value);
-  }
-
   try {
-    const values = [date, time, name, qty, unit, Math.round(kcal), type, recipeId];
-    const user = UserContext.getCurrentUser();
-    const tabName = `History_${user}`;
+    const email = UserContext.getCurrentEmail();
+    const tabName = `History_${email}`;
+    const values = [date, time, recipe.name, qty, 'g', totalKcal, 'manger', mealSelect.value];
 
     await SheetsAPI.appendRow(tabName, values, Auth.getToken());
 
-    closeMealModal();
-    await loadTodayHistory();
-    renderProgress();
-    renderJournal();
+    closeMangerModal();
+    loadTodayHistory();
+    renderConsumptionLog();
     Utils.showToast('Repas enregistré', 'success');
-  } catch (e) {
+  } catch (err) {
+    console.error('Error submitting manger:', err);
     Utils.showToast('Erreur d\'enregistrement', 'error');
   }
 }
 
-function startScanner() {
-  // Scanner logic will depend on html5-qrcode library
-  // For now, placeholder
+// TASK 5: Consommer Modal Functions
+function openConsommerModal() {
+  const modal = document.getElementById('consommer-modal');
+  const select = document.getElementById('consommer-product');
+
+  // Populate products dropdown from inventory
+  select.innerHTML = '<option value="">-- Sélectionner --</option>';
+  const items = InventoryAPI.getActiveItems();
+  items.forEach(item => {
+    const option = document.createElement('option');
+    option.value = item.ID;
+    option.textContent = item.Produit;
+    option.dataset.kcalPer100 = item.Kcal_per_100;
+    option.dataset.unit = item.Unité;
+    select.appendChild(option);
+  });
+
+  modal.classList.remove('hidden');
+}
+
+function closeConsommerModal() {
+  document.getElementById('consommer-modal').classList.add('hidden');
+  document.getElementById('consommer-form').reset();
+  document.getElementById('consommer-preview').innerHTML = '';
+}
+
+function updateConsommerPreview() {
+  const productSelect = document.getElementById('consommer-product');
+  const qtyInput = document.getElementById('consommer-qty');
+  const previewBox = document.getElementById('consommer-preview');
+
+  if (!productSelect.value || !qtyInput.value) {
+    previewBox.innerHTML = '';
+    return;
+  }
+
+  const items = InventoryAPI.getActiveItems();
+  const product = items.find(i => i.ID === productSelect.value);
+  if (!product) return;
+
+  const qty = parseFloat(qtyInput.value);
+  const kcalPer100 = parseFloat(product.Kcal_per_100) || 0;
+  const totalKcal = Utils.calcPortionKcal(qty, kcalPer100);
+
+  previewBox.innerHTML = `
+    <div style="padding: 12px; background-color: var(--color-bg); border-radius: 6px;">
+      <p style="margin: 0; font-size: 0.9em;"><strong>${product.Produit}</strong></p>
+      <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${qty} ${product.Unité} · ${totalKcal} kcal</p>
+    </div>
+  `;
+}
+
+async function submitConsommer(e) {
+  e.preventDefault();
+
+  const productSelect = document.getElementById('consommer-product');
+  const qtyInput = document.getElementById('consommer-qty');
+
+  if (!productSelect.value || !qtyInput.value) {
+    Utils.showToast('Veuillez remplir tous les champs', 'error');
+    return;
+  }
+
+  const items = InventoryAPI.getActiveItems();
+  const product = items.find(i => i.ID === productSelect.value);
+  if (!product) {
+    Utils.showToast('Produit non trouvé', 'error');
+    return;
+  }
+
+  const qty = parseFloat(qtyInput.value);
+  const kcalPer100 = parseFloat(product.Kcal_per_100) || 0;
+  const totalKcal = Math.round(Utils.calcPortionKcal(qty, kcalPer100));
+
+  const now = new Date();
+  const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const date = Utils.getTodayISO();
+
+  try {
+    const email = UserContext.getCurrentEmail();
+    const tabName = `History_${email}`;
+    const values = [date, time, product.Produit, qty, product.Unité, totalKcal, 'consommer', productSelect.value];
+
+    await SheetsAPI.appendRow(tabName, values, Auth.getToken());
+
+    closeConsommerModal();
+    loadTodayHistory();
+    renderConsumptionLog();
+    Utils.showToast('Consommation enregistrée', 'success');
+  } catch (err) {
+    console.error('Error submitting consommer:', err);
+    Utils.showToast('Erreur d\'enregistrement', 'error');
+  }
+}
+
+// TASK 6: Delete Consumption Function
+function deleteConsumption(index) {
+  if (confirm('Êtes-vous sûr de vouloir supprimer cette consommation ?')) {
+    todayConsumptions.splice(index, 1);
+    renderConsumptionLog();
+    Utils.showToast('Consommation supprimée', 'success');
+  }
 }

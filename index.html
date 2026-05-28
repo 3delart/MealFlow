@@ -58,13 +58,19 @@
               <th>Aliment</th>
               <th>Quantité</th>
               <th>Calories</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody id="log-body">
-            <tr><td colspan="4" style="text-align: center; color: var(--color-text-light);">Aucune consommation</td></tr>
+            <tr><td colspan="5" style="text-align: center; color: var(--color-text-light);">Aucune consommation</td></tr>
           </tbody>
         </table>
       </div>
+    </div>
+
+    <div class="actions-section">
+      <button id="manger-btn" class="btn btn-primary" style="width: 100%;">🍽️ Manger</button>
+      <button id="consommer-btn" class="btn btn-secondary" style="width: 100%;">📦 Consommer</button>
     </div>
 
     <div class="search-section">
@@ -72,6 +78,52 @@
       <div id="search-results" class="search-results hidden"></div>
     </div>
   </main>
+
+  <!-- TASK 4: Manger Modal -->
+  <div id="manger-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🍽️ Manger</h3>
+        <button class="modal-close" id="close-manger-modal">&times;</button>
+      </div>
+      <form id="manger-form" class="modal-form">
+        <label for="manger-meal">Repas:</label>
+        <select id="manger-meal" required>
+          <option value="">-- Sélectionner --</option>
+        </select>
+
+        <label for="manger-qty">Quantité (g):</label>
+        <input type="number" id="manger-qty" min="0" step="1" required>
+
+        <div id="manger-preview" class="preview-box"></div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Soumettre</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- TASK 5: Consommer Modal -->
+  <div id="consommer-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📦 Consommer</h3>
+        <button class="modal-close" id="close-consommer-modal">&times;</button>
+      </div>
+      <form id="consommer-form" class="modal-form">
+        <label for="consommer-product">Produit:</label>
+        <select id="consommer-product" required>
+          <option value="">-- Sélectionner --</option>
+        </select>
+
+        <label for="consommer-qty">Quantité:</label>
+        <input type="number" id="consommer-qty" min="0" step="1" required>
+
+        <div id="consommer-preview" class="preview-box"></div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Soumettre</button>
+      </form>
+    </div>
+  </div>
 
   <nav class="nav-bottom" aria-label="Navigation principale">
     <a href="index.html" class="nav-item active" aria-current="page">
@@ -104,5 +156,6 @@
   <script src="js/google-auth.js"></script>
   <script src="js/sheets-api.js"></script>
   <script src="js/accueil.js"></script>
+  <script src="js/accueil-ui.js"></script>
 </body>
 </html>
