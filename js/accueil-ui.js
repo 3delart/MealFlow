@@ -4,15 +4,14 @@ let selectedMealData = null;
 let selectedProduct = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const email = await Auth.init();
-  if (!email) {
-    Auth.showLoginButton();
+  const token = getAccessToken();
+  if (!token) {
+    console.warn("Not authenticated");
     return;
   }
 
-  await UserContext.init(email);
-  await RecipesAPI.load();
-  await InventoryAPI.load();
+  await loadRecipes();
+  await loadInventory();
 
   initAccueil();
 
@@ -44,18 +43,18 @@ function initAccueil() {
 }
 
 function renderGreeting() {
-  const profile = UserContext.getCurrentProfile();
-  if (profile) {
-    document.getElementById('greeting').textContent = `Bonjour ${profile.name}`;
+  const user = getCurrentUser();
+  if (user) {
+    document.getElementById('greeting').textContent = `Bonjour ${user}`;
   }
   document.getElementById('date-today').textContent = Utils.getLocaleDateFr(Utils.getTodayISO());
 }
 
 function loadTodayHistory() {
-  const email = UserContext.getCurrentEmail();
-  if (!email) return;
+  const user = getCurrentUser();
+  if (!user) return;
 
-  const tabName = `History_${email}`;
+  const tabName = `History_${user}`;
   SheetsAPI.readTab(tabName).then(rows => {
     if (!rows) {
       todayConsumptions = [];
