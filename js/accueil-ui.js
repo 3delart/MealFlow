@@ -15,6 +15,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   await window.initAccueil();
   await initAccueilUI();
 
+  // Event listeners for Manger modal
+  document.getElementById('manger-form')?.addEventListener('submit', submitManger);
+  document.getElementById('manger-qty')?.addEventListener('input', updateMangerPreview);
+  document.getElementById('close-manger-modal')?.addEventListener('click', closeMangerModal);
+
   // Event listeners for Consommer modal
   document.getElementById('consommer-btn').addEventListener('click', openConsommerModal);
   document.getElementById('close-consommer-modal').addEventListener('click', closeConsommerModal);
