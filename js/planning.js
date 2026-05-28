@@ -321,6 +321,13 @@ async function savePlanningToSheets() {
       return;
     }
 
+    // Clear existing data first
+    try {
+      await window.SheetsAPI.clearSheetRange("Planning!A2:C100", token);
+    } catch (clearErr) {
+      console.warn("Clear failed, continuing with append:", clearErr.message);
+    }
+
     // Append each day's meals
     for (const dayMeal of mealPlan) {
       const row = [
