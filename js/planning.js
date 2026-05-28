@@ -145,8 +145,9 @@ function openRecipePickerModal(dateISO, mealTime) {
 }
 
 /**
- * TASK 8: Filter recipes by name as user types
- * Called on search input change
+ * TASK 8: Search/Filter recipes by name as user types
+ * Filters recipes from window.recipesData by name match
+ * Called on search input 'input' event in openRecipePickerModal()
  */
 function filterRecipes(event) {
   const query = event.target.value.toLowerCase().trim();
