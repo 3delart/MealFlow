@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadRecipes();
   await loadInventory();
 
-  initAccueil();
+  await initAccueil();
 
   // Event listeners for Manger modal
   document.getElementById('manger-btn').addEventListener('click', openMangerModal);
@@ -36,9 +36,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
-function initAccueil() {
+async function initAccueil() {
   renderGreeting();
-  loadTodayHistory();
+  await loadTodayHistory();
   renderConsumptionLog();
 }
 
