@@ -306,7 +306,7 @@ function collectRecipeFormData() {
     const product = productInput.value.trim();
     const qty = parseFloat(qtyInput.value) || 0;
     const unit = unitSelect.value;
-    const cal100 = parseFloat(calSpan.dataset.caloriesPer100 || 0) || 0;
+    const cal100 = parseFloat(calSpan.dataset.caloriesPer100 || calSpan.textContent) || 0;
 
     if (product && qty > 0) {
       ingredients.push({
