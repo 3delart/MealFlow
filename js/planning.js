@@ -44,9 +44,16 @@ async function loadMealPlan() {
     const objects = SheetsAPI.rowsToObjects(rows);
 
     if (objects.length > 0) {
-      // Filter rows to 7-day window by dateISO
+      // Filter rows to 7-day window by date
       const windowDates = rollingWindow.map(d => d.dateISO);
-      mealPlan = objects.filter(row => windowDates.includes(row.dateISO));
+      mealPlan = rollingWindow.map(dayInfo => {
+        const planRow = objects.find(row => row.Date === dayInfo.dateISO);
+        return {
+          ...dayInfo,
+          Midi: planRow?.Midi || null,
+          Soir: planRow?.Soir || null
+        };
+      });
       console.log(`Planning: loaded ${mealPlan.length} days from Sheets`);
     } else {
       console.log("Planning: empty, using fallback");
