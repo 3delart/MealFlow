@@ -1,5 +1,4 @@
 // js/accueil-ui.js
-let todayConsumptions = [];
 let selectedMealData = null;
 let selectedProduct = null;
 
@@ -14,12 +13,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadInventory();
 
   await initAccueil();
-
-  // Event listeners for Manger modal
-  document.getElementById('manger-btn').addEventListener('click', openMangerModal);
-  document.getElementById('close-manger-modal').addEventListener('click', closeMangerModal);
-  document.getElementById('manger-form').addEventListener('submit', submitManger);
-  document.getElementById('manger-qty').addEventListener('input', updateMangerPreview);
 
   // Event listeners for Consommer modal
   document.getElementById('consommer-btn').addEventListener('click', openConsommerModal);
@@ -78,7 +71,7 @@ function renderConsumptionLog() {
   tbody.innerHTML = '';
 
   // Filter out zero-kcal entries
-  const validConsumptions = todaysConsumptions.filter(c => (c.kcal_total || c.Kcal_total) > 0);
+  const validConsumptions = todaysConsumptions.filter(c => (c.Kcal_total || 0) > 0);
 
   if (validConsumptions.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--color-text-light);">Aucune consommation</td></tr>';
@@ -178,6 +171,9 @@ async function submitManger(e) {
 
     // Add to local state (match sheet column names)
     todaysConsumptions.push({ Heure: time, Nom: mealName, Quantité: qty, Unité: 'g', Kcal_total: totalKcal, Type: 'manger' });
+
+    // Update global calories consumed
+    window.caloriesConsumed = (window.caloriesConsumed || 0) + totalKcal;
 
     // Save to sheet
     if (token && SheetsAPI) {
@@ -292,8 +288,13 @@ async function submitConsommer(e) {
 // TASK 6: Delete Consumption Function
 function deleteConsumption(index) {
   if (confirm('Êtes-vous sûr de vouloir supprimer cette consommation ?')) {
-    todayConsumptions.splice(index, 1);
+    if (todaysConsumptions[index]) {
+      window.caloriesConsumed = (window.caloriesConsumed || 0) - (todaysConsumptions[index].Kcal_total || 0);
+    }
+    todaysConsumptions.splice(index, 1);
     renderConsumptionLog();
+    updateProgressDisplay();
+    renderWheel();
     Utils.showToast('Consommation supprimée', 'success');
   }
 }

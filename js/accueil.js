@@ -222,10 +222,14 @@ function toggleMealEaten(mealType) {
 
   meal.eaten = !meal.eaten;
 
-  // Recalculate consumed calories
+  // Recalculate consumed calories (for local meal tracking, not consumptions)
   caloriesConsumed = todaysMeals
     .filter(m => m.eaten)
     .reduce((sum, m) => sum + (m.actualKcal || m.estimatedKcal), 0);
+
+  // Also add consumptions from todaysConsumptions
+  const consumptionTotal = todaysConsumptions.reduce((sum, c) => sum + (c.Kcal_total || 0), 0);
+  caloriesConsumed += consumptionTotal;
 
   // Persist to localStorage
   saveMealsState();
@@ -263,10 +267,16 @@ function updateProgressDisplay() {
  */
 function renderWheel() {
   // Filter zero-kcal entries
-  const validConsumptions = todaysConsumptions.filter(c => (c.kcal_total || c.Kcal_total || 0) > 0);
-  const consumed = validConsumptions.reduce((sum, c) => sum + (c.kcal_total || c.Kcal_total || 0), 0);
-  const percentage = dailyGoal > 0 ? Math.round((consumed / dailyGoal) * 100) : 0;
-  const remaining = Math.max(0, dailyGoal - consumed);
+  const validConsumptions = todaysConsumptions.filter(c => (c.Kcal_total || 0) > 0);
+  const consumed = validConsumptions.reduce((sum, c) => sum + (c.Kcal_total || 0), 0);
+
+  // Add meals that were eaten
+  const mealsConsumed = todaysMeals
+    .filter(m => m.eaten)
+    .reduce((sum, m) => sum + (m.actualKcal || m.estimatedKcal), 0);
+  const total = consumed + mealsConsumed;
+  const percentage = dailyGoal > 0 ? Math.round((total / dailyGoal) * 100) : 0;
+  const remaining = Math.max(0, dailyGoal - total);
 
   const percentageEl = document.getElementById("wheel-percentage");
   const remainingEl = document.getElementById("wheel-remaining");
@@ -495,20 +505,20 @@ async function loadTodaysConsumptions() {
     const objects = window.SheetsAPI.rowsToObjects(rows);
 
     // Filter by today's date
-    // Expected columns: Date, Product, Quantity, Unit, Calories_per_100g, Total_calories, Type
+    // Expected columns: Date, Time/Heure, Product/Nom, Quantity/Quantité, Unit/Unité, Total_calories/Kcal_total, Type
     todaysConsumptions = objects
       .filter(row => (row.Date || "").trim() === todayISO)
       .map(row => ({
-        time: row.Time || "",
-        name: row.Product || "",
-        qty: Number(row.Quantity || 0),
-        unit: row.Unit || "g",
-        kcal_total: Number(row.Total_calories || 0),
-        type: row.Type || "other"
+        Heure: row.Time || row.Heure || "",
+        Nom: row.Product || row.Nom || "",
+        Quantité: Number(row.Quantity || row.Quantité || 0),
+        Unité: row.Unit || row.Unité || "g",
+        Kcal_total: Number(row.Total_calories || row.Kcal_total || 0),
+        Type: row.Type || "other"
       }));
 
     // Recalculate total consumed calories
-    caloriesConsumed = todaysConsumptions.reduce((sum, c) => sum + c.kcal_total, 0);
+    caloriesConsumed = todaysConsumptions.reduce((sum, c) => sum + (c.Kcal_total || 0), 0);
 
     console.log(`Accueil: Loaded ${todaysConsumptions.length} consumptions for today, total=${caloriesConsumed} kcal`);
     renderWheel();
