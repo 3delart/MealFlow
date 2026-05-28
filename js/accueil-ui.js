@@ -175,7 +175,7 @@ async function submitManger(e) {
     todaysConsumptions.push({ Heure: time, Nom: mealName, Quantité: qty, Unité: 'g', Kcal_total: totalKcal, Type: 'manger' });
 
     // Update global calories consumed
-    window.caloriesConsumed = (window.caloriesConsumed || 0) + totalKcal;
+    caloriesConsumed = (caloriesConsumed || 0) + totalKcal;
 
     // Save to sheet
     if (token && SheetsAPI) {
@@ -299,14 +299,14 @@ async function deleteConsumption(index) {
 
     // Remove from local state
     if (entry) {
-      window.caloriesConsumed = (window.caloriesConsumed || 0) - (entry.Kcal_total || 0);
+      caloriesConsumed = (caloriesConsumed || 0) - (entry.Kcal_total || 0);
     }
     todaysConsumptions.splice(index, 1);
 
     // Persist deletion to localStorage
     try {
       localStorage.setItem(`mealflow:consumptions:${user}:${today}`, JSON.stringify(todaysConsumptions));
-      localStorage.setItem(`mealflow:consumed:${user}:${today}`, String(window.caloriesConsumed || 0));
+      localStorage.setItem(`mealflow:consumed:${user}:${today}`, String(caloriesConsumed || 0));
     } catch (err) {
       console.warn("Could not save consumptions to localStorage:", err);
     }
