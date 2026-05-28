@@ -100,16 +100,19 @@ function openMangerModal() {
   const modal = document.getElementById('manger-modal');
   const select = document.getElementById('manger-meal');
 
-  // Populate meals dropdown from RecipesAPI
+  // Populate from todaysMeals with actual recipe data
   select.innerHTML = '<option value="">-- Sélectionner --</option>';
-  const recipes = RecipesAPI.getRecipeList();
-  recipes.forEach(r => {
+  const mealsWithRecipes = todaysMeals.filter(m => m.name && m.name.trim());
+  mealsWithRecipes.forEach(meal => {
     const option = document.createElement('option');
-    option.value = r.id;
-    option.textContent = r.name;
+    option.value = meal.name;
+    option.textContent = `${meal.name} (${meal.kcal_per_100} kcal/100g)`;
+    option.dataset.kcalPer100 = meal.kcal_per_100;
     select.appendChild(option);
   });
 
+  document.getElementById('manger-qty').value = '';
+  document.getElementById('manger-preview').innerHTML = '';
   modal.classList.remove('hidden');
 }
 
@@ -129,14 +132,15 @@ function updateMangerPreview() {
     return;
   }
 
-  const recipe = RecipesAPI.getRecipe(mealSelect.value);
+  const mealName = mealSelect.value;
   const qty = parseFloat(qtyInput.value);
-  const kcalPer100g = RecipesAPI.calcKcalPer100g(mealSelect.value);
-  const totalKcal = Utils.calcPortionKcal(qty, kcalPer100g);
+  const selectedOption = mealSelect.options[mealSelect.selectedIndex];
+  const kcalPer100g = parseFloat(selectedOption.dataset.kcalPer100) || 0;
+  const totalKcal = Math.round(qty * (kcalPer100g / 100));
 
   previewBox.innerHTML = `
     <div style="padding: 12px; background-color: var(--color-bg); border-radius: 6px;">
-      <p style="margin: 0; font-size: 0.9em;"><strong>${recipe.name}</strong></p>
+      <p style="margin: 0; font-size: 0.9em;"><strong>${mealName}</strong></p>
       <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${qty}g · ${totalKcal} kcal</p>
     </div>
   `;
@@ -149,33 +153,41 @@ async function submitManger(e) {
   const qtyInput = document.getElementById('manger-qty');
 
   if (!mealSelect.value || !qtyInput.value) {
-    Utils.showToast('Veuillez remplir tous les champs', 'error');
+    alert('Remplissez les champs');
     return;
   }
 
-  const recipe = RecipesAPI.getRecipe(mealSelect.value);
+  const mealName = mealSelect.value;
   const qty = parseFloat(qtyInput.value);
-  const kcalPer100g = RecipesAPI.calcKcalPer100g(mealSelect.value);
-  const totalKcal = Math.round(Utils.calcPortionKcal(qty, kcalPer100g));
+  const selectedOption = mealSelect.options[mealSelect.selectedIndex];
+  const kcalPer100g = parseFloat(selectedOption.dataset.kcalPer100) || 0;
+  const totalKcal = Math.round(qty * (kcalPer100g / 100));
 
   const now = new Date();
   const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  const date = Utils.getTodayISO();
+  const date = getTodayISO();
+  const user = getCurrentUser();
 
   try {
-    const email = UserContext.getCurrentEmail();
-    const tabName = `History_${email}`;
-    const values = [date, time, recipe.name, qty, 'g', totalKcal, 'manger', mealSelect.value];
+    const token = getAccessToken?.();
+    const tabName = `History_${user}`;
+    const row = [date, time, mealName, qty, 'g', totalKcal, 'manger'];
 
-    await SheetsAPI.appendRow(tabName, values, Auth.getToken());
+    // Add to local state
+    todaysConsumptions.push({ time, name: mealName, qty, unit: 'g', kcal_total: totalKcal, type: 'manger' });
 
-    closeMangerModal();
-    loadTodayHistory();
+    // Save to sheet
+    if (token && SheetsAPI) {
+      await SheetsAPI.appendRowWithToken(tabName, row, token);
+    }
+
     renderConsumptionLog();
-    Utils.showToast('Repas enregistré', 'success');
+    updateProgressDisplay();
+    renderWheel();
+    closeMangerModal();
   } catch (err) {
     console.error('Error submitting manger:', err);
-    Utils.showToast('Erreur d\'enregistrement', 'error');
+    alert('Erreur sauvegarde');
   }
 }
 
