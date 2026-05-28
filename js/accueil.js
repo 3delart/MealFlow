@@ -225,6 +225,7 @@ function toggleMealEaten(mealType) {
   // Update UI
   renderMeals();
   updateProgressDisplay();
+  renderWheel();
 }
 
 /**
@@ -271,11 +272,11 @@ function renderWheel() {
   const wheelContainer = document.querySelector(".accueil-wheel");
   if (wheelContainer) {
     if (percentage >= 100) {
-      wheelContainer.style.borderColor = "red";
+      wheelContainer.style.borderColor = "var(--color-error)";
     } else if (percentage >= 80) {
-      wheelContainer.style.borderColor = "orange";
+      wheelContainer.style.borderColor = "var(--color-warning)";
     } else {
-      wheelContainer.style.borderColor = "green";
+      wheelContainer.style.borderColor = "var(--color-success)";
     }
   }
 }
@@ -488,6 +489,7 @@ async function loadTodaysConsumptions() {
     caloriesConsumed = todaysConsumptions.reduce((sum, c) => sum + c.kcal_total, 0);
 
     console.log(`Accueil: Loaded ${todaysConsumptions.length} consumptions for today, total=${caloriesConsumed} kcal`);
+    renderWheel();
   } catch (err) {
     console.warn(`Accueil: Could not load History tab for ${user}:`, err.message);
     todaysConsumptions = [];
@@ -625,6 +627,7 @@ document.addEventListener("userChanged", function () {
   renderGreeting();
   renderMeals();
   updateProgressDisplay();
+  renderWheel();
 });
 
 // Check for midnight rollover every minute
