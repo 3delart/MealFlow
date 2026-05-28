@@ -278,31 +278,35 @@ Page-specific styles built on top of `style.css`.
 
 ## Pages
 
-### 1. **Accueil (index.html)** — Daily Meal Log
-**Purpose:** Track meals eaten today, see progress toward calorie target.
+### 1. **Accueil (index.html)** — Daily Meal Log (Per-User)
+**Purpose:** Track meals eaten today (current user only), see progress toward calorie target.
+
+**Per-user data:**
+- Shows only meals logged by current user (from History_[user])
+- When different user logs in, they see their own consumption, not the previous user's
 
 **Sections:**
-- **Header:** Greeting ("Bonjour Florian"), today's date, calorie target
-- **Progress Circle:** SVG circle showing % of daily calories consumed
-- **Journal du jour:** List of meals eaten today (reversed chronological)
+- **Header:** Greeting ("Bonjour Florian"), today's date, logged-in user's calorie target
+- **Progress Circle:** SVG circle showing % of daily calories consumed (for current user)
+- **Journal du jour:** List of meals eaten today by current user (reversed chronological)
   - Shows: emoji (type), name, time, quantity, kcal
 - **Button "J'ai mangé":** Opens modal with 4 options:
   1. **Scanner:** Scan product barcode → lookup Open Food Facts → enter quantity
-  2. **Recette:** Pick from recipes → enter quantity
-  3. **Inventaire:** Pick from inventory items → enter quantity
+  2. **Recette:** Pick from recipes (shared) → enter quantity eaten
+  3. **Inventaire:** Pick from inventory items (shared) → enter quantity eaten
   4. **Manuel:** Enter name + kcal manually
 
 **Data flow:**
-1. Load profile from Profils (get calorie target)
-2. Load History_[user] tab, filter by today
-3. Calculate total kcal consumed
+1. Load current user's profile from Profils (via Auth.init() email)
+2. Load History_[user] tab where user = current user, filter by today's date
+3. Calculate total kcal consumed (current user only)
 4. Render progress circle, journal
 5. On "J'ai mangé" submit:
    - Calculate kcal (qty * kcal_per_100 / 100)
-   - Append row to History_[user]
+   - Append row to History_[currentUser] (not shared)
    - Refresh display
 
-**Modules used:** Auth, UserContext, Utils, SheetsAPI, InventoryAPI, RecipesAPI
+**Modules used:** Auth, SheetsAPI, Utils, InventoryAPI, RecipesAPI
 
 ---
 
@@ -337,32 +341,35 @@ Page-specific styles built on top of `style.css`.
 
 ---
 
-### 3. **Planning (planning.html)** — Weekly Meal Plan
-**Purpose:** Choose recipes for each day's lunch and dinner.
+### 3. **Planning (planning.html)** — Weekly Meal Plan (7-Day Rolling Window)
+**Purpose:** Choose recipes for next 7 days; shopping list auto-updates in real-time.
+
+**7-Day Rolling Window:**
+- Always display next 7 days in vertical layout
+- If today is Wednesday 26 May → show Wed 26 to Tue 1 June
+- Each day the window shifts (e.g., next day: Thu 27 to Wed 2 June)
+- Shopping list only includes items for these 7 days (day 8+ ignored)
 
 **Sections:**
-- **Week Navigator:** Previous/next week buttons, week date range
-- **Planning Grid:** 7 rows (Mon-Sun), 2 columns (Midi/Soir)
-  - Each cell shows recipe name (or empty)
+- **Planning Grid:** 7 rows (one per day), 2 columns (Midi/Soir)
+  - Row header: day name + date (e.g., "MERCREDI 26 MAI")
+  - Each cell shows recipe name (or empty with "+")
   - Tap cell → open recipe picker modal
-  - Save button writes to Planning tab
-- **Button "Générer liste de courses":** Calculates shopping list (Courses page)
+- **No "Générer liste de courses" button** (auto-updates instead)
 - **Link to "Recette du jour":** Shows today's scheduled recipe (if any)
 
 **Data flow:**
-1. Load Planning tab for the week
-2. Render grid
-3. On recipe select:
-   - Update Planning tab
-   - Re-render
-4. On "Générer liste":
-   - Read this week's recipes
-   - For each recipe, get ingredients
-   - For each ingredient, check Inventaire qty
-   - Calculate needed qty = (recipe qty * portions) - (inventory qty)
-   - Redirect to Courses page with list
+1. Calculate 7-day window (today through today+6)
+2. Load Planning tab, filter to window dates
+3. Render grid
+4. On recipe select:
+   - Update Planning tab (cell write)
+   - Recalculate Courses list (only next 7 days)
+   - Update Courses tab in real-time
+   - Courses page auto-refreshes
+   - Show toast confirmation
 
-**Modules used:** Auth, UserContext, Utils, SheetsAPI, RecipesAPI, InventoryAPI
+**Modules used:** Auth, SheetsAPI, RecipesAPI, InventoryAPI, Utils
 
 ---
 
@@ -389,8 +396,13 @@ Page-specific styles built on top of `style.css`.
 
 ---
 
-### 5. **Inventaire (inventory.html)** — Inventory Management
-**Purpose:** Track food items, their quantities, expiry dates, and nutrition info.
+### 5. **Inventaire (inventory.html)** — Inventory Management (Shared)
+**Purpose:** Track household food items, quantities, expiry dates, and nutrition info. Shared by all users.
+
+**Shared data:**
+- All users can add/edit/delete items
+- Any user logging in sees the same inventory
+- Intentional: household stock is common knowledge
 
 **Sections:**
 - **Scanner Section:** Tap "Scanner un Produit" → barcode scanner
@@ -398,89 +410,109 @@ Page-specific styles built on top of `style.css`.
   - Fill form with product name + kcal/100g
 - **Add Item Form:**
   - Product name, quantity, unit (g/ml/pièce/litre)
-  - Category (dropdown)
+  - Category (dropdown: Fruits, Légumes, Viandes, Produits Laitiers, etc)
   - Expiry date
   - Price (EUR)
   - kcal/100g (auto-filled from API, editable)
-- **Category Filter:** Dropdown to show only one category
-- **Inventory List:** Cards per item
-  - Name, quantity, unit
-  - Expiry date with days remaining (red if < 3 days)
+- **Category Filter:** Dropdown to show only one category, or "All"
+- **Inventory List:** Grouped by category
+  - Per item: name, quantity, unit
+  - Expiry date with days remaining (red if < 3 days, grey if expired)
   - kcal/100g
-  - Button "Consommer" → log to History_[user]
-  - Button "Supprimer"
-  - Button "Éditer" → opens edit modal
+  - Button "Consommer" → log to History_[currentUser] + update inventory qty
+  - Button "Éditer" → opens edit modal (qty, expiry, price, category)
+  - Button "Supprimer" → remove item
 
 **Data flow:**
-1. Load Inventaire tab
-2. Render list, grouped/filtered by category
-3. On scanner: call Open Food Facts API → parse JSON → extract name + kcal
-4. On add: append row to Inventaire + update memory
-5. On consume: create History entry with product name, qty eaten, kcal
-6. On delete: mark consumed=true (soft delete) or remove row
-7. On edit: update Sheets + memory
+1. Load Inventaire tab (shared)
+2. Group/filter by category
+3. Render inventory list
+4. On scanner: call Open Food Facts API → extract name + kcal/100g
+5. On add: append row to Inventaire + update memory
+6. On consume: 
+   - Create History_[currentUser] entry (product name, qty eaten, kcal)
+   - Update Inventaire row (decrement quantity)
+7. On edit: update Inventaire row (qty/expiry/price/category)
+8. On delete: remove row from Inventaire
 
-**Modules used:** Auth, UserContext, SheetsAPI, InventoryAPI, Utils, open-food-facts API
+**Modules used:** SheetsAPI, InventoryAPI, Utils, open-food-facts API
 
 ---
 
-### 6. **Profils (profils.html)** — User Profile & History
-**Purpose:** Manage profile, view meal history, track weight and statistics.
+### 6. **Profils (profils.html)** — User Profile & History (Multi-User)
+**Purpose:** View/manage profiles for both users, separate meal histories and stats per user.
+
+**Architecture:**
+- Each user (Florian, Naomi) has separate OAuth2 login
+- App displays current logged-in user + link to other user's profile
+- Each user views their own History_[user] tab only
 
 **Sections:**
-1. **Profil Tab:**
+
+1. **Current User Profile Tab:**
    - Display: Name, height, weight, IMC, BMR, TDEE, calorie target, diet
-   - Edit button → form to update taille/poids/calories
+   - Edit button → form to update taille/poids/calories (only current user can edit)
    - Save recalculates BMR/TDEE
 
-2. **Historique Tab:**
-   - List of days with total kcal consumed
+2. **Current User History Tab:**
+   - List of days with total kcal consumed (from History_[currentUser])
    - Format: "Lundi 26 mai 2026 : 1346 kcal" → button to expand
-   - Expand shows: list of meals eaten that day (from History_[user])
-   - Detail modal shows each meal with time, qty, kcal
+   - Expand shows: meals eaten that day with time, qty, kcal
+   - Detail modal shows each meal
 
-3. **Stats Tab:**
-   - Summary cards: avg kcal/day, avg weight, weight lost/gained
+3. **Current User Stats Tab:**
+   - Summary cards: avg kcal/day, weight change (last 30 days)
    - Chart: last 30 days kcal consumption (Chart.js line chart)
    - Chart: last 30 days weight (Chart.js line chart)
-   - Button to log weight: input weight → append to weight log
+   - Button to log weight: input weight → append to profile log
+
+4. **Other User Profile (Tab or Toggle):**
+   - View-only other user's profile, history, stats
+   - Same layout as current user sections
+   - Cannot edit other user's data
+   - Shows their History_[otherUser] data
 
 **Data flow:**
-1. Load Profils tab (current profile)
-2. Load History_[user] tab, group by date
+1. Load current user's profile from Profils tab (via email from Auth.init())
+2. Load History_[currentUser], group by date
 3. For each day, sum kcal
-4. Render historique list
-5. On day click: load details for that date
-6. For stats: aggregate last 30 days, render charts
+4. Render current user sections
+5. Load other user's profile from Profils tab
+6. Load History_[otherUser], render in separate section
 
-**Modules used:** Auth, UserContext, SheetsAPI, Utils, Chart.js
+**Modules used:** Auth, SheetsAPI, Utils, Chart.js
 
 ---
 
-### 7. **Courses (courses.html)** — Shopping List
-**Purpose:** Generate shopping list from weekly plan.
+### 7. **Courses (courses.html)** — Shopping List (Auto-Updated)
+**Purpose:** Display auto-generated shopping list from next 7 days of Planning.
 
-**Sections:**
-- **Header:** Week date, "Générer" button
-- **Shopping List:**
-  - Grouped by category (Fruits, Légumes, Viandes, etc)
-  - Item: name, needed quantity, unit
-  - Checkbox to mark bought
-  - Total price estimation
+**Read-only list:**
+- Grouped by category (Fruits, Légumes, Viandes, etc)
+- Item: name, needed quantity, unit, price estimate
+- Checkbox to mark bought (local only, not synced to Sheets)
+- **No manual editing** (list auto-calculated from Planning + Inventaire)
+- **No "regenerate" button** (updates in real-time when Planning changes)
 
-**Data flow:**
-1. Load this week's Planning
-2. For each recipe scheduled:
+**Auto-calculation logic:**
+1. Calculate 7-day window (today through today+6)
+2. Load Planning tab for these dates
+3. For each recipe scheduled in window:
    - Load recipe from RecipesAPI
-   - Get ingredients
-3. For each ingredient:
+   - Get ingredients list
+4. For each ingredient:
    - Check Inventaire for current quantity
    - Needed = (recipe qty * portions) - (inventory qty)
    - If needed > 0, add to list
-4. Group by category
-5. Render
+5. Group by category, aggregate quantities
+6. Render list
 
-**Modules used:** Auth, UserContext, SheetsAPI, RecipesAPI, InventoryAPI, Utils
+**Real-time updates:**
+- When user selects recipe in Planning → Courses tab updates automatically
+- Courses page refreshes (via listener on Sheets changes or localStorage event)
+- Recipes scheduled beyond day+7 are NOT included
+
+**Modules used:** SheetsAPI, RecipesAPI, InventoryAPI, Utils
 
 ---
 
@@ -496,7 +528,51 @@ Bottom fixed navbar on all pages (except modals):
 Additional links within pages:
 - Planning → "Recette du jour" link
 - Accueil modal → "Chercher dans l'inventaire"
-- Courses shown from Planning
+- Courses accessible from Planning or navbar
+
+---
+
+## Multi-User Architecture
+
+**Two separate users = Two separate OAuth2 logins**
+
+Each user (Florian, Naomi) logs in with their own Google account. Only one user logged in per browser tab at a time.
+
+**Per-user data (isolated by user):**
+- `History_florian` — Florian's meal log only
+- `History_naomi` — Naomi's meal log only
+- Each user's profile in Profils tab (identified by email)
+- Accueil page shows only logged-in user's consumption
+
+**Shared data (read/write by any logged-in user):**
+| Data | Purpose | Who can write? |
+|------|---------|---|
+| RecettesJSON | All recipes | Any user |
+| Planning | Weekly meal schedule | Any user |
+| Inventaire | Household inventory | Any user |
+| Courses | Shopping list (derived) | Auto-calculated, read-only |
+
+**Switch users:**
+- Logout current user → tokens cleared → page reloads → login button shown
+- Other user logs in with their Google account
+- App loads their profile, History_[user], all shared data
+
+**Page behavior:**
+
+| Page | Per-user or shared? | Notes |
+|------|-------------------|-------|
+| Accueil | Per-user | Shows only logged-in user's meals today |
+| Recettes | Shared | All users can add/edit/delete recipes |
+| Planning | Shared | One meal plan for whole household |
+| Recette du jour | Shared | Shows today's recipe for all users |
+| Inventaire | Shared | Household inventory, any user can manage |
+| Courses | Shared | Shopping list for whole household (auto-calculated) |
+| Profils | Both | Current user profile + history; can view other user's profile + history |
+
+**No in-app user switching:**
+- No toggle button within app
+- No session merging
+- Each user has isolated OAuth2 token
 
 ---
 
@@ -567,20 +643,21 @@ Additional links within pages:
 8. App appends to History_[user]: [date, time, "Pâtes Carbonara", 250, "g", 450, "recette", recipe_id_1]
 9. Accueil refreshes: journal updates, progress circle updates
 
-### Flow 3: Plan Next Week
+### Flow 3: Plan Next 7 Days (Auto-updating Shopping List)
 1. User on Planning
-2. Taps "Suivant" to go to next week
-3. Taps Monday Midi cell → recipe picker
+2. Sees next 7 days (Wed 26 May - Tue 1 June in vertical layout)
+3. Taps Wednesday Midi cell → recipe picker modal
 4. Selects "Pâtes Carbonara" (2 portions)
-5. Planning tab updates: Monday Midi_Recette = recipe_id_1, Midi_Portions = 2
-6. User taps "Générer liste de courses"
-7. App calculates:
-   - Pâtes Carbonara ingredients: 400g pâtes, 3 œufs, 150g lardons (per 2 portions)
-   - Check Inventaire: 100g pâtes in stock → need 300g more
-   - Check Inventaire: 0 eggs → need 3
-   - Check Inventaire: 200g lardons in stock → need -50g (don't buy)
-8. Shopping list: Pâtes 300g, Œufs 3 pièces
-9. Redirect to Courses page with list
+5. Planning tab updates: Wed Midi_Recette = recipe_id_1, Midi_Portions = 2
+6. Toast shows: "Recipe added to shopping list"
+7. Courses tab updates automatically:
+   - Calculates ingredients for Pâtes: 400g pâtes, 3 œufs, 150g lardons
+   - Checks Inventaire: 100g pâtes in stock → need 300g
+   - Checks Inventaire: 0 eggs → need 3
+   - Checks Inventaire: 200g lardons in stock → need -50g (don't buy)
+8. Courses page shows updated list (if user views it)
+9. User can continue planning other days (list updates for each recipe)
+10. **Recipes scheduled after next 7 days are ignored** (not added to shopping list)
 
 ### Flow 4: Buy Groceries & Add to Inventory
 1. User goes shopping, buys items from list
