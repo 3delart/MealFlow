@@ -294,6 +294,17 @@ function deleteConsumption(index) {
       window.caloriesConsumed = (window.caloriesConsumed || 0) - (todaysConsumptions[index].Kcal_total || 0);
     }
     todaysConsumptions.splice(index, 1);
+
+    // Persist deletion to localStorage
+    try {
+      const user = getCurrentUser();
+      const today = getTodayISO();
+      localStorage.setItem(`mealflow:consumptions:${user}:${today}`, JSON.stringify(todaysConsumptions));
+      localStorage.setItem(`mealflow:consumed:${user}:${today}`, String(window.caloriesConsumed || 0));
+    } catch (err) {
+      console.warn("Could not save consumptions to localStorage:", err);
+    }
+
     renderConsumptionLog();
     updateProgressDisplay();
     renderWheel();

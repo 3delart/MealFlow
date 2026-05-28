@@ -524,6 +524,22 @@ async function loadTodaysConsumptions() {
     renderWheel();
   } catch (err) {
     console.warn(`Accueil: Could not load History tab for ${user}:`, err.message);
+
+    // Fallback to localStorage
+    try {
+      const today = getTodayISO();
+      const saved = localStorage.getItem(`mealflow:consumptions:${user}:${today}`);
+      if (saved) {
+        todaysConsumptions = JSON.parse(saved);
+        caloriesConsumed = todaysConsumptions.reduce((sum, c) => sum + (c.Kcal_total || 0), 0);
+        console.log(`Accueil: Loaded ${todaysConsumptions.length} consumptions from localStorage, total=${caloriesConsumed} kcal`);
+        renderWheel();
+        return;
+      }
+    } catch (localErr) {
+      console.warn(`Accueil: Could not load from localStorage:`, localErr.message);
+    }
+
     todaysConsumptions = [];
     caloriesConsumed = 0;
   }
