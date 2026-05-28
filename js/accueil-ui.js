@@ -308,6 +308,5 @@ function deleteConsumption(index) {
     renderConsumptionLog();
     updateProgressDisplay();
     renderWheel();
-    Utils.showToast('Consommation supprimée', 'success');
   }
 }
