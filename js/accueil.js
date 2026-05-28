@@ -201,11 +201,8 @@ function renderMeals() {
             </div>
           </div>
           <div class="meal-actions">
-            <button class="btn-meal btn-recette" onclick="showRecipe('${meal.mealType}')">
-              📖
-            </button>
-            <button class="btn-meal btn-mange" onclick="toggleMealEaten('${meal.mealType}')">
-              ${meal.eaten ? "✓" : "Mangé"}
+            <button class="btn-meal btn-mange" onclick="openMangerModal()">
+              Manger
             </button>
           </div>
         </div>
