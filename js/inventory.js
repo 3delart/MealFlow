@@ -940,12 +940,14 @@ function setupEventHandlers() {
   // Populate category filter dynamically from inventory
   const categories = [...new Set(inventoryData.map(i => i.Catégorie))].sort();
   const filterSelect = document.getElementById("filter-category");
-  categories.forEach(cat => {
-    const option = document.createElement("option");
-    option.value = cat;
-    option.textContent = cat;
-    filterSelect.appendChild(option);
-  });
+  if (filterSelect) {
+    categories.forEach(cat => {
+      const option = document.createElement("option");
+      option.value = cat;
+      option.textContent = cat;
+      filterSelect.appendChild(option);
+    });
+  }
 
   // Scanner buttons
   document.getElementById("btn-start-scanner").addEventListener("click", function() {

@@ -132,9 +132,6 @@ function updateIngredientCalories(input) {
 
   const row = input.closest("tr");
   const calSpan = row.querySelector("td:nth-child(4) span");
-  const dropdown = input.dataset.dropdown ? document.querySelector(`td:has(input[value="${input.value}"])?.querySelector(".ingredient-dropdown")` : null;
-
-  // Get actual dropdown element from row
   const dropdownEl = row.querySelector(".ingredient-dropdown");
 
   // Show/populate dropdown if there are matches
