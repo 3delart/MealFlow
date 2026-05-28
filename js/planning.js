@@ -289,7 +289,8 @@ function syncCoursesFromMealPlan() {
 
 /**
  * TASK 7: Persist meal plan changes to Planning sheet
- * Clears Planning tab and appends all 7 days' meals
+ * Clears Planning tab (A2:C1000) and appends all 7 days' meals
+ * Called on beforeunload and after selectRecipe()
  */
 async function savePlanningToSheets() {
   if (!window.SheetsAPI) {
