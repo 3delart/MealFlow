@@ -108,16 +108,16 @@ function updateIngredientCalories(input) {
   const matches = window.RecettesUtils.searchInventoryProducts(productName);
 
   const row = input.closest("tr");
-  const calCell = row.querySelector("td:nth-child(4)");
+  const calSpan = row.querySelector("td:nth-child(4) span");
 
   if (matches.length > 0) {
     const match = matches[0];
-    calCell.textContent = match.calories_per_100;
-    calCell.dataset.caloriesPer100 = match.calories_per_100;
+    calSpan.textContent = match.calories_per_100;
+    calSpan.dataset.caloriesPer100 = match.calories_per_100;
   } else {
     // No match found, show placeholder
-    calCell.textContent = "?";
-    calCell.dataset.caloriesPer100 = 0;
+    calSpan.textContent = "?";
+    calSpan.dataset.caloriesPer100 = 0;
   }
 
   updateCalories();
