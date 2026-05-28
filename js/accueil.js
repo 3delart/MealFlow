@@ -384,10 +384,12 @@ async function loadDailyGoal() {
       console.log(`Accueil: Loaded profile ${user}:`, profile);
       const kcal = Number(profile.Calories_cible || profile.Objectif || profile.objectifKcal || 0);
       dailyGoal = kcal;
+      window.dailyGoal = dailyGoal;
       console.log(`Accueil: Daily goal for ${user} = ${dailyGoal} kcal`);
     } else {
       console.warn(`Accueil: No profile found for ${user}`);
       dailyGoal = 0;
+      window.dailyGoal = 0;
     }
   } catch (err) {
     console.error("Accueil: Could not load Profils tab:", err.message);
