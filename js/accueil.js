@@ -419,10 +419,10 @@ async function loadTodaysMeals() {
       return;
     }
 
-    // Build meals array from ONLY Midi (Déjeuner) and Soir (Dîner) columns
+    // Build meals array from ONLY Midi and Soir columns
     const mealTypesToLoad = [
-      { type: "dejeuner", label: "Déjeuner", emoji: "🍽️", estimatedKcal: 700, columnName: "Déjeuner" },
-      { type: "diner", label: "Dîner", emoji: "🌙", estimatedKcal: 600, columnName: "Diner" }
+      { type: "midi", label: "Midi", emoji: "🍽️", estimatedKcal: 700, columnName: "Midi" },
+      { type: "soir", label: "Soir", emoji: "🌙", estimatedKcal: 600, columnName: "Soir" }
     ];
 
     todaysMeals = mealTypesToLoad.map(mealDef => {

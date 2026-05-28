@@ -45,26 +45,9 @@
     </div>
 
     <div class="meals-section">
+      <h3>🍽️ Repas du jour</h3>
       <div class="meals-list" id="meals-container">
         <p class="loading-text">Chargement repas du jour...</p>
-      </div>
-
-      <div class="consumption-log-section">
-        <h3>Consommations aujourd'hui</h3>
-        <table class="consumption-log">
-          <thead>
-            <tr>
-              <th>Heure</th>
-              <th>Aliment</th>
-              <th>Quantité</th>
-              <th>Calories</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="log-body">
-            <tr><td colspan="5" style="text-align: center; color: var(--color-text-light);">Aucune consommation</td></tr>
-          </tbody>
-        </table>
       </div>
     </div>
 
@@ -73,9 +56,22 @@
       <button id="consommer-btn" class="btn btn-secondary" style="width: 100%;">📦 Consommer</button>
     </div>
 
-    <div class="search-section">
-      <input type="text" id="search-meals" placeholder="🔍 Chercher une recette..." autocomplete="off">
-      <div id="search-results" class="search-results hidden"></div>
+    <div class="consumption-log-section">
+      <h3>📋 Consommations aujourd'hui</h3>
+      <table class="consumption-log">
+        <thead>
+          <tr>
+            <th>Heure</th>
+            <th>Aliment</th>
+            <th>Quantité</th>
+            <th>Calories</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="log-body">
+          <tr><td colspan="5" style="text-align: center; color: var(--color-text-light);">Aucune consommation</td></tr>
+        </tbody>
+      </table>
     </div>
   </main>
 

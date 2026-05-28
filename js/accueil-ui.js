@@ -48,6 +48,11 @@ function renderGreeting() {
     document.getElementById('greeting').textContent = `Bonjour ${user}`;
   }
   document.getElementById('date-today').textContent = Utils.getLocaleDateFr(Utils.getTodayISO());
+
+  // Fill daily goal
+  if (window.dailyGoal) {
+    document.getElementById('calorie-objective').textContent = `Objectif: ${window.dailyGoal} kcal`;
+  }
 }
 
 function loadTodayHistory() {
