@@ -306,9 +306,6 @@ async function savePlanningToSheets() {
       return;
     }
 
-    // Clear existing Planning sheet data (keep header)
-    await window.SheetsAPI.clearSheetRange("Planning!A2:C1000", token);
-
     // Append each day's meals
     for (const dayMeal of mealPlan) {
       const row = [
