@@ -153,8 +153,20 @@ function renderRecipeCard(recipeID, recipe) {
   editBtn.textContent = "✏️ Éditer";
   editBtn.addEventListener("click", () => openEditModal(recipeID));
 
+  const deleteBtn = document.createElement("button");
+  deleteBtn.className = "btn btn-danger";
+  deleteBtn.textContent = "🗑️ Supprimer";
+  deleteBtn.addEventListener("click", () => {
+    if (confirm("Confirmer la suppression de cette recette ?")) {
+      delete recipesData[recipeID];
+      syncRecipesToSheets();
+      renderRecipeList();
+    }
+  });
+
   buttons.appendChild(viewBtn);
   buttons.appendChild(editBtn);
+  buttons.appendChild(deleteBtn);
 
   card.appendChild(name);
   card.appendChild(desc);
