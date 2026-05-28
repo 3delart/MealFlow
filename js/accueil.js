@@ -276,7 +276,7 @@ function renderWheel() {
   }
 
   if (remainingEl) {
-    remainingEl.textContent = `${remaining} kcal`;
+    remainingEl.textContent = `Remaining : ${remaining}kcal`;
   }
 
   const wheelContainer = document.querySelector(".accueil-wheel");
