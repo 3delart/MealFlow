@@ -156,7 +156,18 @@ function renderMeals() {
     return;
   }
 
-  const mealsHtml = todaysMeals
+  // Filter: only show meals with names
+  const mealsWithNames = todaysMeals.filter(m => m.name && m.name.trim());
+
+  if (mealsWithNames.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: var(--spacing-lg); color: var(--color-text-light);">
+        <p>📋 Aucun repas planifié pour aujourd'hui</p>
+      </div>`;
+    return;
+  }
+
+  const mealsHtml = mealsWithNames
     .map(meal => {
       const displayKcal = meal.actualKcal || meal.estimatedKcal;
       const eatenClass = meal.eaten ? "eaten" : "";
@@ -430,12 +441,22 @@ async function loadTodaysMeals() {
     todaysMeals = mealTypesToLoad.map(mealDef => {
       const mealName = (todayRow[mealDef.columnName] || "").trim();
 
+      // Get actual recipe kcal_per_100 from window.recipesData
+      let recipeKcal = mealDef.estimatedKcal;
+      if (mealName && window.recipesData) {
+        const recipe = Object.values(window.recipesData).find(r => r.name === mealName);
+        if (recipe && recipe.kcal_per_100) {
+          recipeKcal = recipe.kcal_per_100;
+        }
+      }
+
       return {
         mealType: mealDef.type,
         label: mealDef.label,
         emoji: mealDef.emoji,
         name: mealName || mealDef.label,
-        estimatedKcal: mealDef.estimatedKcal,
+        kcal_per_100: recipeKcal,
+        estimatedKcal: recipeKcal,
         actualKcal: null,
         eaten: false,
         timestamp: null,
