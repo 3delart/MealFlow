@@ -101,9 +101,11 @@ async function fetchProductFromOpenFoodFacts(barcode) {
       // Canned/Conserves
       { patterns: ["conserve", "canned", "en boîte", "en conserve"], category: "Conserves" },
       // Spices & Condiments
-      { patterns: ["épice", "condiment", "sauce", "sirop"], category: "Épices & Condiments" },
+      { patterns: ["épice", "condiment"], category: "Épices & Condiments" },
+      // Sauces
+      { patterns: ["sauce", "mayonnaise", "ketchup", "moutarde"], category: "Sauces" },
       // Drinks
-      { patterns: ["boisson", "drink", "jus"], category: "Boissons" }
+      { patterns: ["boisson", "drink", "jus", "sirop"], category: "Boissons" }
     ];
 
     for (const map of categoryMap) {
