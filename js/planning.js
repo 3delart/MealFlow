@@ -333,6 +333,7 @@ async function savePlanningToSheets() {
 async function initializePlanning() {
   UserContext.applyUserStyling();
   UserContext.initializeUserToggle();
+  await loadRecipes();  // Load recipes for modal
   await loadMealPlan();
   syncCoursesFromMealPlan();
 
