@@ -10,43 +10,6 @@
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     .auth-buttons { position: fixed; top: 10px; right: 10px; display: flex; gap: 8px; z-index: 100; }
-
-    /* Grignottage modal mode selector */
-    .grignottage-mode-selector {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
-      padding: 12px 0;
-      border-bottom: 1px solid #eee;
-    }
-
-    .radio-option {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      flex: 1;
-      padding: 8px 12px;
-      border-radius: 8px;
-      transition: background-color 0.2s;
-    }
-
-    .radio-option input[type="radio"] {
-      cursor: pointer;
-    }
-
-    .radio-option:hover {
-      background-color: #f5f5f5;
-    }
-
-    /* Grignottage sections visibility */
-    .grignottage-section {
-      display: block;
-    }
-
-    .grignottage-section.hidden {
-      display: none;
-    }
   </style>
 </head>
 <body>
@@ -77,12 +40,6 @@
     </div>
 
     <div class="meals-section">
-      <div class="grignottage-banner">
-        <button id="consume-btn" class="btn btn-primary">
-          ➕ Ajouter une consommation
-        </button>
-      </div>
-
       <div class="meals-list" id="meals-container">
         <p class="loading-text">Chargement repas du jour...</p>
       </div>
@@ -102,60 +59,6 @@
             <tr><td colspan="4" style="text-align: center; color: var(--color-text-light);">Aucune consommation</td></tr>
           </tbody>
         </table>
-      </div>
-
-      <div id="scanner-modal" class="modal hidden" aria-hidden="true">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3>Grignottage</h3>
-            <button class="modal-close" onclick="closeGrignottageModal()">✕</button>
-          </div>
-
-          <!-- Mode selection radio buttons -->
-          <div class="grignottage-mode-selector">
-            <label class="radio-option">
-              <input type="radio" name="grignottage-mode" value="scan" checked>
-              <span>📱 Scanner un produit</span>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="grignottage-mode" value="pick">
-              <span>🛒 Choisir de l'inventaire</span>
-            </label>
-          </div>
-
-          <!-- Scanner mode section -->
-          <div id="scanner-mode-section" class="grignottage-section">
-            <div id="scanner-container" style="width: 100%; height: 300px;">
-              <!-- html5-qrcode scanner inits here -->
-            </div>
-            <div class="scanner-result hidden" id="scanner-result">
-              <p>Aliment trouvé: <strong id="result-name">—</strong></p>
-              <p id="result-brand" style="font-size: 0.9em; color: #666; margin: 4px 0;">—</p>
-              <p id="result-quantity" style="font-size: 0.85em; color: #999; margin: 4px 0;">—</p>
-              <p id="result-category" style="font-size: 0.85em; color: #999; margin: 4px 0;">—</p>
-              <p>
-                <label for="result-kcal">Calories (kcal):</label>
-                <input type="number" id="result-kcal" placeholder="0" min="0" />
-              </p>
-              <div id="inventory-suggestions" class="inventory-suggestions-container" style="margin-top: 12px; max-height: 200px; overflow-y: auto;"></div>
-              <button class="btn btn-primary" onclick="addGrignottage()">Ajouter</button>
-              <button class="btn btn-secondary" onclick="restartScanner()">Rescanner</button>
-            </div>
-            <div id="grignottage-form-container-scan" class="hidden">
-              <!-- Grignottage form will be populated here by JS (scanner mode) -->
-            </div>
-          </div>
-
-          <!-- Pick mode section -->
-          <div id="pick-mode-section" class="grignottage-section hidden">
-            <div id="inventory-list">
-              <!-- Inventory items will be populated here by JS -->
-            </div>
-            <div id="grignottage-form-container-pick" class="hidden">
-              <!-- Grignottage form will be populated here by JS (pick mode) -->
-            </div>
-          </div>
-        </div>
       </div>
     </div>
 
