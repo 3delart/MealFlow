@@ -176,8 +176,8 @@ async function submitManger(e) {
     const tabName = `History_${user}`;
     const row = [date, time, mealName, qty, 'g', totalKcal, 'manger'];
 
-    // Add to local state
-    todaysConsumptions.push({ time, name: mealName, qty, unit: 'g', kcal_total: totalKcal, type: 'manger' });
+    // Add to local state (match sheet column names)
+    todaysConsumptions.push({ Heure: time, Nom: mealName, Quantité: qty, Unité: 'g', Kcal_total: totalKcal, Type: 'manger' });
 
     // Save to sheet
     if (token && SheetsAPI) {
