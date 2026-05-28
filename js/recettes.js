@@ -10,6 +10,7 @@
 
 /** @type {Object.<string, Object>} Recipes keyed by recipe ID (lowercase slug) */
 let recipesData = {};
+window.recipesData = recipesData;  // Expose globally for forms
 
 // ============================================================================
 // STEP 1: DATA LOADING
@@ -31,6 +32,7 @@ async function loadRecipes() {
 
     const jsonStr = rows[0][0] || "{}";
     recipesData = JSON.parse(jsonStr);
+    window.recipesData = recipesData;
     console.log("Recipes loaded from Sheets:", Object.keys(recipesData).length, "recipes");
   } catch (err) {
     console.warn("RecettesJSON: Sheets API unavailable, falling back to localStorage", err.message);
@@ -47,6 +49,7 @@ function loadRecipesFromLocalStorage() {
   if (stored) {
     try {
       recipesData = JSON.parse(stored);
+      window.recipesData = recipesData;
       console.log("Recipes loaded from localStorage:", Object.keys(recipesData).length, "recipes");
     } catch (err) {
       console.error("Failed to parse localStorage recipes:", err);

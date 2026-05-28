@@ -704,7 +704,8 @@ async function reduceQuantity(itemId, currentQty, productName) {
  */
 function renderInventory() {
   const container = document.getElementById("inventory-list");
-  const filterValue = document.getElementById("filter-category").value;
+  const filterEl = document.getElementById("filter-category");
+  const filterValue = filterEl ? filterEl.value : "";
 
   let filtered = filterValue
     ? inventoryData.filter(item => item.Catégorie === filterValue && (parseFloat(item.Qty) || 0) > 0)
