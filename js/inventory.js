@@ -84,8 +84,10 @@ async function fetchProductFromOpenFoodFacts(barcode) {
     const categoryMap = [
       // Starches FIRST (before vegetables)
       { patterns: ["féculents", "riz", "pâtes", "pain", "pasta", "céréales"], category: "Féculents" },
+      // Cheese (before general Dairy)
+      { patterns: ["fromage", "comté", "cheddar", "mozzarella", "camembert", "brie", "emmental"], category: "Fromage" },
       // Dairy
-      { patterns: ["fromage", "yaourt", "lait", "beurre", "crème"], category: "Produits laitiers" },
+      { patterns: ["yaourt", "lait", "beurre", "crème", "laitier"], category: "Produits laitiers" },
       // Vegetables (after starches to avoid "blé" confusion)
       { patterns: ["maïs", "légume", "vegetable", "corn", "carotte", "brocoli", "épinard", "poele", "poêle"], category: "Légumes" },
       // Fruits
@@ -370,7 +372,7 @@ async function loadInventory() {
       inventoryData = objects.map((row, idx) => ({
         id: `sheet_${idx + 2}`, // Store actual Sheets row number (1-indexed + header)
         sheetRowNumber: idx + 2,
-        Barcode: row["Code barre"] || row["Barcode"] || "",
+        Barcode: row["Code barre"] || row["Barcode"] || row["ID"] || "",
         Produit: row["Produit"] || "",
         Catégorie: row["Catégorie"] || "Autres",
         Qty: row["Qty"] || "",
