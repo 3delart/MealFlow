@@ -454,7 +454,7 @@ async function loadTodaysMeals() {
         mealType: mealDef.type,
         label: mealDef.label,
         emoji: mealDef.emoji,
-        name: mealName || mealDef.label,
+        name: mealName,
         kcal_per_100: recipeKcal,
         estimatedKcal: recipeKcal,
         actualKcal: null,
