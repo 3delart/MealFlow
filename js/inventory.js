@@ -419,6 +419,7 @@ async function loadInventory() {
       }));
       console.log("Inventory loaded from Sheets:", inventoryData.length, "items");
       mergeDuplicatesByBarcode();
+      window.inventoryData = inventoryData;  // Expose for autocomplete
       return;
     }
   } catch (err) {
@@ -547,7 +548,7 @@ async function addItem(item) {
     Consommé: false,
     Barcode: barcode,
     Prix: item.price || "",
-    calories_per_100: scannedProductData?.calories || null,
+    calories_per_100: scannedProductData?.calories || parseFloat(item.calories_per_100) || null,
     proteins: scannedProductData?.proteins || null,
     fats: scannedProductData?.fats || null,
     carbs: scannedProductData?.carbs || null,
@@ -592,6 +593,9 @@ async function addItem(item) {
   document.getElementById("add-item-form").reset();
   document.getElementById("product-info").style.display = "none";
   document.getElementById("add-item-section").style.display = "none"; // Hide form after add
+
+  // Expose updated inventory for autocomplete
+  window.inventoryData = inventoryData;
 
   renderInventory();
 }
@@ -990,7 +994,8 @@ function setupEventHandlers() {
       unit: document.getElementById("field-unit").value,
       category: document.getElementById("field-category").value,
       expiry_date: document.getElementById("field-expiry").value,
-      price: document.getElementById("field-price").value || ""
+      price: document.getElementById("field-price").value || "",
+      calories_per_100: document.getElementById("field-calories").value || null
     };
 
     if (!formData.product_name || !formData.quantity || !formData.unit || !formData.category || !formData.expiry_date) {
