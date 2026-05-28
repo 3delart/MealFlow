@@ -77,12 +77,15 @@ function renderConsumptionLog() {
   const tbody = document.getElementById('log-body');
   tbody.innerHTML = '';
 
-  if (todayConsumptions.length === 0) {
+  // Filter out zero-kcal entries
+  const validConsumptions = todaysConsumptions.filter(c => (c.kcal_total || c.Kcal_total) > 0);
+
+  if (validConsumptions.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--color-text-light);">Aucune consommation</td></tr>';
     return;
   }
 
-  todayConsumptions.forEach((entry, index) => {
+  validConsumptions.forEach((entry, index) => {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${entry.Heure || ''}</td>

@@ -262,7 +262,9 @@ function updateProgressDisplay() {
  * and color-codes the wheel border (green/orange/red).
  */
 function renderWheel() {
-  const consumed = todaysConsumptions.reduce((sum, c) => sum + c.kcal_total, 0);
+  // Filter zero-kcal entries
+  const validConsumptions = todaysConsumptions.filter(c => (c.kcal_total || c.Kcal_total || 0) > 0);
+  const consumed = validConsumptions.reduce((sum, c) => sum + (c.kcal_total || c.Kcal_total || 0), 0);
   const percentage = dailyGoal > 0 ? Math.round((consumed / dailyGoal) * 100) : 0;
   const remaining = Math.max(0, dailyGoal - consumed);
 
@@ -274,7 +276,7 @@ function renderWheel() {
   }
 
   if (remainingEl) {
-    remainingEl.textContent = `Remaining: ${remaining} kcal`;
+    remainingEl.textContent = `${remaining} kcal`;
   }
 
   const wheelContainer = document.querySelector(".accueil-wheel");
