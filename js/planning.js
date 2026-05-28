@@ -16,24 +16,13 @@ function calculateRollingWindow() {
     const date = new Date(today);
     date.setDate(date.getDate() + i);
 
-    const dateISO = Utils.getTodayISO().split('-').reduce((acc, val, idx) => {
-      if (idx === 0) return val;
-      return acc;
-    }) + '-' +
-    String(date.getMonth() + 1).padStart(2, '0') + '-' +
-    String(date.getDate()).padStart(2, '0');
-
-    // Recalculate proper ISO for this date
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const properlISO = `${year}-${month}-${day}`;
+    const dateISO = Utils.getDateISO(i);
 
     days.push({
       date: date,
-      dateStr: Utils.formatDate(properlISO),
+      dateStr: Utils.formatDate(dateISO),
       dayOfWeek: frenchDays[date.getDay()],
-      dateISO: properlISO
+      dateISO: dateISO
     });
   }
 
