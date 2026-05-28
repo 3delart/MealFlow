@@ -196,7 +196,7 @@ function renderMeals() {
               <span class="meal-time-icon">${meal.emoji}</span>
               <div>
                 <p class="meal-name">${displayName}</p>
-                <p class="meal-kcal">${displayKcal} kcal</p>
+                <p class="meal-kcal">${meal.kcal_per_100} kcal/100g</p>
               </div>
             </div>
           </div>
