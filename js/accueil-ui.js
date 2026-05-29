@@ -26,7 +26,7 @@ function viewMealRecipe(mealName) {
 function closeViewModal() {
   const modal = document.getElementById("modal-recipe-view");
   if (modal) {
-    modal.classList.add("hidden");
+    modal.classList.remove("open");
   }
 }
 
