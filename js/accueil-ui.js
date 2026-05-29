@@ -364,6 +364,55 @@ async function consommerScannerOnDetect(barcode) {
       alert('Produit non trouvé');
       return;
     }
+
+    // If product found in Open Food Facts, add to inventory
+    if (product && product.name) {
+      try {
+        const newItem = {
+          Barcode: barcode,
+          Produit: product.name,
+          Catégorie: product.category || 'Autres',
+          Qty: '0',
+          Unité: product.unit || 'g',
+          Date_ajout: Utils.getTodayISO(),
+          Péremption: '',
+          Prix: '',
+          calories_per_100: product.calories || 0,
+          proteins: product.proteins || null,
+          fats: product.fats || null,
+          carbs: product.carbs || null,
+          allergens: product.allergens || '—'
+        };
+
+        const token = getAccessToken?.();
+        if (token && window.SheetsAPI) {
+          const row = [
+            newItem.Barcode,
+            newItem.Produit,
+            newItem.Catégorie,
+            newItem.Qty,
+            newItem.Unité,
+            newItem.Date_ajout,
+            newItem.Péremption,
+            newItem.Prix,
+            newItem.calories_per_100,
+            newItem.proteins,
+            newItem.fats,
+            newItem.carbs,
+            newItem.allergens
+          ];
+          await window.SheetsAPI.appendRowWithToken('Inventory', row, token);
+          console.log(`Added product to inventory: ${newItem.Produit}`);
+        }
+
+        // Also add to local inventory
+        newItem.id = Date.now();
+        newItem.sheetRowNumber = -1;
+        window.inventoryData.push(newItem);
+      } catch (err) {
+        console.warn('Failed to add product to inventory:', err);
+      }
+    }
   }
 
   if (!product || !product.name) {
