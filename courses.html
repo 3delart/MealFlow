@@ -49,6 +49,23 @@
     .price-edit-btn:hover { background: #1b5e20; }
 
     .auth-buttons { position: fixed; top: 10px; right: 10px; display: flex; gap: 8px; z-index: 100; }
+
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal.hidden { display: none; }
+    .modal-content { background-color: var(--color-surface); border-radius: var(--border-radius-md); padding: var(--spacing-lg); max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg); border-bottom: 1px solid var(--color-border); padding-bottom: var(--spacing-md); }
+    .modal-header h3 { margin: 0; font-size: 18px; }
+    .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--color-text-light); padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+    .modal-close:hover { color: var(--color-text); }
+    .edit-form { display: flex; flex-direction: column; gap: var(--spacing-md); }
+    .form-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-md); }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: var(--color-text); }
+    .form-group input, .form-group select { padding: 8px 12px; border: 1px solid var(--color-border); border-radius: var(--border-radius-sm); font-size: 14px; font-family: inherit; background-color: var(--color-bg); color: var(--color-text); }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1); }
+    .form-group input[readonly] { background-color: var(--color-surface); cursor: not-allowed; opacity: 0.6; }
+    .modal-actions { display: flex; gap: var(--spacing-md); margin-top: var(--spacing-lg); }
+    .modal-actions button { flex: 1; }
   </style>
 </head>
 <body>
@@ -87,14 +104,64 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="price-modal-overlay" onclick="hideModal(event)">
-    <div class="modal">
-      <h3>Corriger le prix</h3>
-      <input type="number" id="price-edit-input" placeholder="Prix en €" step="0.01" min="0" />
-      <div class="modal-btns">
-        <button class="btn-cancel" onclick="hidePriceModal()">Annuler</button>
-        <button class="btn-add" onclick="savePriceAndUpdate()">Corriger ✓</button>
+  <div id="edit-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Corriger l'ingrédient</h3>
+        <button class="modal-close" onclick="closeEditModal()">✕</button>
       </div>
+      <form id="edit-form" class="edit-form">
+        <div class="form-group">
+          <label for="edit-ingredient-name">Ingrédient</label>
+          <input type="text" id="edit-ingredient-name" readonly>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-ingredient-category">Catégorie</label>
+          <select id="edit-ingredient-category" required>
+            <option value="">— Sélectionner —</option>
+            <option value="Fruits & Légumes">Fruits & Légumes</option>
+            <option value="Viandes & Charcuterie">Viandes & Charcuterie</option>
+            <option value="Produits Vegan">Produits Vegan</option>
+            <option value="Poissons">Poissons</option>
+            <option value="Cuisine du Monde">Cuisine du Monde</option>
+            <option value="Œufs">Œufs</option>
+            <option value="Yaourt">Yaourt</option>
+            <option value="Fromages">Fromages</option>
+            <option value="Conserves">Conserves</option>
+            <option value="Produits Secs & Sauces">Produits Secs & Sauces</option>
+            <option value="Pain & Viennoiserie">Pain & Viennoiserie</option>
+            <option value="Salade & Herbes">Salade & Herbes</option>
+            <option value="Autres">Autres</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-ingredient-quantity">Quantité nécessaire</label>
+          <input type="number" id="edit-ingredient-quantity" min="0" step="0.1" required>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-ingredient-unit">Unité</label>
+          <select id="edit-ingredient-unit" required>
+            <option value="">— Sélectionner —</option>
+            <option value="g">g (grammes)</option>
+            <option value="ml">ml (millilitres)</option>
+            <option value="pièce">pièce</option>
+            <option value="litre">litre</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-ingredient-price">Prix unitaire (€)</label>
+          <input type="number" id="edit-ingredient-price" step="0.01" min="0">
+        </div>
+
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+          <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Annuler</button>
+        </div>
+      </form>
     </div>
   </div>
 

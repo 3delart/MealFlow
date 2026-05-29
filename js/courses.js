@@ -274,7 +274,7 @@ function renderIngredientItem(ing, dimmed = false) {
       </span>
       <div class="price-correction">
         <span class="price-display">${priceText}</span>
-        <button class="price-edit-btn" onclick="showPriceModal('${ing.name.replace(/'/g, "\\'")}', ${displayPrice})">Corriger</button>
+        <button class="price-edit-btn" onclick="openEditModal('${ing.name.replace(/'/g, "\\'")}')">Corriger</button>
       </div>
     </label>
   `;
@@ -364,10 +364,8 @@ function hideAddModal() {
 
 function hideModal(e) {
   const modalOverlay = document.getElementById('modal-overlay');
-  const priceModalOverlay = document.getElementById('price-modal-overlay');
 
   if (e.target === modalOverlay) hideAddModal();
-  if (e.target === priceModalOverlay) hidePriceModal();
 }
 
 function saveCustomItem() {
@@ -388,6 +386,13 @@ document.addEventListener('keydown', (e) => {
   if (!document.getElementById('modal-overlay').classList.contains('active')) return;
   if (e.key === 'Enter') saveCustomItem();
   if (e.key === 'Escape') hideAddModal();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const editForm = document.getElementById('edit-form');
+  if (editForm) {
+    editForm.addEventListener('submit', saveEditedIngredient);
+  }
 });
 
 /**
@@ -443,53 +448,67 @@ function savePriceOverride(ingredientName, price) {
 }
 
 /**
- * Show modal to edit price for an ingredient
+ * Open edit modal for an ingredient
  */
-function showPriceModal(ingredientName, currentPrice) {
-  const input = document.getElementById('price-edit-input');
-  input.value = currentPrice || '';
-  input.dataset.ingredient = ingredientName;
-  document.getElementById('price-modal-overlay').classList.add('active');
-  setTimeout(() => input.focus(), 50);
+function openEditModal(ingredientName) {
+  const ing = Object.values(ingredientMap).find(i => i.name === ingredientName);
+  if (!ing) return;
+
+  const modal = document.getElementById('edit-modal');
+  document.getElementById('edit-ingredient-name').value = ing.name;
+  document.getElementById('edit-ingredient-category').value = ing.category || '';
+  document.getElementById('edit-ingredient-quantity').value = ing.needed.toFixed(1);
+  document.getElementById('edit-ingredient-unit').value = ing.unit || 'g';
+
+  const priceVal = loadPriceOverride(ing.name) || ing.price || 0;
+  document.getElementById('edit-ingredient-price').value = priceVal.toFixed(2);
+
+  modal.setAttribute('aria-hidden', 'false');
+  modal.classList.remove('hidden');
+  modal.setAttribute('data-ingredient-name', ing.name);
 }
 
-function hidePriceModal() {
-  document.getElementById('price-modal-overlay').classList.remove('active');
+function closeEditModal() {
+  const modal = document.getElementById('edit-modal');
+  modal.setAttribute('aria-hidden', 'true');
+  modal.classList.add('hidden');
+  modal.removeAttribute('data-ingredient-name');
 }
 
-async function savePriceAndUpdate() {
-  const input = document.getElementById('price-edit-input');
-  const ingredientName = input.dataset.ingredient;
-  const price = input.value.trim();
+async function saveEditedIngredient(e) {
+  e.preventDefault();
 
-  if (!price || parseFloat(price) <= 0) {
-    alert('Prix invalide');
-    return;
-  }
+  const ingredientName = document.getElementById('edit-modal').getAttribute('data-ingredient-name');
+  const ing = Object.values(ingredientMap).find(i => i.name === ingredientName);
+  if (!ing) return;
+
+  const category = document.getElementById('edit-ingredient-category').value || ing.category;
+  const quantity = document.getElementById('edit-ingredient-quantity').value || ing.needed;
+  const unit = document.getElementById('edit-ingredient-unit').value || ing.unit;
+  const price = document.getElementById('edit-ingredient-price').value || ing.price;
+
+  // Update ingredient map
+  ing.category = category;
+  ing.needed = parseFloat(quantity);
+  ing.unit = unit;
 
   // Save to Sheets
   try {
     const token = window.getAccessToken ? window.getAccessToken() : null;
     if (token && window.SheetsAPI) {
-      const row = [ingredientName, price, Utils.getDateISO(0)];
-      await window.SheetsAPI.appendRowWithToken('CoursePrices', row, token);
-      console.log(`Price saved for ${ingredientName}: ${price}€`);
+      const row = [ingredientName, category, quantity, unit, price, Utils.getDateISO(0)];
+      await window.SheetsAPI.appendRowWithToken('Courses', row, token);
+      console.log(`Ingredient saved: ${ingredientName}`);
     }
   } catch (err) {
-    console.warn('Failed to save price to Sheets:', err);
+    console.warn('Failed to save to Sheets:', err);
   }
 
   savePriceOverride(ingredientName, price);
-
-  // Update global price overrides
   priceOverrides[ingredientName] = parseFloat(price);
 
-  // Update the display
-  const ing = Object.values(ingredientMap).find(i => i.name === ingredientName);
-  if (ing) {
-    renderCoursesList();
-  }
-  hidePriceModal();
+  closeEditModal();
+  renderCoursesList();
 }
 
 /**
