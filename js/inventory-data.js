@@ -319,3 +319,17 @@ window.InventoryAPI = {
       });
   }
 };
+
+// Auto-initialize inventory when file loads (for use in recettes.html and other pages)
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    loadInventory().then(() => {
+      window.inventoryData = inventoryData;
+    });
+  });
+} else {
+  // DOM already loaded
+  loadInventory().then(() => {
+    window.inventoryData = inventoryData;
+  });
+}
