@@ -353,6 +353,18 @@ body.user-naomi {
   opacity: 0.9;
 }
 
+.btn-voir {
+  background-color: var(--color-bg);
+  color: var(--color-primary);
+  border: 1px solid var(--color-border);
+}
+
+.btn-voir:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background-color: rgba(46, 125, 50, 0.05);
+}
+
 .btn-mange.checked {
   background-color: var(--color-success);
 }

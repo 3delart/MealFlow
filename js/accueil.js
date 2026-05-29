@@ -205,6 +205,9 @@ function renderMeals() {
             <button class="btn-meal btn-mange" onclick="openMangerModal('${meal.name}')">
               Manger
             </button>
+            <button class="btn-meal btn-voir" onclick="viewMealRecipe('${meal.name}')">
+              👁️ Voir
+            </button>
           </div>
         </div>
       `;

@@ -2,6 +2,27 @@
 let selectedMealData = null;
 let selectedProduct = null;
 
+function viewMealRecipe(mealName) {
+  if (!window.recipesData) return;
+
+  // Find recipe by name
+  const recipeID = Object.keys(window.recipesData).find(id => {
+    return window.recipesData[id].name === mealName;
+  });
+
+  if (!recipeID) {
+    alert("Recette non trouvée");
+    return;
+  }
+
+  // Use openViewModal from recettes.js if available
+  if (typeof openViewModal === "function") {
+    openViewModal(recipeID);
+  } else {
+    alert("Modal recette non disponible");
+  }
+}
+
 function scannerLog(msg) {
   console.log(msg);
   const output = document.getElementById('scanner-debug-output');
