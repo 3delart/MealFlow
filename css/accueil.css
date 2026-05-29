@@ -398,6 +398,10 @@ body.user-naomi {
   display: none;
 }
 
+.modal.open {
+  display: flex;
+}
+
 .modal-content {
   background-color: var(--color-surface);
   width: 90%;
