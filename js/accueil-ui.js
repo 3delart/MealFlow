@@ -343,6 +343,8 @@ function closeConsommerModal() {
   document.getElementById('consommer-recette-qty').value = '';
   document.getElementById('consommer-recette-preview').innerHTML = '';
   document.getElementById('consommer-manuel-nom').value = '';
+  document.getElementById('consommer-manuel-qty').value = '';
+  document.getElementById('consommer-manuel-unit').value = '';
   document.getElementById('consommer-manuel-kcal').value = '';
   document.getElementById('consommer-scan-result').style.display = 'none';
 }
@@ -628,16 +630,20 @@ function submitConsommerRecette() {
 
 function submitConsommerManuel() {
   const nomEl = document.getElementById('consommer-manuel-nom');
+  const qtyEl = document.getElementById('consommer-manuel-qty');
+  const unitEl = document.getElementById('consommer-manuel-unit');
   const kcalEl = document.getElementById('consommer-manuel-kcal');
   const nom = nomEl.value.trim();
+  const qty = parseFloat(qtyEl.value);
+  const unit = unitEl.value.trim() || 'g';
   const totalKcal = parseFloat(kcalEl.value);
 
-  if (!nom || !totalKcal || totalKcal <= 0) {
-    alert('Entrez un nom et des calories');
+  if (!nom || !qty || qty <= 0 || !totalKcal || totalKcal <= 0) {
+    alert('Remplissez tous les champs (nom, quantité, unité, calories)');
     return;
   }
 
-  _enregistrerConsommation(nom, totalKcal, 'kcal', null, totalKcal, 'manuel');
+  _enregistrerConsommation(nom, qty, unit, null, totalKcal, 'manuel');
 }
 
 async function _enregistrerConsommation(nom, qty, unit, kcalPer100, totalKcal, type) {

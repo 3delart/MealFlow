@@ -170,6 +170,10 @@
       <div class="tab-content" id="tab-manuel">
         <label>Nom:</label>
         <input type="text" id="consommer-manuel-nom" placeholder="Ex: Chips, Yaourt..." style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; margin-bottom:12px;">
+        <label>Quantité:</label>
+        <input type="number" id="consommer-manuel-qty" min="0" step="1" style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; margin-bottom:12px;">
+        <label>Unité:</label>
+        <input type="text" id="consommer-manuel-unit" placeholder="Ex: g, ml, pièce..." style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; margin-bottom:12px;">
         <label>Calories totales (kcal):</label>
         <input type="number" id="consommer-manuel-kcal" min="0" step="1" style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; margin-bottom:12px;">
         <button class="btn btn-primary" style="width:100%;" onclick="submitConsommerManuel()">Soumettre</button>
