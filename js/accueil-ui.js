@@ -23,6 +23,13 @@ function viewMealRecipe(mealName) {
   }
 }
 
+function closeViewModal() {
+  const modal = document.getElementById("modal-recipe-view");
+  if (modal) {
+    modal.classList.add("hidden");
+  }
+}
+
 function scannerLog(msg) {
   console.log(msg);
   const output = document.getElementById('scanner-debug-output');
