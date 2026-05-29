@@ -30,7 +30,7 @@ let caloriesConsumed = 0;    // For progress circle calculation (from todaysCons
  * @returns {string}
  */
 function getTodayISO() {
-  return new Date().toISOString().split("T")[0];
+  return Utils.getTodayISO();
 }
 
 /**
@@ -38,7 +38,8 @@ function getTodayISO() {
  * @returns {string}
  */
 function getLocaleDateFr() {
-  return new Date().toLocaleDateString("fr-FR", {
+  const today = new Date();
+  return today.toLocaleDateString("fr-FR", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -76,7 +77,7 @@ function renderGreeting() {
   }
 
   if (dateTodayEl) {
-    dateTodayEl.textContent = getLocaleDateFr();
+    dateTodayEl.textContent = Utils.formatDate(getTodayISO()) || getLocaleDateFr();
   }
 
   if (calorieObjectiveEl) {
@@ -247,8 +248,6 @@ function showRecipe(mealType) {
   const meal = todaysMeals.find(m => m.mealType === mealType);
   if (!meal) return;
 
-  // TODO: Link to Recipes tab or show modal with recipe details
-  // For now, just log to console
   console.log(`Recipe requested for: ${meal.name}`);
 }
 

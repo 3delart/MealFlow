@@ -265,7 +265,6 @@ function selectRecipe(recipeName) {
 /**
  * TASK 6: Sync Courses list from 7-day meal plan
  * Aggregates ingredients from all selected recipes into window.syncedCourses
- * Logs to console (TODO: update Courses tab later)
  * Called from selectRecipe() and initializePlanning()
  */
 function syncCoursesFromMealPlan() {
@@ -296,7 +295,6 @@ function syncCoursesFromMealPlan() {
     });
   });
 
-  // Log aggregated ingredients (TODO: sync to Courses sheet/tab)
   console.log("Synced Courses list from meal plan:", Object.values(allIngredients));
 
   // Store in window for access by Courses page
