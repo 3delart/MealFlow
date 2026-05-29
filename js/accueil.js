@@ -513,7 +513,7 @@ async function loadTodaysConsumptions() {
       .map(row => ({
         Heure: row.Time || row.Heure || "",
         Nom: row.Product || row.Nom || "",
-        Quantité: Number(row.Quantity || row.Quantité || row.Quantite || row.Qty || 0),
+        Quantité: Number(row.Quantity || row.Quantité || row.Quantite || row["Quantitée"] || row.Qty || 0),
         Unité: row.Unit || row.Unité || row.Unite || row.Unité || "g",
         Kcal_total: Number(row.Total_calories || row.Kcal_total || row.Kcal_total || 0),
         Type: row.Type || "other"

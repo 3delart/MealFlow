@@ -57,6 +57,13 @@ function scannerLog(msg) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Attach button listeners before auth check (no auth needed for DOM binding)
+  document.getElementById('consommer-btn')?.addEventListener('click', openConsommerModal);
+  document.getElementById('close-consommer-modal')?.addEventListener('click', closeConsommerModal);
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchConsommerTab(btn.dataset.tab));
+  });
+
   const token = getAccessToken();
   if (!token) {
     console.warn("Not authenticated");
@@ -73,13 +80,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('manger-form')?.addEventListener('submit', submitManger);
   document.getElementById('manger-qty')?.addEventListener('input', updateMangerPreview);
   document.getElementById('close-manger-modal')?.addEventListener('click', closeMangerModal);
-
-  // Event listeners for Consommer modal - tabs
-  document.getElementById('consommer-btn').addEventListener('click', openConsommerModal);
-  document.getElementById('close-consommer-modal').addEventListener('click', closeConsommerModal);
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => switchConsommerTab(btn.dataset.tab));
-  });
 
   // Consommer - Scanner tab
   document.getElementById('consommer-btn-scan')?.addEventListener('click', consommerScannerStart);
@@ -104,7 +104,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function initAccueilUI() {
   renderGreeting();
-  await loadTodayHistory();
   renderConsumptionLog();
 
   // Event delegation for meal action buttons
@@ -329,10 +328,13 @@ function openConsommerModal() {
   // Show first tab (scanner)
   switchConsommerTab('scanner');
   modal.classList.remove('hidden');
+  modal.classList.add('open');
 }
 
 function closeConsommerModal() {
-  document.getElementById('consommer-modal').classList.add('hidden');
+  const modal = document.getElementById('consommer-modal');
+  modal.classList.add('hidden');
+  modal.classList.remove('open');
   consommerScannerStop();
   document.getElementById('consommer-product').value = '';
   document.getElementById('consommer-qty').value = '';
