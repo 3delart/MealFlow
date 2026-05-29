@@ -170,7 +170,7 @@ function renderConsumptionLog() {
     row.innerHTML = `
       <td>${entry.Heure || ''}</td>
       <td>${entry.Nom || ''}</td>
-      <td>${entry.Quantité || ''} ${entry.Unité || ''}</td>
+      <td>${entry.Quantité} ${entry.Unité || ''}</td>
       <td>${entry.Kcal_total || '0'}</td>
       <td><button class="btn btn-delete" onclick="deleteConsumption(${index})">✕</button></td>
     `;
