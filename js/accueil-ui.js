@@ -354,11 +354,14 @@ async function consommerScannerOnDetect(barcode) {
 
   // First check inventory
   let product = InventoryAPI.findByBarcode(barcode);
+  console.log(`[Scanner] Barcode: ${barcode}, Found in inventory:`, product ? product.name : 'NO');
 
   // Otherwise fetch from Open Food Facts
   if (!product) {
     try {
+      console.log(`[Scanner] Fetching from Open Food Facts...`);
       product = await fetchProductFromOpenFoodFacts(barcode);
+      console.log(`[Scanner] Open Food Facts result:`, product);
     } catch (err) {
       console.error('Product lookup failed:', err);
       alert('Produit non trouvé');
@@ -367,6 +370,7 @@ async function consommerScannerOnDetect(barcode) {
 
     // If product found in Open Food Facts, add to inventory
     if (product && product.name) {
+      console.log(`[Scanner] Adding to inventory: ${product.name}`);
       try {
         const newItem = {
           Barcode: barcode,
@@ -385,6 +389,8 @@ async function consommerScannerOnDetect(barcode) {
         };
 
         const token = getAccessToken?.();
+        console.log(`[Scanner] Token exists:`, !!token, `SheetsAPI exists:`, !!window.SheetsAPI);
+
         if (token && window.SheetsAPI) {
           const row = [
             newItem.Barcode,
@@ -401,17 +407,23 @@ async function consommerScannerOnDetect(barcode) {
             newItem.carbs,
             newItem.allergens
           ];
+          console.log(`[Scanner] Appending row to Inventory sheet...`);
           await window.SheetsAPI.appendRowWithToken('Inventory', row, token);
-          console.log(`Added product to inventory: ${newItem.Produit}`);
+          console.log(`[Scanner] ✓ Added product to Inventory sheet: ${newItem.Produit}`);
+        } else {
+          console.warn(`[Scanner] Cannot add to sheet: token=${!!token}, SheetsAPI=${!!window.SheetsAPI}`);
         }
 
         // Also add to local inventory
         newItem.id = Date.now();
         newItem.sheetRowNumber = -1;
         window.inventoryData.push(newItem);
+        console.log(`[Scanner] ✓ Added to local inventoryData`);
       } catch (err) {
-        console.warn('Failed to add product to inventory:', err);
+        console.error('[Scanner] Failed to add product to inventory:', err);
       }
+    } else {
+      console.warn(`[Scanner] Product not found in Open Food Facts`);
     }
   }
 
