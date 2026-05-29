@@ -401,4 +401,9 @@ async function initializeRecipes() {
 // STEP 5: BOOT
 // ============================================================================
 
-document.addEventListener("DOMContentLoaded", initializeRecipes);
+// Only initialize recipes UI if on recettes.html (has recipes-container)
+document.addEventListener("DOMContentLoaded", () => {
+  if (document.getElementById("recipes-container")) {
+    initializeRecipes();
+  }
+});
