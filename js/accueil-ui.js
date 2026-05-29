@@ -106,6 +106,20 @@ async function initAccueilUI() {
   renderGreeting();
   await loadTodayHistory();
   renderConsumptionLog();
+
+  // Event delegation for meal action buttons
+  const mealsContainer = document.getElementById('meals-container');
+  if (mealsContainer) {
+    mealsContainer.addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-mange')) {
+        const mealName = e.target.dataset.mealName;
+        openMangerModal(mealName);
+      } else if (e.target.classList.contains('btn-voir')) {
+        const mealName = e.target.dataset.mealName;
+        viewMealRecipe(mealName);
+      }
+    });
+  }
 }
 
 function renderGreeting() {
