@@ -576,10 +576,20 @@ main {
 .history-day-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: var(--spacing-sm) var(--spacing-md);
   background: var(--color-bg);
   cursor: pointer;
   font-weight: bold;
+}
+
+.history-chevron {
+  transition: transform var(--transition-fast);
+  display: inline-block;
+}
+
+.history-chevron.open {
+  transform: rotate(180deg);
 }
 
 .history-day-detail {

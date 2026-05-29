@@ -72,7 +72,7 @@ function renderHistoryContent(history) {
 
     const headerDiv = document.createElement("div");
     headerDiv.className = "history-day-header";
-    headerDiv.textContent = `${dateStr} — ${totalKcal} kcal`;
+    headerDiv.innerHTML = `<span>${dateStr} — ${totalKcal} kcal</span> <span class="history-chevron">▼</span>`;
     headerDiv.style.cursor = "pointer";
 
     const detailDiv = document.createElement("div");
@@ -81,10 +81,11 @@ function renderHistoryContent(history) {
     items.forEach(item => {
       const entryDiv = document.createElement("div");
       entryDiv.className = "history-entry";
+      const qty = item.Quantité > 0 ? `${item.Quantité}${item.Unité}` : "—";
       entryDiv.innerHTML = `
         <div style="font-weight:bold; width:50px;">${item.Heure}</div>
         <div>${item.Nom}</div>
-        <div style="text-align:right; min-width:60px;">${item.Quantité}${item.Unité}</div>
+        <div style="text-align:right; min-width:60px;">${qty}</div>
         <div style="text-align:right; min-width:60px; color:var(--color-primary); font-weight:bold;">${item.Kcal_total}kcal</div>
       `;
       detailDiv.appendChild(entryDiv);
@@ -92,6 +93,7 @@ function renderHistoryContent(history) {
 
     headerDiv.addEventListener("click", () => {
       detailDiv.classList.toggle("open");
+      headerDiv.querySelector(".history-chevron").classList.toggle("open");
     });
 
     dayDiv.appendChild(headerDiv);
