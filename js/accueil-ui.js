@@ -14,6 +14,9 @@ function debugLog(msg) {
   }
 }
 
+// Make globally available
+window.debugLog = debugLog;
+
 function viewMealRecipe(mealName) {
   if (!window.recipesData) return;
 
