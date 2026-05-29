@@ -2,6 +2,7 @@
 
 let ingredientMap = {};
 let rollingWindow = [];
+let priceOverrides = {};
 
 /**
  * Calculate rolling window of 7 days (today through today+6)
@@ -390,9 +391,40 @@ document.addEventListener('keydown', (e) => {
 });
 
 /**
- * Load price override from localStorage
+ * Load all price overrides from CoursePrices sheet
+ */
+async function loadPriceOverridesFromSheet() {
+  try {
+    const rows = await SheetsAPI.readSheetTab('CoursePrices');
+    const objects = SheetsAPI.rowsToObjects(rows);
+
+    // Store latest price for each ingredient
+    const priceMap = {};
+    objects.forEach(row => {
+      if (row.Ingrédient || row['Ingrédient'] || row.Ingredient) {
+        const ing = row.Ingrédient || row['Ingrédient'] || row.Ingredient;
+        const price = row.Prix || row.Price;
+        priceMap[ing] = parseFloat(price) || 0;
+      }
+    });
+
+    return priceMap;
+  } catch (err) {
+    console.log('CoursePrices sheet not found or empty');
+    return {};
+  }
+}
+
+/**
+ * Load price override (from sheet or localStorage)
  */
 function loadPriceOverride(ingredientName) {
+  // Check sheet-loaded prices first
+  if (priceOverrides[ingredientName]) {
+    return priceOverrides[ingredientName];
+  }
+
+  // Fall back to localStorage
   const key = `COURSES_PRICE_${ingredientName}`;
   const val = localStorage.getItem(key);
   return val ? parseFloat(val) : null;
@@ -425,12 +457,32 @@ function hidePriceModal() {
   document.getElementById('price-modal-overlay').classList.remove('active');
 }
 
-function savePriceAndUpdate() {
+async function savePriceAndUpdate() {
   const input = document.getElementById('price-edit-input');
   const ingredientName = input.dataset.ingredient;
   const price = input.value.trim();
 
+  if (!price || parseFloat(price) <= 0) {
+    alert('Prix invalide');
+    return;
+  }
+
+  // Save to Sheets
+  try {
+    const token = window.getAccessToken ? window.getAccessToken() : null;
+    if (token && window.SheetsAPI) {
+      const row = [ingredientName, price, Utils.getDateISO(0)];
+      await window.SheetsAPI.appendRowWithToken('CoursePrices', row, token);
+      console.log(`Price saved for ${ingredientName}: ${price}€`);
+    }
+  } catch (err) {
+    console.warn('Failed to save price to Sheets:', err);
+  }
+
   savePriceOverride(ingredientName, price);
+
+  // Update global price overrides
+  priceOverrides[ingredientName] = parseFloat(price);
 
   // Update the display
   const ing = Object.values(ingredientMap).find(i => i.name === ingredientName);
@@ -452,6 +504,9 @@ async function initCourses() {
 
     // Load recipes first
     await loadRecipes();
+
+    // Load price overrides from sheet
+    priceOverrides = await loadPriceOverridesFromSheet();
 
     // Calculate week window
     rollingWindow = calculateWeekWindow();
