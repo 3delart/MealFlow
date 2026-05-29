@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/profils.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     .auth-buttons { position: fixed; top: 10px; right: 10px; display: flex; gap: 8px; z-index: 100; }
   </style>
@@ -32,6 +33,37 @@
       <!-- Dynamically populated -->
     </div>
   </main>
+
+  <!-- Modal Historique -->
+  <div id="modal-history" class="modal-overlay">
+    <div class="modal-dialog modal-wide">
+      <button class="modal-close" onclick="closeHistoryModal()">&times;</button>
+      <h2 id="history-modal-title">Historique</h2>
+      <div id="history-content"></div>
+    </div>
+  </div>
+
+  <!-- Modal Stats -->
+  <div id="modal-stats" class="modal-overlay">
+    <div class="modal-dialog modal-wide">
+      <button class="modal-close" onclick="closeStatsModal()">&times;</button>
+      <h2 id="stats-modal-title">Statistiques</h2>
+      <div class="consommer-tabs">
+        <button class="tab-btn active" data-tab="calories">📈 Calories</button>
+        <button class="tab-btn" data-tab="repartition">🥧 Répartition</button>
+      </div>
+      <div id="tab-calories" class="tab-content active">
+        <div class="chart-period-btns">
+          <button class="period-btn active" data-days="7">7j</button>
+          <button class="period-btn" data-days="30">30j</button>
+        </div>
+        <canvas id="chart-calories" height="200"></canvas>
+      </div>
+      <div id="tab-repartition" class="tab-content">
+        <canvas id="chart-repartition" height="200"></canvas>
+      </div>
+    </div>
+  </div>
 
   <div id="modal-edit-profile" class="modal-overlay">
     <div class="modal-dialog">
@@ -204,6 +236,7 @@
   <script src="js/profils-calc.js"></script>
   <script src="js/profils-render.js"></script>
   <script src="js/profils-modal.js"></script>
+  <script src="js/profils-history.js"></script>
   <script src="js/profils-init.js"></script>
 </body>
 </html>

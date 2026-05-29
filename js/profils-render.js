@@ -195,7 +195,19 @@ function renderProfileCard(userId) {
     openEditModal(userId);
   });
 
+  const histBtn = document.createElement("button");
+  histBtn.className = "btn-profile-action";
+  histBtn.textContent = "📋 Historique";
+  histBtn.addEventListener("click", () => openHistoryModal(userId));
+
+  const statsBtn = document.createElement("button");
+  statsBtn.className = "btn-profile-action";
+  statsBtn.textContent = "📊 Stats";
+  statsBtn.addEventListener("click", () => openStatsModal(userId));
+
   footer.appendChild(editBtn);
+  footer.appendChild(histBtn);
+  footer.appendChild(statsBtn);
   card.appendChild(footer);
 
   return card;
