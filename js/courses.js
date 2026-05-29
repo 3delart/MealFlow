@@ -131,7 +131,7 @@ function populateIngredientMap(objects) {
       unit: row.Unité || 'g',
       price: parseFloat(row.Prix) || 0,
       days: row['Date_utilisation'] ? row['Date_utilisation'].split(',').filter(Boolean) : [],
-      acheté: row.Acheté === '1',
+      acheté: row.Acheté === '1' || row.Acheté === 1,
       sheetRow: idx + 2
     };
   });
@@ -259,8 +259,10 @@ function renderCoursesList() {
       const token = window.getAccessToken ? window.getAccessToken() : null;
       if (token && window.SheetsAPI) {
         try {
+          console.log(`Writing Acheté=${checkbox.checked ? '1' : ''} to Courses!G${ing.sheetRow}`);
           await window.SheetsAPI.updateSheetCell(`Courses!G${ing.sheetRow}`, checkbox.checked ? '1' : '', token);
-        } catch (e) { console.warn('Failed to update Acheté:', e); }
+          console.log(`✓ Updated Acheté`);
+        } catch (e) { console.error('❌ Failed to update Acheté:', e); }
       }
       updateProgress();
     });
