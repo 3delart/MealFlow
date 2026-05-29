@@ -307,10 +307,7 @@ function syncCoursesFromMealPlan() {
  * Called on beforeunload and after selectRecipe()
  */
 async function savePlanningToSheets() {
-  if (typeof window.debugLog === 'function') window.debugLog('savePlanningToSheets called');
-
   if (!window.SheetsAPI) {
-    if (typeof window.debugLog === 'function') window.debugLog('SheetsAPI not available');
     console.warn("SheetsAPI not available, skipping Planning sync");
     return;
   }
@@ -318,12 +315,9 @@ async function savePlanningToSheets() {
   try {
     const token = window.getAccessToken ? window.getAccessToken() : null;
     if (!token) {
-      if (typeof window.debugLog === 'function') window.debugLog('No OAuth token');
       console.warn("No OAuth token, skipping Planning sync");
       return;
     }
-
-    if (typeof window.debugLog === 'function') window.debugLog(`Saving ${mealPlan.length} meals to sheet`);
 
     // Replace Planning!A2:C1000 atomically (no separate clear needed)
     const values = mealPlan.map(dayMeal => [
@@ -333,10 +327,8 @@ async function savePlanningToSheets() {
     ]);
 
     await window.SheetsAPI.batchUpdateRange("Planning!A2:C1000", values, token);
-    if (typeof window.debugLog === 'function') window.debugLog('Planning synced OK');
     console.log("Planning synced to Planning sheet");
   } catch (err) {
-    if (typeof window.debugLog === 'function') window.debugLog('Planning sync ERROR: ' + err.message);
     console.error("Failed to sync planning to Sheets:", err);
   }
 }

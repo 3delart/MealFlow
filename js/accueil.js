@@ -630,6 +630,11 @@ async function initAccueil() {
   // Render placeholder meals
   renderMeals();
 
+  // Setup modal handlers (from recettes.js)
+  if (typeof setupModalHandlers === 'function') {
+    setupModalHandlers();
+  }
+
   // Load data in parallel
   await Promise.all([
     loadDailyGoal(),

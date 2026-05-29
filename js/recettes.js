@@ -343,11 +343,9 @@ function openEditModal(recipeID) {
 // ============================================================================
 
 /**
- * Initialize recipes page
- * Sets up modal handlers, loads data, renders recipe list
- * @returns {Promise<void>}
+ * Setup modal close handlers (used on all pages)
  */
-async function initializeRecipes() {
+function setupModalHandlers() {
   // Load modal close handlers
   document.querySelectorAll(".modal-close").forEach(btn => {
     btn.addEventListener("click", function() {
@@ -363,6 +361,15 @@ async function initializeRecipes() {
       }
     });
   });
+}
+
+/**
+ * Initialize recipes page
+ * Sets up modal handlers, loads data, renders recipe list
+ * @returns {Promise<void>}
+ */
+async function initializeRecipes() {
+  setupModalHandlers();
 
   // Add recipe button
   const addBtn = document.getElementById("btn-add-recipe");
