@@ -49,8 +49,8 @@ function renderInventory() {
   const filterValue = filterEl ? filterEl.value : "";
 
   let filtered = filterValue
-    ? inventoryData.filter(item => item.Catégorie === filterValue && (parseFloat(item.Qty) || 0) > 0)
-    : inventoryData.filter(item => (parseFloat(item.Qty) || 0) > 0);
+    ? inventoryData.filter(item => item.Catégorie === filterValue)
+    : inventoryData;
 
   if (filtered.length === 0) {
     container.innerHTML = '<div class="inventory-empty">Aucun article</div>';
