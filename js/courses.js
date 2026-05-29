@@ -496,7 +496,8 @@ async function saveEditedIngredient(e) {
   try {
     const token = window.getAccessToken ? window.getAccessToken() : null;
     if (token && window.SheetsAPI) {
-      const row = [ingredientName, category, quantity, unit, price, Utils.getDateISO(0)];
+      // Columns: Produit, Catégorie, Qty, Unité, Prix
+      const row = [ingredientName, category, quantity, unit, price];
       await window.SheetsAPI.appendRowWithToken('Courses', row, token);
       console.log(`Ingredient saved: ${ingredientName}`);
     }
