@@ -43,6 +43,11 @@
 
     .reset { display: block; margin: 20px auto 0; padding: 10px 24px; background: #eee; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; color: #666; }
 
+    .price-correction { display: flex; align-items: center; gap: 8px; margin-left: 8px; }
+    .price-display { font-size: 0.8em; color: #aaa; min-width: 40px; }
+    .price-edit-btn { background: #2E7D32; color: white; border: 1px solid #2E7D32; border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer; font-weight: 600; }
+    .price-edit-btn:hover { background: #1b5e20; }
+
     .auth-buttons { position: fixed; top: 10px; right: 10px; display: flex; gap: 8px; z-index: 100; }
   </style>
 </head>
@@ -82,7 +87,7 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="price-modal-overlay" onclick="if(event.target === this) hidePriceModal()">
+  <div class="modal-overlay" id="price-modal-overlay" onclick="hideModal(event)">
     <div class="modal">
       <h3>Corriger le prix</h3>
       <input type="number" id="price-edit-input" placeholder="Prix en €" step="0.01" min="0" />

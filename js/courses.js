@@ -262,6 +262,8 @@ function renderIngredientItem(ing, dimmed = false) {
     dayBadges += `<span style="background:${badgeColor};padding:1px 4px;margin-right:2px;border-radius:2px;">${dayAbbr} ${dayNum}</span>`;
   });
 
+  const priceText = displayPrice > 0 ? `${displayPrice.toFixed(2)}€` : '-€';
+
   return `
     <label${dimmClass} style="position:relative;">
       <input type="checkbox" data-ingredient="${ing.name}" />
@@ -269,7 +271,10 @@ function renderIngredientItem(ing, dimmed = false) {
         ${ing.name}${qtyDisplay}${priceDisplay}
         <div style="color:#2E7D32;font-size:0.75em;margin-top:2px;">${dayBadges}</div>
       </span>
-      <button class="price-edit-btn" onclick="showPriceModal('${ing.name.replace(/'/g, "\\'")}', ${displayPrice})" style="background:none;border:none;color:#999;font-size:12px;cursor:pointer;padding:4px 8px;margin-left:4px;">corriger</button>
+      <div class="price-correction">
+        <span class="price-display">${priceText}</span>
+        <button class="price-edit-btn" onclick="showPriceModal('${ing.name.replace(/'/g, "\\'")}', ${displayPrice})">Corriger</button>
+      </div>
     </label>
   `;
 }
@@ -357,7 +362,11 @@ function hideAddModal() {
 }
 
 function hideModal(e) {
-  if (e.target === document.getElementById('modal-overlay')) hideAddModal();
+  const modalOverlay = document.getElementById('modal-overlay');
+  const priceModalOverlay = document.getElementById('price-modal-overlay');
+
+  if (e.target === modalOverlay) hideAddModal();
+  if (e.target === priceModalOverlay) hidePriceModal();
 }
 
 function saveCustomItem() {
