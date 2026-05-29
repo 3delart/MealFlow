@@ -202,7 +202,7 @@ function renderMeals() {
             </div>
           </div>
           <div class="meal-actions">
-            <button class="btn-meal btn-mange" onclick="openMangerModal()">
+            <button class="btn-meal btn-mange" onclick="openMangerModal('${meal.name}')">
               Manger
             </button>
           </div>
