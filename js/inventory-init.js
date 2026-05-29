@@ -54,8 +54,8 @@ function setupEventHandlers() {
         calories_per_100: document.getElementById("field-calories").value || null
       };
 
-      if (!formData.product_name || !formData.quantity || !formData.unit || !formData.category || !formData.expiry_date) {
-        alert("Veuillez remplir tous les champs.");
+      if (!formData.product_name || !formData.quantity || !formData.unit || !formData.category) {
+        alert("Veuillez remplir les champs obligatoires (produit, quantité, unité, catégorie).");
         return;
       }
 
