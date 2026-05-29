@@ -4,6 +4,7 @@
 
 function openEditModal(item) {
   const modal = document.getElementById("edit-modal");
+  console.log('[Edit Modal] Item loaded:', { Produit: item.Produit, Prix: item.Prix, allKeys: Object.keys(item) });
   document.getElementById("edit-product-name").value = item.Produit;
   document.getElementById("edit-category").value = item.Catégorie;
   document.getElementById("edit-quantity").value = item.Qty;
