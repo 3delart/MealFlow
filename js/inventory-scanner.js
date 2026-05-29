@@ -144,4 +144,28 @@ async function processBarcodeDetection(barcode) {
     document.getElementById("info-carbs").textContent = product.carbs.toFixed(1) + "g";
   }
   document.getElementById("info-allergens").textContent = product.allergens;
+
+  // Auto-fill expiry date based on category
+  const categoryExpiryDays = {
+    "Produits laitiers": 180,
+    "Lait": 180,
+    "Fromage": 30,
+    "Viandes": 3,
+    "Poissons": 2,
+    "Œufs": 21,
+    "Conserves": 365,
+    "Fruits": 14,
+    "Légumes": 21,
+    "Boissons": 365,
+    "Épices & Condiments": 365,
+    "Sauces": 365,
+    "Féculents": 180,
+    "Autres": 30
+  };
+
+  const category = product.category || "Autres";
+  const days = categoryExpiryDays[category] || 30;
+  const expiryDate = new Date();
+  expiryDate.setDate(expiryDate.getDate() + days);
+  document.getElementById("field-expiry").value = expiryDate.toISOString().split("T")[0];
 }
