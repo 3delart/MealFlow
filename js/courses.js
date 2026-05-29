@@ -65,6 +65,7 @@ function buildIngredientMap(window7, planningObjects) {
             unit: ing.unit || 'g',
             days: [],
             category: null,
+            price: 0,
             inStock: 0,
             fullyStocked: false
           };
@@ -106,9 +107,12 @@ function applyInventoryDeductions(ingredientMap, inventoryObjects) {
     }
 
     if (matched) {
-      // Always set category from inventory if found
+      // Always set category and price from inventory if found
       if (!matched.category) {
         matched.category = invCategory;
+      }
+      if (matched.price === 0) {
+        matched.price = parseFloat(invItem.Prix) || 0;
       }
 
       // Only deduct if units match
@@ -139,6 +143,12 @@ function renderCoursesList() {
   const toBuy = Object.values(ingredientMap).filter(ing => ing.needed > 0);
   const inStock = Object.values(ingredientMap).filter(ing => ing.fullyStocked);
 
+  // Calculate total price for "to buy" items
+  const totalPrice = toBuy.reduce((sum, ing) => {
+    const price = loadPriceOverride(ing.name) || ing.price || 0;
+    return sum + (parseFloat(price) || 0);
+  }, 0);
+
   // Group by category
   function groupByCategory(items) {
     const groups = {};
@@ -156,6 +166,11 @@ function renderCoursesList() {
   }
 
   let html = '';
+
+  // Show total price if there are items to buy
+  if (toBuy.length > 0) {
+    html += `<div style="text-align:center;font-size:17px;font-weight:bold;color:#2E7D32;margin:0 0 8px;">Budget estimé : ~${totalPrice.toFixed(2)}€</div>`;
+  }
 
   // "À acheter" section by category
   if (toBuy.length > 0) {
@@ -207,7 +222,7 @@ function renderCoursesList() {
 }
 
 /**
- * Render a single ingredient item with badges
+ * Render a single ingredient item with badges and price
  */
 function renderIngredientItem(ing, dimmed = false) {
   const today = new Date();
@@ -219,6 +234,10 @@ function renderIngredientItem(ing, dimmed = false) {
   const qtyDisplay = ing.inStock > 0 && ing.fullyStocked
     ? ''
     : ` <small style="color:#999;font-size:0.85em;">(${ing.needed.toFixed(0)}${ing.unit})</small>`;
+
+  const priceOverride = loadPriceOverride(ing.name);
+  const displayPrice = priceOverride || ing.price || 0;
+  const priceDisplay = displayPrice > 0 ? ` <small style="color:#aaa;font-size:0.8em;">~${displayPrice.toFixed(2)}€</small>` : '';
 
   let dayBadges = '';
   ing.days.forEach(dateISO => {
@@ -244,9 +263,13 @@ function renderIngredientItem(ing, dimmed = false) {
   });
 
   return `
-    <label${dimmClass}>
+    <label${dimmClass} style="position:relative;">
       <input type="checkbox" data-ingredient="${ing.name}" />
-      <span>${ing.name}${qtyDisplay}<div style="color:#2E7D32;font-size:0.75em;margin-top:2px;">${dayBadges}</div></span>
+      <span style="flex:1;">
+        ${ing.name}${qtyDisplay}${priceDisplay}
+        <div style="color:#2E7D32;font-size:0.75em;margin-top:2px;">${dayBadges}</div>
+      </span>
+      <button class="price-edit-btn" onclick="showPriceModal('${ing.name.replace(/'/g, "\\'")}', ${displayPrice})" style="background:none;border:none;color:#999;font-size:12px;cursor:pointer;padding:4px 8px;margin-left:4px;">corriger</button>
     </label>
   `;
 }
@@ -356,6 +379,57 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') saveCustomItem();
   if (e.key === 'Escape') hideAddModal();
 });
+
+/**
+ * Load price override from localStorage
+ */
+function loadPriceOverride(ingredientName) {
+  const key = `COURSES_PRICE_${ingredientName}`;
+  const val = localStorage.getItem(key);
+  return val ? parseFloat(val) : null;
+}
+
+/**
+ * Save price override to localStorage
+ */
+function savePriceOverride(ingredientName, price) {
+  const key = `COURSES_PRICE_${ingredientName}`;
+  if (price && parseFloat(price) > 0) {
+    localStorage.setItem(key, price);
+  } else {
+    localStorage.removeItem(key);
+  }
+}
+
+/**
+ * Show modal to edit price for an ingredient
+ */
+function showPriceModal(ingredientName, currentPrice) {
+  const input = document.getElementById('price-edit-input');
+  input.value = currentPrice || '';
+  input.dataset.ingredient = ingredientName;
+  document.getElementById('price-modal-overlay').classList.add('active');
+  setTimeout(() => input.focus(), 50);
+}
+
+function hidePriceModal() {
+  document.getElementById('price-modal-overlay').classList.remove('active');
+}
+
+function savePriceAndUpdate() {
+  const input = document.getElementById('price-edit-input');
+  const ingredientName = input.dataset.ingredient;
+  const price = input.value.trim();
+
+  savePriceOverride(ingredientName, price);
+
+  // Update the display
+  const ing = Object.values(ingredientMap).find(i => i.name === ingredientName);
+  if (ing) {
+    renderCoursesList();
+  }
+  hidePriceModal();
+}
 
 /**
  * Initialize courses page
