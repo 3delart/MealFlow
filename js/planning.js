@@ -312,7 +312,7 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
 /**
  * Generate and write Courses sheet from current mealPlan
  */
-async function generateAndWriteCourses(token, existingValidé = {}) {
+async function generateAndWriteCourses(token, existingAcheté = {}) {
   if (!window.SheetsAPI || !token) return;
 
   try {
@@ -323,7 +323,7 @@ async function generateAndWriteCourses(token, existingValidé = {}) {
 
     rows = rows.map(row => {
       const key = row[0].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-      row[6] = existingValidé[key] || '';
+      row[6] = existingAcheté[key] || '';
       return row;
     });
 
@@ -416,14 +416,14 @@ async function savePlanningToSheets() {
     ;(async () => {
       try {
         const oldCourses = await window.SheetsAPI.readSheetTab('Courses');
-        const existingValidé = {};
+        const existingAcheté = {};
         window.SheetsAPI.rowsToObjects(oldCourses).forEach(row => {
-          if (row.Produit && row.Validé === '1') {
+          if (row.Produit && row.Acheté === '1') {
             const key = row.Produit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-            existingValidé[key] = '1';
+            existingAcheté[key] = '1';
           }
         });
-        await generateAndWriteCourses(token, existingValidé);
+        await generateAndWriteCourses(token, existingAcheté);
       } catch(e) { console.warn('Courses sync failed:', e); }
     })();
   } catch (err) {
@@ -489,14 +489,14 @@ async function initializePlanning() {
   if (token) {
     try {
       const oldCourses = await window.SheetsAPI.readSheetTab('Courses');
-      const existingValidé = {};
+      const existingAcheté = {};
       window.SheetsAPI.rowsToObjects(oldCourses).forEach(row => {
-        if (row.Produit && row.Validé === '1') {
+        if (row.Produit && row.Acheté === '1') {
           const key = row.Produit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-          existingValidé[key] = '1';
+          existingAcheté[key] = '1';
         }
       });
-      await generateAndWriteCourses(token, existingValidé);
+      await generateAndWriteCourses(token, existingAcheté);
     } catch(e) { console.warn('Initial Courses sync failed:', e); }
   }
 

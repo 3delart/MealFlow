@@ -80,7 +80,7 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
 /**
  * Generate and write Courses sheet from current mealPlan
  */
-async function generateAndWriteCourses(token, existingValidé = {}) {
+async function generateAndWriteCourses(token, existingAcheté = {}) {
   if (!window.SheetsAPI || !token) return;
 
   try {
@@ -100,7 +100,7 @@ async function generateAndWriteCourses(token, existingValidé = {}) {
 
     rows = rows.map(row => {
       const key = row[0].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-      row[6] = existingValidé[key] || '';
+      row[6] = existingAcheté[key] || '';
       return row;
     });
 
@@ -132,7 +132,7 @@ function populateIngredientMap(objects) {
       unit: row.Unité || 'g',
       price: parseFloat(row.Prix) || 0,
       days: row.Jours ? row.Jours.split(',').filter(Boolean) : [],
-      valide: row.Validé === '1',
+      acheté: row.Acheté === '1',
       sheetRow: idx + 2
     };
   });
@@ -205,7 +205,7 @@ function renderCoursesList() {
     const ing = ingredientMap[key];
     if (!ing) return;
 
-    checkbox.checked = ing.valide;
+    checkbox.checked = ing.acheté;
     if (checkbox.checked) checkbox.parentElement.classList.add('done');
 
     checkbox.addEventListener('change', async () => {
@@ -427,7 +427,7 @@ async function saveEditedIngredient(e) {
     const token = window.getAccessToken ? window.getAccessToken() : null;
     if (token && window.SheetsAPI) {
       const range = `Courses!A${ing.sheetRow}:G${ing.sheetRow}`;
-      await window.SheetsAPI.batchUpdateRange(range, [[ing.name, category, quantity, unit, price.toFixed(2), ing.days.join(','), ing.valide ? '1' : '']], token);
+      await window.SheetsAPI.batchUpdateRange(range, [[ing.name, category, quantity, unit, price.toFixed(2), ing.days.join(','), ing.acheté ? '1' : '']], token);
       console.log(`Ingredient updated: ${ingredientName}`);
     }
   } catch (err) {
@@ -468,14 +468,14 @@ async function initCourses() {
       const token = window.getAccessToken ? window.getAccessToken() : null;
       if (token) {
         await loadRecipes();
-        const existingValidé = {};
+        const existingAcheté = {};
         objects.forEach(r => {
-          if (r.Produit && r.Validé === '1') {
+          if (r.Produit && r.Acheté === '1') {
             const k = r.Produit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-            existingValidé[k] = '1';
+            existingAcheté[k] = '1';
           }
         });
-        await generateAndWriteCourses(token, existingValidé);
+        await generateAndWriteCourses(token, existingAcheté);
         const updated = await SheetsAPI.readSheetTab('Courses');
         populateIngredientMap(SheetsAPI.rowsToObjects(updated));
       } else {
