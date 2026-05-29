@@ -130,7 +130,7 @@ function populateIngredientMap(objects) {
       needed: parseFloat(row.Qty) || 0,
       unit: row.Unité || 'g',
       price: parseFloat(row.Prix) || 0,
-      days: row.Jours ? row.Jours.split(',').filter(Boolean) : [],
+      days: row['Date_utilisation'] ? row['Date_utilisation'].split(',').filter(Boolean) : [],
       acheté: row.Acheté === '1',
       sheetRow: idx + 2
     };
@@ -506,9 +506,9 @@ async function initCourses() {
     const objects = SheetsAPI.rowsToObjects(rows);
 
     // Auto-refresh si sheet vide ou date périmée
-    const firstDate = objects[0]?.Jours?.split(',')[0];
+    const firstDate = objects[0]?.['Date_utilisation']?.split(',')[0];
     const today = Utils.getDateISO(0);
-    const isStale = !firstDate || !objects[0]?.Produit || !objects.some(r => r.Jours?.includes(today));
+    const isStale = !firstDate || !objects[0]?.Produit || !objects.some(r => r['Date_utilisation']?.includes(today));
 
     if (isStale) {
       const token = window.getAccessToken ? window.getAccessToken() : null;
