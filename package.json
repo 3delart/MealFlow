@@ -4,10 +4,6 @@
   "description": "Multi-user meal planning app",
   "main": "index.html",
   "scripts": {
-    "test": "jest",
     "dev": "python -m http.server 8000"
-  },
-  "devDependencies": {
-    "jest": "^29.0.0"
   }
 }
