@@ -13,6 +13,8 @@ function setupEventHandlers() {
 
   const filterSelect = document.getElementById("filter-category");
   if (filterSelect) {
+    filterSelect.innerHTML = "";
+
     // "Tous les articles"
     let option = document.createElement("option");
     option.value = "";
