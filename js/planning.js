@@ -260,6 +260,81 @@ function selectRecipe(recipeName) {
 }
 
 /**
+ * Build courses rows from meal plan + inventory (with deduction)
+ * Returns array of rows for Courses!A2:G sheet
+ */
+function buildCoursesRows(mealPlanArg, inventoryObjects) {
+  const map = {};
+
+  // 1. Aggregate ingredients from recipes
+  mealPlanArg.forEach(day => {
+    ['Midi', 'Soir'].forEach(slot => {
+      const recipeName = day[slot];
+      if (!recipeName) return;
+      const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
+      if (!recipe?.ingredients) return;
+      recipe.ingredients.forEach(ing => {
+        const key = ing.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+        if (!map[key]) map[key] = { name: ing.name, qty: 0, unit: ing.unit || 'g', days: [] };
+        map[key].qty += parseFloat(ing.quantity) || 0;
+        if (!map[key].days.includes(day.dateISO)) map[key].days.push(day.dateISO);
+      });
+    });
+  });
+
+  // 2. Enrich from inventory + deduct stock
+  Object.values(map).forEach(ing => {
+    const ingKey = ing.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+    const match = inventoryObjects.find(item => {
+      const k = (item.Produit||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+      return k === ingKey || k.includes(ingKey) || ingKey.includes(k);
+    });
+    if (match) {
+      ing.category = match.Catégorie || 'Autres';
+      ing.price = parseFloat(match.Prix) || 0;
+      const stock = parseFloat(match.Qty) || 0;
+      const unitMatch = ing.unit === match.Unité ||
+        (ing.unit === 'piece' && match.Unité === 'pièce') ||
+        (ing.unit === 'pièce' && match.Unité === 'piece');
+      if (unitMatch) ing.qty = Math.max(0, ing.qty - stock);
+    } else {
+      ing.category = 'Autres';
+      ing.price = 0;
+    }
+  });
+
+  // 3. Sort and return rows
+  return Object.values(map)
+    .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+    .map(ing => [ing.name, ing.category, ing.qty.toFixed(1), ing.unit, ing.price.toFixed(2), ing.days.join(','), '']);
+}
+
+/**
+ * Generate and write Courses sheet from current mealPlan
+ */
+async function generateAndWriteCourses(token, existingValidé = {}) {
+  if (!window.SheetsAPI || !token) return;
+
+  try {
+    const invRows = await window.SheetsAPI.readSheetTab('Inventory');
+    const inventory = window.SheetsAPI.rowsToObjects(invRows);
+
+    let rows = buildCoursesRows(mealPlan, inventory);
+
+    rows = rows.map(row => {
+      const key = row[0].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+      row[6] = existingValidé[key] || '';
+      return row;
+    });
+
+    await window.SheetsAPI.batchUpdateRange('Courses!A2:G1000', rows, token);
+    console.log(`Courses synced: ${rows.length} rows`);
+  } catch (err) {
+    console.warn('Courses sync failed:', err);
+  }
+}
+
+/**
  * TASK 6: Sync Courses list from 7-day meal plan
  * Aggregates ingredients from all selected recipes into window.syncedCourses
  * Called from selectRecipe() and initializePlanning()
@@ -336,6 +411,21 @@ async function savePlanningToSheets() {
 
     await window.SheetsAPI.batchUpdateRange("Planning!A2:C1000", values, token);
     console.log(`Planning synced: ${values.length} rows to sheet`);
+
+    // Fire-and-forget Courses sync
+    ;(async () => {
+      try {
+        const oldCourses = await window.SheetsAPI.readSheetTab('Courses');
+        const existingValidé = {};
+        window.SheetsAPI.rowsToObjects(oldCourses).forEach(row => {
+          if (row.Produit && row.Validé === '1') {
+            const key = row.Produit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+            existingValidé[key] = '1';
+          }
+        });
+        await generateAndWriteCourses(token, existingValidé);
+      } catch(e) { console.warn('Courses sync failed:', e); }
+    })();
   } catch (err) {
     console.error("Failed to sync planning to Sheets:", err);
   }
@@ -393,6 +483,22 @@ async function initializePlanning() {
   await loadMealPlan();
   syncCoursesFromMealPlan();
   updateWeekNavUI();
+
+  // Initialize Courses sheet on first load
+  const token = window.getAccessToken ? window.getAccessToken() : null;
+  if (token) {
+    try {
+      const oldCourses = await window.SheetsAPI.readSheetTab('Courses');
+      const existingValidé = {};
+      window.SheetsAPI.rowsToObjects(oldCourses).forEach(row => {
+        if (row.Produit && row.Validé === '1') {
+          const key = row.Produit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+          existingValidé[key] = '1';
+        }
+      });
+      await generateAndWriteCourses(token, existingValidé);
+    } catch(e) { console.warn('Initial Courses sync failed:', e); }
+  }
 
   // Setup beforeunload to persist before leaving page
   window.addEventListener("beforeunload", savePlanningToSheets);

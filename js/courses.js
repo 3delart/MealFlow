@@ -1,8 +1,7 @@
-// Courses list module — dynamically generate shopping list from planning + recipes + inventory
+// Courses list module — reads from Courses sheet
 
 let ingredientMap = {};
 let rollingWindow = [];
-let priceOverrides = {};
 
 /**
  * Calculate rolling window of 7 days (today through today+6)
@@ -29,107 +28,113 @@ function calculateWeekWindow() {
 }
 
 /**
- * Normalize string for matching: lowercase, remove accents, trim
+ * Build courses rows from meal plan + inventory (with deduction)
+ * Returns array of rows for Courses!A2:G sheet
  */
-function normalize(str) {
-  if (!str) return '';
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .trim();
-}
-
-/**
- * Build ingredient map from planning + recipes
- * Returns { normalized_name: { name, needed, unit, days, category, inStock, fullyStocked } }
- */
-function buildIngredientMap(window7, planningObjects) {
+function buildCoursesRows(mealPlanArg, inventoryObjects) {
   const map = {};
 
-  window7.forEach(day => {
-    const planRow = planningObjects.find(r => r.Date === day.dateISO);
-    if (!planRow) return;
-
-    [planRow.Midi, planRow.Soir].forEach(recipeName => {
+  // 1. Aggregate ingredients from recipes
+  mealPlanArg.forEach(day => {
+    ['Midi', 'Soir'].forEach(slot => {
+      const recipeName = day[slot];
       if (!recipeName) return;
-
       const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
-      if (!recipe || !recipe.ingredients) return;
-
+      if (!recipe?.ingredients) return;
       recipe.ingredients.forEach(ing => {
-        const key = normalize(ing.name);
-        if (!map[key]) {
-          map[key] = {
-            name: ing.name,
-            needed: 0,
-            unit: ing.unit || 'g',
-            days: [],
-            category: null,
-            price: 0,
-            inStock: 0,
-            fullyStocked: false
-          };
-        }
-        map[key].needed += parseFloat(ing.quantity) || 0;
-        if (!map[key].days.includes(day.dateISO)) {
-          map[key].days.push(day.dateISO);
-        }
+        const key = ing.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+        if (!map[key]) map[key] = { name: ing.name, qty: 0, unit: ing.unit || 'g', days: [] };
+        map[key].qty += parseFloat(ing.quantity) || 0;
+        if (!map[key].days.includes(day.dateISO)) map[key].days.push(day.dateISO);
       });
     });
   });
 
-  return map;
+  // 2. Enrich from inventory + deduct stock
+  Object.values(map).forEach(ing => {
+    const ingKey = ing.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+    const match = inventoryObjects.find(item => {
+      const k = (item.Produit||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+      return k === ingKey || k.includes(ingKey) || ingKey.includes(k);
+    });
+    if (match) {
+      ing.category = match.Catégorie || 'Autres';
+      ing.price = parseFloat(match.Prix) || 0;
+      const stock = parseFloat(match.Qty) || 0;
+      const unitMatch = ing.unit === match.Unité ||
+        (ing.unit === 'piece' && match.Unité === 'pièce') ||
+        (ing.unit === 'pièce' && match.Unité === 'piece');
+      if (unitMatch) ing.qty = Math.max(0, ing.qty - stock);
+    } else {
+      ing.category = 'Autres';
+      ing.price = 0;
+    }
+  });
+
+  // 3. Sort and return rows
+  return Object.values(map)
+    .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+    .map(ing => [ing.name, ing.category, ing.qty.toFixed(1), ing.unit, ing.price.toFixed(2), ing.days.join(','), '']);
 }
 
 /**
- * Apply inventory deductions: reduce needed quantities by what's in stock
- * Also populate category from inventory
+ * Generate and write Courses sheet from current mealPlan
  */
-function applyInventoryDeductions(ingredientMap, inventoryObjects) {
-  inventoryObjects.forEach(invItem => {
-    const invQty = parseFloat(invItem.Qty) || 0;
-    const invKey = normalize(invItem.Produit);
-    const invUnit = invItem.Unité || 'g';
-    const invCategory = invItem.Catégorie || 'Autres';
+async function generateAndWriteCourses(token, existingValidé = {}) {
+  if (!window.SheetsAPI || !token) return;
 
-    // Try exact match first
-    let matched = ingredientMap[invKey];
+  try {
+    const invRows = await window.SheetsAPI.readSheetTab('Inventory');
+    const inventory = window.SheetsAPI.rowsToObjects(invRows);
 
-    // If no exact match, try partial matches
-    if (!matched) {
-      const possibleKeys = Object.keys(ingredientMap).filter(k => {
-        const ing = ingredientMap[k];
-        return invKey.includes(k) || k.includes(invKey);
-      });
-      if (possibleKeys.length > 0) {
-        matched = ingredientMap[possibleKeys[0]];
-      }
-    }
+    // Build a temporary mealPlan from Planning sheet for generation
+    const planRows = await window.SheetsAPI.readSheetTab('Planning');
+    const planObjects = window.SheetsAPI.rowsToObjects(planRows);
+    const tempMealPlan = calculateWeekWindow().map(day => ({
+      ...day,
+      Midi: planObjects.find(p => p.Date === day.dateISO)?.Midi || null,
+      Soir: planObjects.find(p => p.Date === day.dateISO)?.Soir || null
+    }));
 
-    if (matched) {
-      // Always set category and price from inventory if found
-      if (!matched.category) {
-        matched.category = invCategory;
-      }
-      if (matched.price === 0) {
-        matched.price = parseFloat(invItem.Prix) || 0;
-      }
+    let rows = buildCoursesRows(tempMealPlan, inventory);
 
-      // Only deduct if units match
-      if (invQty > 0) {
-        const unitMatch =
-          matched.unit === invUnit ||
-          (matched.unit === 'piece' && invUnit === 'pièce') ||
-          (matched.unit === 'pièce' && invUnit === 'piece');
+    rows = rows.map(row => {
+      const key = row[0].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+      row[6] = existingValidé[key] || '';
+      return row;
+    });
 
-        if (unitMatch) {
-          matched.inStock = invQty;
-          matched.needed = Math.max(0, matched.needed - invQty);
-          matched.fullyStocked = matched.needed <= 0;
-        }
-      }
-    }
+    await window.SheetsAPI.batchUpdateRange('Courses!A2:G1000', rows, token);
+    console.log(`Courses synced: ${rows.length} rows`);
+  } catch (err) {
+    console.warn('Courses sync failed:', err);
+  }
+}
+
+/**
+ * Populate ingredientMap from Courses sheet rows
+ */
+function populateIngredientMap(objects) {
+  ingredientMap = {};
+  rollingWindow = calculateWeekWindow();
+  const first = rollingWindow[0];
+  const last = rollingWindow[6];
+  document.getElementById('week-range-label').textContent = `${first.dateStr} – ${last.dateStr}`;
+  document.getElementById('loading-state').textContent = '';
+
+  objects.forEach((row, idx) => {
+    if (!row.Produit) return;
+    const key = row.Produit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+    ingredientMap[key] = {
+      name: row.Produit,
+      category: row.Catégorie || 'Autres',
+      needed: parseFloat(row.Qty) || 0,
+      unit: row.Unité || 'g',
+      price: parseFloat(row.Prix) || 0,
+      days: row.Jours ? row.Jours.split(',').filter(Boolean) : [],
+      valide: row.Validé === '1',
+      sheetRow: idx + 2
+    };
   });
 }
 
@@ -138,17 +143,13 @@ function applyInventoryDeductions(ingredientMap, inventoryObjects) {
  */
 function renderCoursesList() {
   const container = document.getElementById('courses-list');
-  const customSection = document.getElementById('custom-section');
 
   // Separate into "to buy" and "in stock"
   const toBuy = Object.values(ingredientMap).filter(ing => ing.needed > 0);
-  const inStock = Object.values(ingredientMap).filter(ing => ing.fullyStocked);
+  const inStock = Object.values(ingredientMap).filter(ing => ing.needed <= 0 && ing.price > 0);
 
-  // Calculate total price for "to buy" items
-  const totalPrice = toBuy.reduce((sum, ing) => {
-    const price = loadPriceOverride(ing.name) || ing.price || 0;
-    return sum + (parseFloat(price) || 0);
-  }, 0);
+  // Calculate total price
+  const totalPrice = toBuy.reduce((sum, ing) => sum + (ing.price || 0), 0);
 
   // Group by category
   function groupByCategory(items) {
@@ -161,19 +162,16 @@ function renderCoursesList() {
     return groups;
   }
 
-  // Sort items within each group by name
   function sortGroup(group) {
     return group.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
   }
 
   let html = '';
 
-  // Show total price if there are items to buy
   if (toBuy.length > 0) {
     html += `<div style="text-align:center;font-size:17px;font-weight:bold;color:#2E7D32;margin:0 0 8px;">Budget estimé : ~${totalPrice.toFixed(2)}€</div>`;
   }
 
-  // "À acheter" section by category
   if (toBuy.length > 0) {
     const toBuyGroups = groupByCategory(toBuy);
     const categories = Object.keys(toBuyGroups).sort();
@@ -186,7 +184,6 @@ function renderCoursesList() {
     });
   }
 
-  // "En stock" section by category
   if (inStock.length > 0) {
     html += '<div class="cat in-stock">En stock ✓</div>';
     const inStockGroups = groupByCategory(inStock);
@@ -203,17 +200,23 @@ function renderCoursesList() {
   container.innerHTML = html;
 
   // Attach checkbox listeners
-  document.querySelectorAll('#courses-list input[type="checkbox"]').forEach((checkbox, i) => {
-    const ingredientName = checkbox.dataset.ingredient;
-    const today = Utils.getDateISO(0);
-    const stateKey = `COURSES_${today}_${ingredientName}`;
+  document.querySelectorAll('#courses-list input[type="checkbox"]').forEach((checkbox) => {
+    const key = checkbox.dataset.key;
+    const ing = ingredientMap[key];
+    if (!ing) return;
 
-    checkbox.checked = localStorage.getItem(stateKey) === '1';
-    checkbox.parentElement.classList.toggle('done', checkbox.checked);
+    checkbox.checked = ing.valide;
+    if (checkbox.checked) checkbox.parentElement.classList.add('done');
 
-    checkbox.addEventListener('change', () => {
-      localStorage.setItem(stateKey, checkbox.checked ? '1' : '0');
+    checkbox.addEventListener('change', async () => {
       checkbox.parentElement.classList.toggle('done', checkbox.checked);
+      ing.valide = checkbox.checked;
+      const token = window.getAccessToken ? window.getAccessToken() : null;
+      if (token && window.SheetsAPI) {
+        try {
+          await window.SheetsAPI.updateSheetCell(`Courses!G${ing.sheetRow}`, checkbox.checked ? '1' : '', token);
+        } catch (e) { console.warn('Failed to update Validé:', e); }
+      }
       updateProgress();
     });
   });
@@ -223,7 +226,7 @@ function renderCoursesList() {
 }
 
 /**
- * Render a single ingredient item with badges and price
+ * Render a single ingredient item with badges
  */
 function renderIngredientItem(ing, dimmed = false) {
   const today = new Date();
@@ -232,44 +235,40 @@ function renderIngredientItem(ing, dimmed = false) {
   const todayAbbr = dayNames[today.getDay()];
 
   const dimmClass = dimmed ? ' dimmed' : '';
-  const qtyDisplay = ing.inStock > 0 && ing.fullyStocked
+  const qtyDisplay = ing.needed <= 0
     ? ''
     : ` <small style="color:#999;font-size:0.85em;">(${ing.needed.toFixed(0)}${ing.unit})</small>`;
 
-  const priceOverride = loadPriceOverride(ing.name);
-  const displayPrice = priceOverride || ing.price || 0;
-  const priceDisplay = displayPrice > 0 ? ` <small style="color:#aaa;font-size:0.8em;">~${displayPrice.toFixed(2)}€</small>` : '';
+  const priceText = ing.price > 0 ? `${ing.price.toFixed(2)}€` : '-€';
 
   let dayBadges = '';
   ing.days.forEach(dateISO => {
     const d = new Date(dateISO);
     const dayNum = d.getDate();
     const dayAbbr = dayNames[d.getDay()];
-    let badgeColor = '#e8f5e9'; // green
+    let badgeColor = '#e8f5e9';
 
     if (dayAbbr === todayAbbr && dayNum === todayDay) {
-      badgeColor = '#ffcdd2'; // red
+      badgeColor = '#ffcdd2';
     } else if (dayNum < todayDay) {
-      badgeColor = '#e0e0e0'; // gray (past)
+      badgeColor = '#e0e0e0';
     } else {
       const tomorrow = todayDay + 1;
       const dayAfter = todayDay + 2;
       if ((dayAbbr === dayNames[(today.getDay() + 1) % 7] && dayNum === tomorrow) ||
           (dayAbbr === dayNames[(today.getDay() + 2) % 7] && dayNum === dayAfter)) {
-        badgeColor = '#fff9c4'; // yellow
+        badgeColor = '#fff9c4';
       }
     }
 
     dayBadges += `<span style="background:${badgeColor};padding:1px 4px;margin-right:2px;border-radius:2px;">${dayAbbr} ${dayNum}</span>`;
   });
 
-  const priceText = displayPrice > 0 ? `${displayPrice.toFixed(2)}€` : '-€';
-
   return `
     <label${dimmClass} style="position:relative;">
-      <input type="checkbox" data-ingredient="${ing.name}" />
+      <input type="checkbox" data-key="${ing.name.replace(/'/g, "\\'")}" />
       <span style="flex:1;">
-        ${ing.name}${qtyDisplay}${priceDisplay}
+        ${ing.name}${qtyDisplay}
         <div style="color:#2E7D32;font-size:0.75em;margin-top:2px;">${dayBadges}</div>
       </span>
       <div class="price-correction">
@@ -290,11 +289,8 @@ function updateProgress() {
   document.getElementById('progress').textContent = `${checked} / ${allBoxes.length} articles cochés (${percent}%)`;
 }
 
-/**
- * Custom items (manual additions)
- */
-const today = Utils.getDateISO(0);
-const customKey = `COURSES_${today}_customs`;
+// Custom items
+const customKey = `COURSES_${Utils.getDateISO(0)}_customs`;
 
 function loadCustomItems() {
   try {
@@ -363,9 +359,7 @@ function hideAddModal() {
 }
 
 function hideModal(e) {
-  const modalOverlay = document.getElementById('modal-overlay');
-
-  if (e.target === modalOverlay) hideAddModal();
+  if (e.target === document.getElementById('modal-overlay')) hideAddModal();
 }
 
 function saveCustomItem() {
@@ -388,70 +382,9 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') hideAddModal();
 });
 
-document.addEventListener('DOMContentLoaded', () => {
-  const editForm = document.getElementById('edit-form');
-  if (editForm) {
-    editForm.addEventListener('submit', saveEditedIngredient);
-  }
-});
-
-/**
- * Load all price overrides from CoursePrices sheet
- */
-async function loadPriceOverridesFromSheet() {
-  try {
-    const rows = await SheetsAPI.readSheetTab('CoursePrices');
-    const objects = SheetsAPI.rowsToObjects(rows);
-
-    // Store latest price for each ingredient
-    const priceMap = {};
-    objects.forEach(row => {
-      if (row.Ingrédient || row['Ingrédient'] || row.Ingredient) {
-        const ing = row.Ingrédient || row['Ingrédient'] || row.Ingredient;
-        const price = row.Prix || row.Price;
-        priceMap[ing] = parseFloat(price) || 0;
-      }
-    });
-
-    return priceMap;
-  } catch (err) {
-    console.log('CoursePrices sheet not found or empty');
-    return {};
-  }
-}
-
-/**
- * Load price override (from sheet or localStorage)
- */
-function loadPriceOverride(ingredientName) {
-  // Check sheet-loaded prices first
-  if (priceOverrides[ingredientName]) {
-    return priceOverrides[ingredientName];
-  }
-
-  // Fall back to localStorage
-  const key = `COURSES_PRICE_${ingredientName}`;
-  const val = localStorage.getItem(key);
-  return val ? parseFloat(val) : null;
-}
-
-/**
- * Save price override to localStorage
- */
-function savePriceOverride(ingredientName, price) {
-  const key = `COURSES_PRICE_${ingredientName}`;
-  if (price && parseFloat(price) > 0) {
-    localStorage.setItem(key, price);
-  } else {
-    localStorage.removeItem(key);
-  }
-}
-
-/**
- * Open edit modal for an ingredient
- */
+// Edit modal
 function openEditModal(ingredientName) {
-  const ing = Object.values(ingredientMap).find(i => i.name === ingredientName);
+  const ing = ingredientMap[ingredientName];
   if (!ing) return;
 
   const modal = document.getElementById('edit-modal');
@@ -459,9 +392,7 @@ function openEditModal(ingredientName) {
   document.getElementById('edit-ingredient-category').value = ing.category || '';
   document.getElementById('edit-ingredient-quantity').value = ing.needed.toFixed(1);
   document.getElementById('edit-ingredient-unit').value = ing.unit || 'g';
-
-  const priceVal = loadPriceOverride(ing.name) || ing.price || 0;
-  document.getElementById('edit-ingredient-price').value = priceVal.toFixed(2);
+  document.getElementById('edit-ingredient-price').value = ing.price.toFixed(2);
 
   modal.setAttribute('aria-hidden', 'false');
   modal.classList.remove('hidden');
@@ -479,7 +410,7 @@ async function saveEditedIngredient(e) {
   e.preventDefault();
 
   const ingredientName = document.getElementById('edit-modal').getAttribute('data-ingredient-name');
-  const ing = Object.values(ingredientMap).find(i => i.name === ingredientName);
+  const ing = ingredientMap[ingredientName];
   if (!ing) return;
 
   const category = document.getElementById('edit-ingredient-category').value || ing.category;
@@ -487,30 +418,32 @@ async function saveEditedIngredient(e) {
   const unit = document.getElementById('edit-ingredient-unit').value || ing.unit;
   const price = document.getElementById('edit-ingredient-price').value || ing.price;
 
-  // Update ingredient map
   ing.category = category;
   ing.needed = parseFloat(quantity);
   ing.unit = unit;
+  ing.price = parseFloat(price);
 
-  // Save to Sheets
   try {
     const token = window.getAccessToken ? window.getAccessToken() : null;
     if (token && window.SheetsAPI) {
-      // Columns: Produit, Catégorie, Qty, Unité, Prix
-      const row = [ingredientName, category, quantity, unit, price];
-      await window.SheetsAPI.appendRowWithToken('Courses', row, token);
-      console.log(`Ingredient saved: ${ingredientName}`);
+      const range = `Courses!A${ing.sheetRow}:G${ing.sheetRow}`;
+      await window.SheetsAPI.batchUpdateRange(range, [[ing.name, category, quantity, unit, price.toFixed(2), ing.days.join(','), ing.valide ? '1' : '']], token);
+      console.log(`Ingredient updated: ${ingredientName}`);
     }
   } catch (err) {
     console.warn('Failed to save to Sheets:', err);
   }
 
-  savePriceOverride(ingredientName, price);
-  priceOverrides[ingredientName] = parseFloat(price);
-
   closeEditModal();
   renderCoursesList();
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const editForm = document.getElementById('edit-form');
+  if (editForm) {
+    editForm.addEventListener('submit', saveEditedIngredient);
+  }
+});
 
 /**
  * Initialize courses page
@@ -519,37 +452,40 @@ async function initCourses() {
   UserContext.applyUserStyling();
   UserContext.initializeUserToggle();
 
+  document.getElementById('loading-state').textContent = 'Chargement...';
+
   try {
-    document.getElementById('loading-state').textContent = 'Chargement...';
+    // Read Courses sheet
+    const rows = await SheetsAPI.readSheetTab('Courses');
+    const objects = SheetsAPI.rowsToObjects(rows);
 
-    // Load recipes first
-    await loadRecipes();
+    // Auto-refresh si sheet vide ou date périmée
+    const firstDate = objects[0]?.Jours?.split(',')[0];
+    const today = Utils.getDateISO(0);
+    const isStale = !firstDate || !objects[0]?.Produit || !objects.some(r => r.Jours?.includes(today));
 
-    // Load price overrides from sheet
-    priceOverrides = await loadPriceOverridesFromSheet();
+    if (isStale) {
+      const token = window.getAccessToken ? window.getAccessToken() : null;
+      if (token) {
+        await loadRecipes();
+        const existingValidé = {};
+        objects.forEach(r => {
+          if (r.Produit && r.Validé === '1') {
+            const k = r.Produit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+            existingValidé[k] = '1';
+          }
+        });
+        await generateAndWriteCourses(token, existingValidé);
+        const updated = await SheetsAPI.readSheetTab('Courses');
+        populateIngredientMap(SheetsAPI.rowsToObjects(updated));
+      } else {
+        populateIngredientMap(objects);
+      }
+    } else {
+      populateIngredientMap(objects);
+    }
 
-    // Calculate week window
-    rollingWindow = calculateWeekWindow();
-    const first = rollingWindow[0];
-    const last = rollingWindow[6];
-    document.getElementById('week-range-label').textContent = `${first.dateStr} – ${last.dateStr}`;
-
-    // Load planning
-    const planningRows = await SheetsAPI.readSheetTab('Planning');
-    const planningObjects = SheetsAPI.rowsToObjects(planningRows);
-
-    // Load inventory
-    const inventoryRows = await SheetsAPI.readSheetTab('Inventory');
-    const inventoryObjects = SheetsAPI.rowsToObjects(inventoryRows);
-
-    // Build and process ingredient map
-    ingredientMap = buildIngredientMap(rollingWindow, planningObjects);
-    applyInventoryDeductions(ingredientMap, inventoryObjects);
-
-    // Render
-    document.getElementById('loading-state').textContent = '';
     renderCoursesList();
-
   } catch (error) {
     console.error('Error loading courses:', error);
     document.getElementById('loading-state').textContent = 'Erreur au chargement. Vérifiez votre connexion.';
