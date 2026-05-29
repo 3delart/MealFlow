@@ -18,7 +18,7 @@ async function loadUserHistory(userId) {
       Date: row.Date || "",
       Heure: row.Time || row.Heure || "",
       Nom: row.Product || row.Nom || "",
-      Quantité: parseFloat(row.Quantity || row.Quantité) || 0,
+      Quantité: parseFloat(row.Quantity || row.Quantité || row.Quantitée) || 0,
       Unité: row.Unit || row.Unité || "",
       Kcal_total: parseFloat(row.Total_calories || row.Kcal_total) || 0,
       Type: row.Type || "autre"
