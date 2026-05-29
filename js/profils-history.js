@@ -164,16 +164,11 @@ function destroyAllCharts() {
 function renderCaloriesChart(userId, days) {
   loadUserHistory(userId).then(history => {
     const today = new Date();
-    const startDate = new Date();
-    startDate.setDate(today.getDate() - days);
-
     const grouped = {};
-    let min = new Date();
-    min.setDate(today.getDate() - days);
 
-    for (let i = 0; i < days; i++) {
-      const d = new Date(startDate);
-      d.setDate(d.getDate() + i);
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split("T")[0];
       grouped[dateStr] = 0;
     }
