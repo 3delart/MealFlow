@@ -2,6 +2,17 @@
 let selectedMealData = null;
 let selectedProduct = null;
 
+function scannerLog(msg) {
+  console.log(msg);
+  const output = document.getElementById('scanner-debug-output');
+  if (output) {
+    const line = document.createElement('div');
+    line.textContent = new Date().toLocaleTimeString() + ' ' + msg;
+    output.appendChild(line);
+    output.scrollTop = output.scrollHeight;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const token = getAccessToken();
   if (!token) {
@@ -354,14 +365,14 @@ async function consommerScannerOnDetect(barcode) {
 
   // First check inventory
   let product = InventoryAPI.findByBarcode(barcode);
-  console.log(`[Scanner] Barcode: ${barcode}, Found in inventory:`, product ? product.name : 'NO');
+  scannerLog(`Barcode: ${barcode}, Found in inventory: ${product ? product.name : 'NO'}`);
 
   // Otherwise fetch from Open Food Facts
   if (!product) {
     try {
-      console.log(`[Scanner] Fetching from Open Food Facts...`);
+      scannerLog(`Fetching from Open Food Facts...`);
       product = await fetchProductFromOpenFoodFacts(barcode);
-      console.log(`[Scanner] Open Food Facts result:`, product);
+      scannerLog(`Open Food Facts result: ${JSON.stringify(product).substring(0,100)}`);
     } catch (err) {
       console.error('Product lookup failed:', err);
       alert('Produit non trouvé');
@@ -370,7 +381,7 @@ async function consommerScannerOnDetect(barcode) {
 
     // If product found in Open Food Facts, add to inventory
     if (product && product.name) {
-      console.log(`[Scanner] Adding to inventory: ${product.name}`);
+      scannerLog(`Adding to inventory: ${product.name}`);
       try {
         const newItem = {
           Barcode: barcode,
@@ -389,7 +400,7 @@ async function consommerScannerOnDetect(barcode) {
         };
 
         const token = getAccessToken?.();
-        console.log(`[Scanner] Token exists:`, !!token, `SheetsAPI exists:`, !!window.SheetsAPI);
+        scannerLog(`Token exists: ${!!token}, SheetsAPI exists: ${!!window.SheetsAPI}`);
 
         if (token && window.SheetsAPI) {
           const row = [
@@ -407,9 +418,9 @@ async function consommerScannerOnDetect(barcode) {
             newItem.carbs,
             newItem.allergens
           ];
-          console.log(`[Scanner] Appending row to Inventory sheet...`);
+          scannerLog(`Appending row to Inventory sheet...`);
           await window.SheetsAPI.appendRowWithToken('Inventory', row, token);
-          console.log(`[Scanner] ✓ Added product to Inventory sheet: ${newItem.Produit}`);
+          scannerLog(`✓ Added product to Inventory sheet: ${newItem.Produit}`);
         } else {
           console.warn(`[Scanner] Cannot add to sheet: token=${!!token}, SheetsAPI=${!!window.SheetsAPI}`);
         }
@@ -418,7 +429,7 @@ async function consommerScannerOnDetect(barcode) {
         newItem.id = Date.now();
         newItem.sheetRowNumber = -1;
         window.inventoryData.push(newItem);
-        console.log(`[Scanner] ✓ Added to local inventoryData`);
+        scannerLog(`✓ Added to local inventoryData`);
       } catch (err) {
         console.error('[Scanner] Failed to add product to inventory:', err);
       }
