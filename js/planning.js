@@ -2,22 +2,25 @@
 let mealPlan = [];
 let rollingWindow = [];
 let currentModalContext = { dateISO: null, mealTime: null };
+let weekOffset = 0;
+const MAX_WEEK_OFFSET = 4;
+let allPlanData = {};
 
 /**
- * Calculate rolling window of 7 days (today through today+6)
- * Each day includes: date (Date object), dateStr (formatted), dayOfWeek (French), dateISO
+ * Calculate rolling window of 7 days
+ * Offset: 0 = current week, -1 = previous week, +1 = next week, etc.
+ * @param {number} offset - Week offset (default: 0 for current week)
  * @returns {Array} Array of 7 day objects
  */
-function calculateRollingWindow() {
-  const today = new Date();
+function calculateRollingWindow(offset = 0) {
   const days = [];
   const frenchDays = ['DIMANCHE', 'LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI'];
 
   for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(date.getDate() + i);
-
-    const dateISO = Utils.getDateISO(i);
+    const daysFromToday = offset * 7 + i;
+    const dateISO = Utils.getDateISO(daysFromToday);
+    const date = new Date();
+    date.setDate(date.getDate() + daysFromToday);
 
     days.push({
       date: date,
@@ -32,48 +35,49 @@ function calculateRollingWindow() {
 
 /**
  * Load meal plan from Planning sheet
- * Filters to 7-day rolling window and populates Midi/Soir for each day
+ * Populates allPlanData with all dates from sheet
  */
 async function loadMealPlan() {
   try {
-    // Calculate rolling window
-    rollingWindow = calculateRollingWindow();
-
     // Load Planning tab from Sheets
     const rows = await SheetsAPI.readSheetTab("Planning");
     const objects = SheetsAPI.rowsToObjects(rows);
 
+    // Populate allPlanData with all dates from sheet
+    allPlanData = {};
     if (objects.length > 0) {
-      // Filter rows to 7-day window by date
-      const windowDates = rollingWindow.map(d => d.dateISO);
-      mealPlan = rollingWindow.map(dayInfo => {
-        const planRow = objects.find(row => row.Date === dayInfo.dateISO);
-        return {
-          ...dayInfo,
-          Midi: planRow?.Midi || null,
-          Soir: planRow?.Soir || null
-        };
+      objects.forEach(row => {
+        if (row.Date) {
+          allPlanData[row.Date] = {
+            Midi: row.Midi || null,
+            Soir: row.Soir || null
+          };
+        }
       });
-      console.log(`Planning: loaded ${mealPlan.length} days from Sheets`);
+      console.log(`Planning: loaded ${Object.keys(allPlanData).length} dates from Sheets`);
     } else {
-      console.log("Planning: empty, using fallback");
-      mealPlan = rollingWindow.map(dayInfo => ({
-        ...dayInfo,
-        Midi: null,
-        Soir: null
-      }));
+      console.log("Planning: empty sheet");
     }
   } catch (error) {
     console.error("Error reading planning:", error);
-    // Offline fallback
-    mealPlan = rollingWindow.map(dayInfo => ({
-      ...dayInfo,
-      Midi: null,
-      Soir: null
-    }));
+    allPlanData = {};
   }
 
+  buildMealPlanForCurrentWindow();
   renderMealPlan();
+}
+
+/**
+ * Build meal plan array from allPlanData for current week window
+ * Uses weekOffset to determine which week to display
+ */
+function buildMealPlanForCurrentWindow() {
+  rollingWindow = calculateRollingWindow(weekOffset);
+  mealPlan = rollingWindow.map(day => ({
+    ...day,
+    Midi: allPlanData[day.dateISO]?.Midi || null,
+    Soir: allPlanData[day.dateISO]?.Soir || null
+  }));
 }
 
 /**
@@ -225,7 +229,7 @@ function escapeHTML(str) {
 
 /**
  * TASK 5: Save selected recipe to meal plan
- * Updates mealPlan local state, closes modal, re-renders grid
+ * Updates allPlanData, rebuilds current window, re-renders grid
  * Calls syncCoursesFromMealPlan() and savePlanningToSheets()
  * @param {string} recipeName - Name of the selected recipe
  */
@@ -237,24 +241,17 @@ function selectRecipe(recipeName) {
     return;
   }
 
-  // Find or create meal plan entry for this date
-  let dayMeal = mealPlan.find(m => m.dateISO === dateISO);
-  if (!dayMeal) {
-    dayMeal = {
-      dateISO: dateISO,
-      Midi: "",
-      Soir: ""
-    };
-    mealPlan.push(dayMeal);
+  // Create or update entry in allPlanData
+  if (!allPlanData[dateISO]) {
+    allPlanData[dateISO] = { Midi: null, Soir: null };
   }
-
-  // Update the meal
-  dayMeal[mealTime] = recipeName;
+  allPlanData[dateISO][mealTime] = recipeName;
 
   console.log(`Selected recipe: ${recipeName} for ${dateISO} ${mealTime}`);
 
-  // Close modal and re-render
+  // Close modal and rebuild meal plan from allPlanData
   closeRecipePickerModal();
+  buildMealPlanForCurrentWindow();
   renderMealPlan();
 
   // Sync Courses list and persist to Sheets
@@ -302,8 +299,8 @@ function syncCoursesFromMealPlan() {
 }
 
 /**
- * TASK 7: Persist meal plan changes to Planning sheet
- * Clears Planning tab (A2:C1000) and appends all 7 days' meals
+ * TASK 7: Persist all meal plan changes to Planning sheet
+ * Cleans old data (>30 days), writes entire allPlanData to Planning!A2:C1000
  * Called on beforeunload and after selectRecipe()
  */
 async function savePlanningToSheets() {
@@ -319,18 +316,74 @@ async function savePlanningToSheets() {
       return;
     }
 
-    // Replace Planning!A2:C1000 atomically (no separate clear needed)
-    const values = mealPlan.map(dayMeal => [
-      dayMeal.dateISO,
-      dayMeal.Midi || "",
-      dayMeal.Soir || ""
-    ]);
+    // Clean up old entries (>30 days in past)
+    const RETENTION_DAYS = 30;
+    const cutoff = Utils.getDateISO(-RETENTION_DAYS);
+    Object.keys(allPlanData).forEach(date => {
+      if (date < cutoff) {
+        delete allPlanData[date];
+      }
+    });
+
+    // Sort all dates and build values array
+    const values = Object.entries(allPlanData)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, meals]) => [
+        date,
+        meals.Midi || "",
+        meals.Soir || ""
+      ]);
 
     await window.SheetsAPI.batchUpdateRange("Planning!A2:C1000", values, token);
-    console.log("Planning synced to Planning sheet");
+    console.log(`Planning synced: ${values.length} rows to sheet`);
   } catch (err) {
     console.error("Failed to sync planning to Sheets:", err);
   }
+}
+
+/**
+ * Navigate to previous week (-1 offset)
+ */
+function navigateToPreviousWeek() {
+  if (weekOffset > -MAX_WEEK_OFFSET) {
+    weekOffset--;
+    buildMealPlanForCurrentWindow();
+    renderMealPlan();
+    updateWeekNavUI();
+  }
+}
+
+/**
+ * Navigate to next week (+1 offset)
+ */
+function navigateToNextWeek() {
+  if (weekOffset < MAX_WEEK_OFFSET) {
+    weekOffset++;
+    buildMealPlanForCurrentWindow();
+    renderMealPlan();
+    updateWeekNavUI();
+  }
+}
+
+/**
+ * Update week navigation UI: label and button disabled states
+ */
+function updateWeekNavUI() {
+  if (rollingWindow.length < 7) return;
+
+  const first = rollingWindow[0];
+  const last = rollingWindow[6];
+
+  const label = document.getElementById('week-label');
+  if (label) {
+    label.textContent = `${first.dateStr} – ${last.dateStr}`;
+  }
+
+  const prevBtn = document.getElementById('prev-week-btn');
+  const nextBtn = document.getElementById('next-week-btn');
+
+  if (prevBtn) prevBtn.disabled = weekOffset <= -MAX_WEEK_OFFSET;
+  if (nextBtn) nextBtn.disabled = weekOffset >= MAX_WEEK_OFFSET;
 }
 
 async function initializePlanning() {
@@ -339,6 +392,7 @@ async function initializePlanning() {
   await loadRecipes();  // Load recipes for modal
   await loadMealPlan();
   syncCoursesFromMealPlan();
+  updateWeekNavUI();
 
   // Setup beforeunload to persist before leaving page
   window.addEventListener("beforeunload", savePlanningToSheets);

@@ -25,6 +25,11 @@
   <main>
     <section class="planning-section">
       <h2>Semaine</h2>
+      <div class="week-navigation">
+        <button id="prev-week-btn" class="week-nav-btn" onclick="navigateToPreviousWeek()">&#8592;</button>
+        <span id="week-label" class="week-label"></span>
+        <button id="next-week-btn" class="week-nav-btn" onclick="navigateToNextWeek()">&#8594;</button>
+      </div>
       <div id="meal-plan" class="meal-plan">
         <!-- Dynamically populated -->
       </div>
