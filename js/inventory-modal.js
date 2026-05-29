@@ -31,15 +31,15 @@ async function saveEditedItem(e) {
   if (!item) return;
 
   const updatedData = {
-    Catégorie: document.getElementById("edit-category").value,
-    Qty: document.getElementById("edit-quantity").value,
-    Unité: document.getElementById("edit-unit").value,
-    Date_ajout: document.getElementById("edit-date-added").value,
-    Péremption: document.getElementById("edit-expiry").value,
-    Prix: document.getElementById("edit-price").value || ""
+    Catégorie: document.getElementById("edit-category").value || item.Catégorie,
+    Qty: document.getElementById("edit-quantity").value || item.Qty,
+    Unité: document.getElementById("edit-unit").value || item.Unité,
+    Date_ajout: document.getElementById("edit-date-added").value || item.Date_ajout,
+    Péremption: document.getElementById("edit-expiry").value || item.Péremption,
+    Prix: document.getElementById("edit-price").value || item.Prix
   };
 
-  // Clear expiry date if quantity is 0
+  // Clear expiry date if quantity is 0 (explicitly set to empty)
   if (parseFloat(updatedData.Qty) === 0) {
     updatedData.Péremption = "";
   }
