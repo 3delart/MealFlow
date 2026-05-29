@@ -2,6 +2,18 @@
 let selectedMealData = null;
 let selectedProduct = null;
 
+function debugLog(msg) {
+  console.log(msg);
+  const output = document.getElementById('debug-output');
+  if (output) {
+    const line = document.createElement('div');
+    line.textContent = new Date().toLocaleTimeString() + ' ' + msg;
+    line.style.marginBottom = '4px';
+    output.appendChild(line);
+    output.scrollTop = output.scrollHeight;
+  }
+}
+
 function viewMealRecipe(mealName) {
   if (!window.recipesData) return;
 
