@@ -102,7 +102,7 @@ function renderConsumptionLog() {
 function openMangerModal(mealName) {
   const modal = document.getElementById('manger-modal');
   const select = document.getElementById('manger-meal');
-  const selectGroup = document.getElementById('manger-meal')?.parentElement;
+  const mealGroup = document.getElementById('manger-meal-group');
 
   // Populate from todaysMeals with actual recipe data
   select.innerHTML = '<option value="">-- Sélectionner --</option>';
@@ -118,10 +118,10 @@ function openMangerModal(mealName) {
   // Pre-select meal if passed
   if (mealName) {
     select.value = mealName;
-    if (selectGroup) selectGroup.style.display = 'none'; // Hide dropdown, meal already selected
+    if (mealGroup) mealGroup.style.display = 'none'; // Hide dropdown, meal already selected
     updateMangerPreview();
   } else {
-    if (selectGroup) selectGroup.style.display = 'block';
+    if (mealGroup) mealGroup.style.display = 'block';
   }
 
   document.getElementById('manger-qty').value = '';
@@ -133,8 +133,8 @@ function closeMangerModal() {
   document.getElementById('manger-modal').classList.add('hidden');
   document.getElementById('manger-form').reset();
   document.getElementById('manger-preview').innerHTML = '';
-  const selectGroup = document.getElementById('manger-meal')?.parentElement;
-  if (selectGroup) selectGroup.style.display = 'block'; // Restore dropdown visibility
+  const mealGroup = document.getElementById('manger-meal-group');
+  if (mealGroup) mealGroup.style.display = 'block'; // Restore dropdown visibility
 }
 
 function updateMangerPreview() {

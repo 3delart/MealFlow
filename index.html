@@ -77,10 +77,12 @@
         <button class="modal-close" id="close-manger-modal">&times;</button>
       </div>
       <form id="manger-form" class="modal-form">
-        <label for="manger-meal">Repas:</label>
-        <select id="manger-meal" required>
-          <option value="">-- Sélectionner --</option>
-        </select>
+        <div id="manger-meal-group">
+          <label for="manger-meal">Repas:</label>
+          <select id="manger-meal" required>
+            <option value="">-- Sélectionner --</option>
+          </select>
+        </div>
 
         <label for="manger-qty">Quantité (g):</label>
         <input type="number" id="manger-qty" min="0" step="1" required>
