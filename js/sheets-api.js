@@ -117,7 +117,7 @@ async function appendRowWithToken(tabName, row, accessToken) {
   const sheetId = getSheetId();
   const values = [row];
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${tabName}!A:Z:append?valueInputOption=USER_ENTERED`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${tabName}:append?valueInputOption=USER_ENTERED`;
 
   try {
     const response = await fetch(url, {
