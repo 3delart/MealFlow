@@ -81,11 +81,10 @@ function renderHistoryContent(history) {
     items.forEach(item => {
       const entryDiv = document.createElement("div");
       entryDiv.className = "history-entry";
-      const qty = item.Quantité > 0 ? `${item.Quantité}${item.Unité}` : "—";
       entryDiv.innerHTML = `
         <div style="font-weight:bold; width:50px;">${item.Heure}</div>
         <div>${item.Nom}</div>
-        <div style="text-align:right; min-width:60px;">${qty}</div>
+        <div style="text-align:right; min-width:60px;">${item.Quantité}${item.Unité}</div>
         <div style="text-align:right; min-width:60px; color:var(--color-primary); font-weight:bold;">${item.Kcal_total}kcal</div>
       `;
       detailDiv.appendChild(entryDiv);
