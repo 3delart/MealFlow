@@ -48,9 +48,14 @@ function renderInventory() {
   const filterEl = document.getElementById("filter-category");
   const filterValue = filterEl ? filterEl.value : "";
 
-  let filtered = filterValue
-    ? inventoryData.filter(item => item.Catégorie === filterValue)
-    : inventoryData;
+  let filtered;
+  if (filterValue === "__IN_STOCK__") {
+    filtered = inventoryData.filter(item => (parseFloat(item.Qty) || 0) > 0);
+  } else if (filterValue) {
+    filtered = inventoryData.filter(item => item.Catégorie === filterValue);
+  } else {
+    filtered = inventoryData;
+  }
 
   if (filtered.length === 0) {
     container.innerHTML = '<div class="inventory-empty">Aucun article</div>';

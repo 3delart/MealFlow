@@ -13,6 +13,19 @@ function setupEventHandlers() {
 
   const filterSelect = document.getElementById("filter-category");
   if (filterSelect) {
+    // "Tous les articles"
+    let option = document.createElement("option");
+    option.value = "";
+    option.textContent = "-- Tous les articles --";
+    filterSelect.appendChild(option);
+
+    // "Articles en stock"
+    option = document.createElement("option");
+    option.value = "__IN_STOCK__";
+    option.textContent = "Articles en stock";
+    filterSelect.appendChild(option);
+
+    // Catégories triées
     categories.forEach(cat => {
       const option = document.createElement("option");
       option.value = cat;
