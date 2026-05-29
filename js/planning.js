@@ -319,23 +319,14 @@ async function savePlanningToSheets() {
       return;
     }
 
-    // Clear existing data first
-    try {
-      await window.SheetsAPI.clearSheetRange("Planning!A2:C100", token);
-    } catch (clearErr) {
-      console.warn("Clear failed, continuing with append:", clearErr.message);
-    }
+    // Replace Planning!A2:C1000 atomically (no separate clear needed)
+    const values = mealPlan.map(dayMeal => [
+      dayMeal.dateISO,
+      dayMeal.Midi || "",
+      dayMeal.Soir || ""
+    ]);
 
-    // Append each day's meals
-    for (const dayMeal of mealPlan) {
-      const row = [
-        dayMeal.dateISO,
-        dayMeal.Midi || "",
-        dayMeal.Soir || ""
-      ];
-      await window.SheetsAPI.appendRowWithToken("Planning", row, token);
-    }
-
+    await window.SheetsAPI.batchUpdateRange("Planning!A2:C1000", values, token);
     console.log("Planning synced to Planning sheet");
   } catch (err) {
     console.error("Failed to sync planning to Sheets:", err);

@@ -249,6 +249,43 @@ async function clearSheetRange(range, accessToken) {
   console.log(`Cleared range ${range}`);
 }
 
+/**
+ * Atomically replace a sheet range with new data (clear + append in one request)
+ * @param {string} range - Sheet range (e.g. "Planning!A2:C100")
+ * @param {Array<Array>} values - 2D array of values to write
+ * @param {string} accessToken - OAuth2 access token
+ * @returns {Promise<Object>} API response
+ */
+async function batchUpdateRange(range, values, accessToken) {
+  const sheetId = getSheetId();
+  const token = accessToken || (typeof getAccessToken === 'function' ? getAccessToken() : null);
+
+  if (!sheetId) {
+    throw new Error("Sheet ID not configured");
+  }
+
+  if (!token) {
+    throw new Error("No access token available");
+  }
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=RAW`;
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ values })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Sheets API update error: ${error.error?.message || response.statusText}`);
+  }
+
+  return response.json();
+}
+
 // Export all functions to the window object so they can be used globally (in browser)
 if (typeof window !== 'undefined') {
   window.SheetsAPI = {
@@ -258,7 +295,8 @@ if (typeof window !== 'undefined') {
     appendRowWithToken,
     appendConsumptionRecord,
     updateSheetCell,
-    clearSheetRange
+    clearSheetRange,
+    batchUpdateRange
   };
 }
 
