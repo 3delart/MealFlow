@@ -39,6 +39,11 @@ async function saveEditedItem(e) {
     Prix: document.getElementById("edit-price").value || ""
   };
 
+  // Clear expiry date if quantity is 0
+  if (parseFloat(updatedData.Qty) === 0) {
+    updatedData.Péremption = "";
+  }
+
   Object.assign(item, updatedData);
   saveInventory();
 
