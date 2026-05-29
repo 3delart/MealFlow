@@ -148,7 +148,7 @@ function loadTodayHistory() {
 
     const today = Utils.getTodayISO();
     const history = SheetsAPI.rowsToObjects(rows);
-    todayConsumptions = history.filter(h => h.Date === today).reverse();
+    todaysConsumptions = history.filter(h => h.Date === today).reverse();
   });
 }
 
