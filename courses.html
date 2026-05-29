@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Courses — MealFlow</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    * { box-sizing: border-box; }
+    main { padding-bottom: 80px; }
+    .planning-section { padding: var(--spacing-lg) var(--spacing-md); }
+
+    #week-range-label { text-align: center; font-size: 0.95rem; color: var(--color-text-secondary); margin: 8px 0 8px; font-weight: 500; }
+    #loading-state { text-align: center; padding: 40px 20px; color: #999; }
+
+    #progress { text-align: center; color: #4CAF50; font-weight: bold; font-size: 14px; margin: 8px 0 16px; }
+
+    .cat { margin: 16px 0 2px; font-weight: bold; color: #2E7D32; font-size: 13px; padding: 6px 10px; background: #e8f5e9; border-radius: 6px; }
+    .cat.in-stock { background: #f0f0f0; color: #999; }
+    .cat.custom-cat { background: #FFF3E0; color: #E65100; }
+
+    label { display: flex; align-items: flex-start; padding: 12px 10px; background: white; border-bottom: 1px solid #f0f0f0; font-size: 14px; cursor: pointer; border-radius: 4px; margin: 2px 0; }
+    label.dimmed { opacity: 0.6; }
+    input[type="checkbox"] { width: 24px; height: 24px; margin-right: 14px; margin-top: 2px; flex-shrink: 0; cursor: pointer; accent-color: #4CAF50; }
+    label.done span { text-decoration: line-through; color: #bbb; }
+    label.custom-item { position: relative; }
+
+    .del-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #ccc; font-size: 20px; cursor: pointer; padding: 4px 8px; line-height: 1; }
+    .del-btn:active { color: #f44336; }
+
+    .add-btn { position: fixed; top: 12px; right: 12px; width: 48px; height: 48px; border-radius: 50%; background: #FF8F00; color: white; border: none; font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3); z-index: 100; line-height: 1; }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: white; border-radius: 12px; padding: 20px; width: 90%; max-width: 340px; }
+    .modal h3 { margin: 0 0 16px; color: #333; font-size: 16px; }
+    .modal input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; margin-bottom: 10px; box-sizing: border-box; }
+    .modal-btns { display: flex; gap: 8px; margin-top: 4px; }
+    .modal-btns button { flex: 1; padding: 11px; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: bold; }
+    .btn-add { background: #2E7D32; color: white; }
+    .btn-cancel { background: #eee; color: #666; }
+
+    .reset { display: block; margin: 20px auto 0; padding: 10px 24px; background: #eee; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; color: #666; }
+
+    .auth-buttons { position: fixed; top: 10px; right: 10px; display: flex; gap: 8px; z-index: 100; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>🛒 Courses</h1>
+    </div>
+    <div class="auth-buttons">
+      <div id="google-login-btn"></div>
+      <button id="google-logout-btn" type="button" class="btn btn-secondary" onclick="logoutGoogle()" style="display: none;">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="planning-section">
+      <div id="week-range-label"></div>
+      <p id="progress"></p>
+      <div id="loading-state">Chargement...</div>
+      <div id="courses-list"></div>
+      <div id="custom-section"></div>
+      <button class="reset" onclick="location.reload()">Actualiser</button>
+    </section>
+  </main>
+
+  <button class="add-btn" onclick="showAddModal()">+</button>
+
+  <div class="modal-overlay" id="modal-overlay" onclick="hideModal(event)">
+    <div class="modal">
+      <h3>Ajouter un article</h3>
+      <input type="text" id="item-name" placeholder="Nom (ex: Huile d'olive)" />
+      <input type="text" id="item-qty" placeholder="Quantité (ex: 1 bouteille) — optionnel" />
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="hideAddModal()">Annuler</button>
+        <button class="btn-add" onclick="saveCustomItem()">Ajouter ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav-bottom" aria-label="Navigation principale">
+    <a href="index.html" class="nav-item">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Accueil</span>
+    </a>
+    <a href="planning.html" class="nav-item">
+      <span class="nav-icon">📅</span>
+      <span class="nav-label">Planning</span>
+    </a>
+    <a href="courses.html" class="nav-item active" aria-current="page">
+      <span class="nav-icon">🛒</span>
+      <span class="nav-label">Courses</span>
+    </a>
+    <a href="recettes.html" class="nav-item">
+      <span class="nav-icon">📖</span>
+      <span class="nav-label">Recettes</span>
+    </a>
+    <a href="inventory.html" class="nav-item">
+      <span class="nav-icon">📦</span>
+      <span class="nav-label">Inventaire</span>
+    </a>
+    <a href="profils.html" class="nav-item">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profils</span>
+    </a>
+  </nav>
+
+  <script src="js/user-context.js"></script>
+  <script src="js/google-auth.js"></script>
+  <script src="js/sheets-api.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/recettes-utils.js"></script>
+  <script src="js/recettes.js"></script>
+  <script src="js/courses.js"></script>
+</body>
+</html>

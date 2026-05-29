@@ -1,0 +1,371 @@
+// Courses list module — dynamically generate shopping list from planning + recipes + inventory
+
+let ingredientMap = {};
+let rollingWindow = [];
+
+/**
+ * Calculate rolling window of 7 days (today through today+6)
+ */
+function calculateWeekWindow() {
+  const today = new Date();
+  const days = [];
+  const frenchDays = ['DIMANCHE', 'LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI'];
+
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(today);
+    date.setDate(date.getDate() + i);
+    const dateISO = Utils.getDateISO(i);
+
+    days.push({
+      date: date,
+      dateStr: Utils.formatDate(dateISO),
+      dayOfWeek: frenchDays[date.getDay()],
+      dateISO: dateISO
+    });
+  }
+
+  return days;
+}
+
+/**
+ * Normalize string for matching: lowercase, remove accents, trim
+ */
+function normalize(str) {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim();
+}
+
+/**
+ * Build ingredient map from planning + recipes
+ * Returns { normalized_name: { name, needed, unit, days, inStock, fullyStocked } }
+ */
+function buildIngredientMap(window7, planningObjects) {
+  const map = {};
+
+  window7.forEach(day => {
+    const planRow = planningObjects.find(r => r.Date === day.dateISO);
+    if (!planRow) return;
+
+    [planRow.Midi, planRow.Soir].forEach(recipeName => {
+      if (!recipeName) return;
+
+      const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
+      if (!recipe || !recipe.ingredients) return;
+
+      recipe.ingredients.forEach(ing => {
+        const key = normalize(ing.name);
+        if (!map[key]) {
+          map[key] = {
+            name: ing.name,
+            needed: 0,
+            unit: ing.unit || 'g',
+            days: [],
+            inStock: 0,
+            fullyStocked: false
+          };
+        }
+        map[key].needed += parseFloat(ing.quantity) || 0;
+        if (!map[key].days.includes(day.dateISO)) {
+          map[key].days.push(day.dateISO);
+        }
+      });
+    });
+  });
+
+  return map;
+}
+
+/**
+ * Apply inventory deductions: reduce needed quantities by what's in stock
+ */
+function applyInventoryDeductions(ingredientMap, inventoryObjects) {
+  inventoryObjects.forEach(invItem => {
+    const invQty = parseFloat(invItem.Qty) || 0;
+    if (invQty <= 0) return;
+
+    const invKey = normalize(invItem.Produit);
+    const invUnit = invItem.Unité || 'g';
+
+    // Try exact match first
+    let matched = ingredientMap[invKey];
+
+    // If no exact match, try partial matches
+    if (!matched) {
+      const possibleKeys = Object.keys(ingredientMap).filter(k => {
+        const ing = ingredientMap[k];
+        return invKey.includes(k) || k.includes(invKey);
+      });
+      if (possibleKeys.length > 0) {
+        matched = ingredientMap[possibleKeys[0]];
+      }
+    }
+
+    if (matched) {
+      // Check unit compatibility
+      const unitMatch =
+        matched.unit === invUnit ||
+        (matched.unit === 'piece' && invUnit === 'pièce') ||
+        (matched.unit === 'pièce' && invUnit === 'piece');
+
+      if (unitMatch) {
+        matched.inStock = invQty;
+        matched.needed = Math.max(0, matched.needed - invQty);
+        matched.fullyStocked = matched.needed <= 0;
+      }
+    }
+  });
+}
+
+/**
+ * Render the courses list into DOM
+ */
+function renderCoursesList() {
+  const container = document.getElementById('courses-list');
+  const customSection = document.getElementById('custom-section');
+
+  // Sort ingredients by name
+  const sorted = Object.values(ingredientMap).sort((a, b) =>
+    a.name.localeCompare(b.name, 'fr')
+  );
+
+  // Separate into "to buy" and "in stock"
+  const toBuy = sorted.filter(ing => ing.needed > 0);
+  const inStock = sorted.filter(ing => ing.fullyStocked);
+
+  let html = '';
+
+  // "À acheter" section
+  if (toBuy.length > 0) {
+    html += '<div class="cat">À acheter</div>';
+    toBuy.forEach(ing => {
+      html += renderIngredientItem(ing);
+    });
+  }
+
+  // "En stock" section
+  if (inStock.length > 0) {
+    html += '<div class="cat in-stock">En stock ✓</div>';
+    inStock.forEach(ing => {
+      html += renderIngredientItem(ing, true);
+    });
+  }
+
+  container.innerHTML = html;
+
+  // Attach checkbox listeners
+  document.querySelectorAll('#courses-list input[type="checkbox"]').forEach((checkbox, i) => {
+    const ingredientName = checkbox.dataset.ingredient;
+    const today = Utils.getDateISO(0);
+    const stateKey = `COURSES_${today}_${ingredientName}`;
+
+    checkbox.checked = localStorage.getItem(stateKey) === '1';
+    checkbox.parentElement.classList.toggle('done', checkbox.checked);
+
+    checkbox.addEventListener('change', () => {
+      localStorage.setItem(stateKey, checkbox.checked ? '1' : '0');
+      checkbox.parentElement.classList.toggle('done', checkbox.checked);
+      updateProgress();
+    });
+  });
+
+  updateProgress();
+  renderCustomItems();
+}
+
+/**
+ * Render a single ingredient item with badges
+ */
+function renderIngredientItem(ing, dimmed = false) {
+  const today = new Date();
+  const todayDay = today.getDate();
+  const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  const todayAbbr = dayNames[today.getDay()];
+
+  const dimmClass = dimmed ? ' dimmed' : '';
+  const qtyDisplay = ing.inStock > 0 && ing.fullyStocked
+    ? ''
+    : ` <small style="color:#999;font-size:0.85em;">(${ing.needed.toFixed(0)}${ing.unit})</small>`;
+
+  let dayBadges = '';
+  ing.days.forEach(dateISO => {
+    const d = new Date(dateISO);
+    const dayNum = d.getDate();
+    const dayAbbr = dayNames[d.getDay()];
+    let badgeColor = '#e8f5e9'; // green
+
+    if (dayAbbr === todayAbbr && dayNum === todayDay) {
+      badgeColor = '#ffcdd2'; // red
+    } else if (dayNum < todayDay) {
+      badgeColor = '#e0e0e0'; // gray (past)
+    } else {
+      const tomorrow = todayDay + 1;
+      const dayAfter = todayDay + 2;
+      if ((dayAbbr === dayNames[(today.getDay() + 1) % 7] && dayNum === tomorrow) ||
+          (dayAbbr === dayNames[(today.getDay() + 2) % 7] && dayNum === dayAfter)) {
+        badgeColor = '#fff9c4'; // yellow
+      }
+    }
+
+    dayBadges += `<span style="background:${badgeColor};padding:1px 4px;margin-right:2px;border-radius:2px;">${dayAbbr} ${dayNum}</span>`;
+  });
+
+  return `
+    <label${dimmClass}>
+      <input type="checkbox" data-ingredient="${ing.name}" />
+      <span>${ing.name}${qtyDisplay}<div style="color:#2E7D32;font-size:0.75em;margin-top:2px;">${dayBadges}</div></span>
+    </label>
+  `;
+}
+
+/**
+ * Update progress counter
+ */
+function updateProgress() {
+  const allBoxes = document.querySelectorAll('#courses-list input[type="checkbox"]');
+  const checked = Array.from(allBoxes).filter(b => b.checked).length;
+  const percent = allBoxes.length > 0 ? Math.round((checked / allBoxes.length) * 100) : 0;
+  document.getElementById('progress').textContent = `${checked} / ${allBoxes.length} articles cochés (${percent}%)`;
+}
+
+/**
+ * Custom items (manual additions)
+ */
+const today = Utils.getDateISO(0);
+const customKey = `COURSES_${today}_customs`;
+
+function loadCustomItems() {
+  try {
+    return JSON.parse(localStorage.getItem(customKey) || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveCustomItems(items) {
+  localStorage.setItem(customKey, JSON.stringify(items));
+}
+
+function renderCustomItems() {
+  const items = loadCustomItems();
+  const section = document.getElementById('custom-section');
+
+  if (items.length === 0) {
+    section.innerHTML = '';
+    return;
+  }
+
+  let html = '<div class="cat custom-cat">Ajouts perso</div>';
+  items.forEach((item, i) => {
+    const doneClass = item.checked ? ' done' : '';
+    const qty = item.qty ? ` <small style="color:#999;font-size:0.85em;">(${item.qty})</small>` : '';
+    html += `
+      <label class="custom-item${doneClass}">
+        <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleCustom(${i}, this)" />
+        <span>${item.name}${qty}</span>
+        <button class="del-btn" onclick="deleteCustom(event, ${i})">×</button>
+      </label>
+    `;
+  });
+
+  section.innerHTML = html;
+  updateProgress();
+}
+
+function toggleCustom(i, cb) {
+  const items = loadCustomItems();
+  items[i].checked = cb.checked;
+  saveCustomItems(items);
+  cb.parentElement.classList.toggle('done', cb.checked);
+  updateProgress();
+}
+
+function deleteCustom(e, i) {
+  e.preventDefault();
+  e.stopPropagation();
+  const items = loadCustomItems();
+  items.splice(i, 1);
+  saveCustomItems(items);
+  renderCustomItems();
+}
+
+function showAddModal() {
+  document.getElementById('modal-overlay').classList.add('active');
+  setTimeout(() => document.getElementById('item-name').focus(), 50);
+}
+
+function hideAddModal() {
+  document.getElementById('modal-overlay').classList.remove('active');
+  document.getElementById('item-name').value = '';
+  document.getElementById('item-qty').value = '';
+}
+
+function hideModal(e) {
+  if (e.target === document.getElementById('modal-overlay')) hideAddModal();
+}
+
+function saveCustomItem() {
+  const name = document.getElementById('item-name').value.trim();
+  if (!name) {
+    document.getElementById('item-name').focus();
+    return;
+  }
+  const qty = document.getElementById('item-qty').value.trim();
+  const items = loadCustomItems();
+  items.unshift({ name, qty, checked: false });
+  saveCustomItems(items);
+  hideAddModal();
+  renderCustomItems();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (!document.getElementById('modal-overlay').classList.contains('active')) return;
+  if (e.key === 'Enter') saveCustomItem();
+  if (e.key === 'Escape') hideAddModal();
+});
+
+/**
+ * Initialize courses page
+ */
+async function initCourses() {
+  UserContext.applyUserStyling();
+  UserContext.initializeUserToggle();
+
+  try {
+    document.getElementById('loading-state').textContent = 'Chargement...';
+
+    // Load recipes first
+    await loadRecipes();
+
+    // Calculate week window
+    rollingWindow = calculateWeekWindow();
+    const first = rollingWindow[0];
+    const last = rollingWindow[6];
+    document.getElementById('week-range-label').textContent = `${first.dateStr} – ${last.dateStr}`;
+
+    // Load planning
+    const planningRows = await SheetsAPI.readSheetTab('Planning');
+    const planningObjects = SheetsAPI.rowsToObjects(planningRows);
+
+    // Load inventory
+    const inventoryRows = await SheetsAPI.readSheetTab('Inventory');
+    const inventoryObjects = SheetsAPI.rowsToObjects(inventoryRows);
+
+    // Build and process ingredient map
+    ingredientMap = buildIngredientMap(rollingWindow, planningObjects);
+    applyInventoryDeductions(ingredientMap, inventoryObjects);
+
+    // Render
+    document.getElementById('loading-state').textContent = '';
+    renderCoursesList();
+
+  } catch (error) {
+    console.error('Error loading courses:', error);
+    document.getElementById('loading-state').textContent = 'Erreur au chargement. Vérifiez votre connexion.';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', initCourses);
