@@ -124,8 +124,7 @@ function populateIngredientMap(objects) {
 
   objects.forEach((row, idx) => {
     if (!row.Produit) return;
-    const key = row.Produit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-    ingredientMap[key] = {
+    ingredientMap[row.Produit] = {
       name: row.Produit,
       category: row.Catégorie || 'Autres',
       needed: parseFloat(row.Qty) || 0,
@@ -135,6 +134,52 @@ function populateIngredientMap(objects) {
       acheté: row.Acheté === '1',
       sheetRow: idx + 2
     };
+  });
+}
+
+/**
+ * Color day badges based on date: red (today), yellow (tomorrow+1), green (rest), gray (past)
+ */
+function colorDayBadges() {
+  const today = new Date();
+  const todayDay = today.getDate();
+  const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  const todayAbbr = dayNames[today.getDay()];
+  const tomorrowDay = todayDay + 1;
+  const tomorrowAbbr = dayNames[(today.getDay() + 1) % 7];
+  const dayAfterDay = todayDay + 2;
+  const dayAfterAbbr = dayNames[(today.getDay() + 2) % 7];
+
+  document.querySelectorAll('span[style*="background:#e8f5e9"]').forEach(span => {
+    const text = span.textContent.trim();
+    const parts = text.split(/\s+/);
+    const day = parts[0];
+    const dayNum = parseInt(parts[1]);
+
+    let bgColor = '#e8f5e9';
+    if (day === todayAbbr && dayNum === todayDay) bgColor = '#ffcdd2';
+    else if ((day === tomorrowAbbr && dayNum === tomorrowDay) ||
+             (day === dayAfterAbbr && dayNum === dayAfterDay)) bgColor = '#fff9c4';
+    else if (dayNum < todayDay) bgColor = '#e0e0e0';
+
+    span.style.background = bgColor;
+  });
+
+  // Strike entire item if ALL dates are past
+  document.querySelectorAll('#courses-list label').forEach(label => {
+    const dateSpans = label.querySelectorAll('span[style*="background"]');
+    if (dateSpans.length === 0) return;
+
+    let allPast = true;
+    dateSpans.forEach(span => {
+      const text = span.textContent.trim();
+      const dayNum = parseInt(text.split(/\s+/)[1]);
+      if (dayNum >= todayDay) allPast = false;
+    });
+
+    if (allPast) {
+      label.classList.add('past-day');
+    }
   });
 }
 
@@ -210,12 +255,12 @@ function renderCoursesList() {
 
     checkbox.addEventListener('change', async () => {
       checkbox.parentElement.classList.toggle('done', checkbox.checked);
-      ing.valide = checkbox.checked;
+      ing.acheté = checkbox.checked;
       const token = window.getAccessToken ? window.getAccessToken() : null;
       if (token && window.SheetsAPI) {
         try {
           await window.SheetsAPI.updateSheetCell(`Courses!G${ing.sheetRow}`, checkbox.checked ? '1' : '', token);
-        } catch (e) { console.warn('Failed to update Validé:', e); }
+        } catch (e) { console.warn('Failed to update Acheté:', e); }
       }
       updateProgress();
     });
@@ -223,6 +268,7 @@ function renderCoursesList() {
 
   updateProgress();
   renderCustomItems();
+  colorDayBadges();
 }
 
 /**
