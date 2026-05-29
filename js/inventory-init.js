@@ -2,6 +2,41 @@
  * Inventory initialization and event handlers
  */
 
+const categoryExpiryDays = {
+  "Produits laitiers": 180,
+  "Lait": 180,
+  "Fromage": 30,
+  "Viandes": 3,
+  "Poissons": 2,
+  "Œufs": 21,
+  "Conserves": 365,
+  "Fruits": 14,
+  "Légumes": 21,
+  "Boissons": 365,
+  "Épices & Condiments": 365,
+  "Sauces": 365,
+  "Féculents": 180,
+  "Autres": 30
+};
+
+function updateExpiryDateFromCategory(dateAddedSelector, categorySelector, expirySelector) {
+  const dateAddedEl = document.getElementById(dateAddedSelector);
+  const categoryEl = document.getElementById(categorySelector);
+  const expiryEl = document.getElementById(expirySelector);
+
+  if (!dateAddedEl || !categoryEl || !expiryEl) return;
+
+  const dateAdded = new Date(dateAddedEl.value + "T00:00:00");
+  if (isNaN(dateAdded.getTime())) return;
+
+  const category = categoryEl.value || "Autres";
+  const days = categoryExpiryDays[category] || 30;
+
+  const expiryDate = new Date(dateAdded);
+  expiryDate.setDate(expiryDate.getDate() + days);
+  expiryEl.value = expiryDate.toISOString().split("T")[0];
+}
+
 function setupEventHandlers() {
   const sheetCategories = [...new Set(inventoryData.map(i => i.Catégorie).filter(c => c))];
   const autoCategories = [
@@ -93,6 +128,34 @@ function setupEventHandlers() {
   if (editModal) {
     editModal.addEventListener("click", function(e) {
       if (e.target === this) closeEditModal();
+    });
+  }
+
+  // Update expiry date when category or date-added changes (add form)
+  const fieldCategory = document.getElementById("field-category");
+  const fieldDateAdded = document.getElementById("field-date-added");
+  if (fieldCategory) {
+    fieldCategory.addEventListener("change", () => {
+      updateExpiryDateFromCategory("field-date-added", "field-category", "field-expiry");
+    });
+  }
+  if (fieldDateAdded) {
+    fieldDateAdded.addEventListener("change", () => {
+      updateExpiryDateFromCategory("field-date-added", "field-category", "field-expiry");
+    });
+  }
+
+  // Update expiry date when category or date-added changes (edit modal)
+  const editCategory = document.getElementById("edit-category");
+  const editDateAdded = document.getElementById("edit-date-added");
+  if (editCategory) {
+    editCategory.addEventListener("change", () => {
+      updateExpiryDateFromCategory("edit-date-added", "edit-category", "edit-expiry");
+    });
+  }
+  if (editDateAdded) {
+    editDateAdded.addEventListener("change", () => {
+      updateExpiryDateFromCategory("edit-date-added", "edit-category", "edit-expiry");
     });
   }
 }
