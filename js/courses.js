@@ -503,8 +503,8 @@ async function initCourses() {
   document.getElementById('loading-state').textContent = 'Chargement...';
 
   try {
-    // Read Courses sheet
-    const rows = await SheetsAPI.readSheetTab('Courses');
+    // Read Courses sheet avec range A:G pour inclure colonnes F/G vides
+    const rows = await SheetsAPI.readSheetTab('Courses', 'A:G');
     const objects = SheetsAPI.rowsToObjects(rows);
 
     // Auto-refresh si sheet vide ou date périmée

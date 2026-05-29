@@ -40,13 +40,14 @@ function getApiKey() {
  * @returns {Promise<Array<Array>>} Array of rows, where each row is an array of cell values
  * @throws {Error} If the API request fails
  */
-async function readSheetTab(tabName) {
+async function readSheetTab(tabName, range = null) {
   try {
     const sheetId = getSheetId();
     const apiKey = getApiKey();
 
-    // Construct the API URL for the specified tab
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${tabName}?key=${apiKey}`;
+    // Construct the API URL for the specified tab (with optional range to include empty columns)
+    const rangeSpec = range ? `${tabName}!${range}` : tabName;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${rangeSpec}?key=${apiKey}`;
 
     // Fetch the data from Google Sheets API
     const response = await fetch(url);
