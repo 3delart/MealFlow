@@ -61,7 +61,7 @@ function renderHistoryContent(history) {
     grouped[item.Date].push(item);
   });
 
-  Object.keys(grouped).reverse().forEach(date => {
+  Object.keys(grouped).sort().reverse().forEach(date => {
     const items = grouped[date];
     const totalKcal = items.reduce((sum, i) => sum + i.Kcal_total, 0);
 
