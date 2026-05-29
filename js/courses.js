@@ -41,7 +41,7 @@ function normalize(str) {
 
 /**
  * Build ingredient map from planning + recipes
- * Returns { normalized_name: { name, needed, unit, days, inStock, fullyStocked } }
+ * Returns { normalized_name: { name, needed, unit, days, category, inStock, fullyStocked } }
  */
 function buildIngredientMap(window7, planningObjects) {
   const map = {};
@@ -64,6 +64,7 @@ function buildIngredientMap(window7, planningObjects) {
             needed: 0,
             unit: ing.unit || 'g',
             days: [],
+            category: null,
             inStock: 0,
             fullyStocked: false
           };
@@ -81,14 +82,14 @@ function buildIngredientMap(window7, planningObjects) {
 
 /**
  * Apply inventory deductions: reduce needed quantities by what's in stock
+ * Also populate category from inventory
  */
 function applyInventoryDeductions(ingredientMap, inventoryObjects) {
   inventoryObjects.forEach(invItem => {
     const invQty = parseFloat(invItem.Qty) || 0;
-    if (invQty <= 0) return;
-
     const invKey = normalize(invItem.Produit);
     const invUnit = invItem.Unité || 'g';
+    const invCategory = invItem.Catégorie || 'Autres';
 
     // Try exact match first
     let matched = ingredientMap[invKey];
@@ -105,52 +106,81 @@ function applyInventoryDeductions(ingredientMap, inventoryObjects) {
     }
 
     if (matched) {
-      // Check unit compatibility
-      const unitMatch =
-        matched.unit === invUnit ||
-        (matched.unit === 'piece' && invUnit === 'pièce') ||
-        (matched.unit === 'pièce' && invUnit === 'piece');
+      // Always set category from inventory if found
+      if (!matched.category) {
+        matched.category = invCategory;
+      }
 
-      if (unitMatch) {
-        matched.inStock = invQty;
-        matched.needed = Math.max(0, matched.needed - invQty);
-        matched.fullyStocked = matched.needed <= 0;
+      // Only deduct if units match
+      if (invQty > 0) {
+        const unitMatch =
+          matched.unit === invUnit ||
+          (matched.unit === 'piece' && invUnit === 'pièce') ||
+          (matched.unit === 'pièce' && invUnit === 'piece');
+
+        if (unitMatch) {
+          matched.inStock = invQty;
+          matched.needed = Math.max(0, matched.needed - invQty);
+          matched.fullyStocked = matched.needed <= 0;
+        }
       }
     }
   });
 }
 
 /**
- * Render the courses list into DOM
+ * Render the courses list into DOM, grouped by category
  */
 function renderCoursesList() {
   const container = document.getElementById('courses-list');
   const customSection = document.getElementById('custom-section');
 
-  // Sort ingredients by name
-  const sorted = Object.values(ingredientMap).sort((a, b) =>
-    a.name.localeCompare(b.name, 'fr')
-  );
-
   // Separate into "to buy" and "in stock"
-  const toBuy = sorted.filter(ing => ing.needed > 0);
-  const inStock = sorted.filter(ing => ing.fullyStocked);
+  const toBuy = Object.values(ingredientMap).filter(ing => ing.needed > 0);
+  const inStock = Object.values(ingredientMap).filter(ing => ing.fullyStocked);
+
+  // Group by category
+  function groupByCategory(items) {
+    const groups = {};
+    items.forEach(ing => {
+      const cat = ing.category || 'Autres';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(ing);
+    });
+    return groups;
+  }
+
+  // Sort items within each group by name
+  function sortGroup(group) {
+    return group.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+  }
 
   let html = '';
 
-  // "À acheter" section
+  // "À acheter" section by category
   if (toBuy.length > 0) {
-    html += '<div class="cat">À acheter</div>';
-    toBuy.forEach(ing => {
-      html += renderIngredientItem(ing);
+    const toBuyGroups = groupByCategory(toBuy);
+    const categories = Object.keys(toBuyGroups).sort();
+
+    categories.forEach(cat => {
+      html += `<div class="cat">${cat}</div>`;
+      sortGroup(toBuyGroups[cat]).forEach(ing => {
+        html += renderIngredientItem(ing);
+      });
     });
   }
 
-  // "En stock" section
+  // "En stock" section by category
   if (inStock.length > 0) {
     html += '<div class="cat in-stock">En stock ✓</div>';
-    inStock.forEach(ing => {
-      html += renderIngredientItem(ing, true);
+    const inStockGroups = groupByCategory(inStock);
+    const categories = Object.keys(inStockGroups).sort();
+
+    categories.forEach(cat => {
+      html += `<div class="cat in-stock" style="margin-top: 8px; margin-bottom: 2px;">${cat}</div>`;
+      sortGroup(inStockGroups[cat]).forEach(ing => {
+        html += renderIngredientItem(ing, true);
+      });
     });
   }
 
