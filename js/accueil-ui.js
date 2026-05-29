@@ -111,12 +111,12 @@ async function initAccueilUI() {
   const mealsContainer = document.getElementById('meals-container');
   if (mealsContainer) {
     mealsContainer.addEventListener('click', (e) => {
-      if (e.target.classList.contains('btn-mange')) {
-        const mealName = e.target.dataset.mealName;
-        openMangerModal(mealName);
-      } else if (e.target.classList.contains('btn-voir')) {
-        const mealName = e.target.dataset.mealName;
-        viewMealRecipe(mealName);
+      const mangeBtn = e.target.closest('.btn-mange');
+      const voirBtn = e.target.closest('.btn-voir');
+      if (mangeBtn) {
+        openMangerModal(mangeBtn.dataset.mealName);
+      } else if (voirBtn) {
+        viewMealRecipe(voirBtn.dataset.mealName);
       }
     });
   }
@@ -127,7 +127,7 @@ function renderGreeting() {
   if (user) {
     document.getElementById('greeting').textContent = `Bonjour ${user}`;
   }
-  document.getElementById('date-today').textContent = formatDate(getTodayISO());
+  document.getElementById('date-today').textContent = Utils.formatDate(getTodayISO());
 
   // Fill daily goal
   if (window.dailyGoal) {
@@ -207,10 +207,13 @@ function openMangerModal(mealName) {
   document.getElementById('manger-qty').value = '';
   document.getElementById('manger-qty').focus();
   modal.classList.remove('hidden');
+  modal.classList.add('open');
 }
 
 function closeMangerModal() {
-  document.getElementById('manger-modal').classList.add('hidden');
+  const modal = document.getElementById('manger-modal');
+  modal.classList.add('hidden');
+  modal.classList.remove('open');
   document.getElementById('manger-form').reset();
   document.getElementById('manger-preview').innerHTML = '';
   const mealGroup = document.getElementById('manger-meal-group');
