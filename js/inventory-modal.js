@@ -11,7 +11,7 @@ function openEditModal(item) {
   document.getElementById("edit-unit").value = item.Unité;
   document.getElementById("edit-date-added").value = item.Date_ajout;
   document.getElementById("edit-expiry").value = item.Péremption;
-  document.getElementById("edit-price").value = item.Prix || "";
+  document.getElementById("edit-price").value = (item.Prix || "").toString().replace(",", ".");
   modal.setAttribute("aria-hidden", "false");
   modal.classList.remove("hidden");
   modal.setAttribute("data-item-id", item.id);
@@ -31,13 +31,14 @@ async function saveEditedItem(e) {
   const item = inventoryData.find(i => i.id === itemId);
   if (!item) return;
 
+  const priceValue = document.getElementById("edit-price").value || item.Prix;
   const updatedData = {
     Catégorie: document.getElementById("edit-category").value || item.Catégorie,
     Qty: document.getElementById("edit-quantity").value || item.Qty,
     Unité: document.getElementById("edit-unit").value || item.Unité,
     Date_ajout: document.getElementById("edit-date-added").value || item.Date_ajout,
     Péremption: document.getElementById("edit-expiry").value || item.Péremption,
-    Prix: document.getElementById("edit-price").value || item.Prix
+    Prix: priceValue.toString().replace(".", ",")
   };
 
   // Clear expiry date if quantity is 0 (explicitly set to empty)
