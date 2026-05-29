@@ -94,26 +94,72 @@
     </div>
   </div>
 
-  <!-- TASK 5: Consommer Modal -->
+  <!-- TASK 5: Consommer Modal (4 tabs) -->
   <div id="consommer-modal" class="modal hidden">
     <div class="modal-content">
       <div class="modal-header">
         <h3>📦 Consommer</h3>
         <button class="modal-close" id="close-consommer-modal">&times;</button>
       </div>
-      <form id="consommer-form" class="modal-form">
-        <label for="consommer-product">Produit:</label>
-        <select id="consommer-product" required>
+
+      <!-- Tab buttons -->
+      <div class="consommer-tabs">
+        <button class="tab-btn active" data-tab="scanner">📷 Scanner</button>
+        <button class="tab-btn" data-tab="inventaire">📦 Inventaire</button>
+        <button class="tab-btn" data-tab="recette">🍽️ Recette</button>
+        <button class="tab-btn" data-tab="manuel">✏️ Manuel</button>
+      </div>
+
+      <!-- Tab: Scanner -->
+      <div class="tab-content active" id="tab-scanner">
+        <div id="consommer-scanner-video" style="display:none; width:100%; height:280px; background:#000; border-radius:6px; margin-bottom:12px;"></div>
+        <div class="scanner-controls" style="display:flex; gap:8px; margin-bottom:12px;">
+          <button id="consommer-btn-scan" class="btn btn-primary" style="flex:1;">📷 Scanner</button>
+          <button id="consommer-btn-stop-scan" class="btn btn-secondary" style="flex:1; display:none;">⏹️ Arrêter</button>
+        </div>
+        <p id="consommer-scanner-status" class="scanner-status"></p>
+        <div id="consommer-scan-result" style="display:none;">
+          <p id="consommer-scan-name" style="font-weight:bold; margin-bottom:4px;"></p>
+          <p id="consommer-scan-kcal" style="color:var(--color-text-light); margin-bottom:12px; font-size:0.9em;"></p>
+          <label>Quantité (g):</label>
+          <input type="number" id="consommer-scan-qty" min="1" step="1" style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; margin-bottom:12px;">
+          <div id="consommer-scan-preview" class="preview-box"></div>
+          <button class="btn btn-primary" style="width:100%;" onclick="submitConsommerScan()">Soumettre</button>
+        </div>
+      </div>
+
+      <!-- Tab: Inventaire -->
+      <div class="tab-content" id="tab-inventaire">
+        <label>Produit:</label>
+        <select id="consommer-product" style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; margin-bottom:12px;">
           <option value="">-- Sélectionner --</option>
         </select>
-
-        <label for="consommer-qty">Quantité:</label>
-        <input type="number" id="consommer-qty" min="0" step="1" required>
-
+        <label>Quantité (g):</label>
+        <input type="number" id="consommer-qty" min="1" step="1" style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; margin-bottom:12px;">
         <div id="consommer-preview" class="preview-box"></div>
+        <button class="btn btn-primary" style="width:100%;" onclick="submitConsommerInventaire()">Soumettre</button>
+      </div>
 
-        <button type="submit" class="btn btn-primary" style="width: 100%;">Soumettre</button>
-      </form>
+      <!-- Tab: Recette -->
+      <div class="tab-content" id="tab-recette">
+        <label>Recette:</label>
+        <select id="consommer-recette" style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; margin-bottom:12px;">
+          <option value="">-- Sélectionner --</option>
+        </select>
+        <label>Quantité (g):</label>
+        <input type="number" id="consommer-recette-qty" min="1" step="1" style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; margin-bottom:12px;">
+        <div id="consommer-recette-preview" class="preview-box"></div>
+        <button class="btn btn-primary" style="width:100%;" onclick="submitConsommerRecette()">Soumettre</button>
+      </div>
+
+      <!-- Tab: Manuel -->
+      <div class="tab-content" id="tab-manuel">
+        <label>Nom:</label>
+        <input type="text" id="consommer-manuel-nom" placeholder="Ex: Chips, Yaourt..." style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; margin-bottom:12px;">
+        <label>Calories totales (kcal):</label>
+        <input type="number" id="consommer-manuel-kcal" min="0" step="1" style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; margin-bottom:12px;">
+        <button class="btn btn-primary" style="width:100%;" onclick="submitConsommerManuel()">Soumettre</button>
+      </div>
     </div>
   </div>
 

@@ -20,12 +20,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('manger-qty')?.addEventListener('input', updateMangerPreview);
   document.getElementById('close-manger-modal')?.addEventListener('click', closeMangerModal);
 
-  // Event listeners for Consommer modal
+  // Event listeners for Consommer modal - tabs
   document.getElementById('consommer-btn').addEventListener('click', openConsommerModal);
   document.getElementById('close-consommer-modal').addEventListener('click', closeConsommerModal);
-  document.getElementById('consommer-form').addEventListener('submit', submitConsommer);
-  document.getElementById('consommer-qty').addEventListener('input', updateConsommerPreview);
-  document.getElementById('consommer-product').addEventListener('change', updateConsommerPreview);
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchConsommerTab(btn.dataset.tab));
+  });
+
+  // Consommer - Scanner tab
+  document.getElementById('consommer-btn-scan')?.addEventListener('click', consommerScannerStart);
+  document.getElementById('consommer-btn-stop-scan')?.addEventListener('click', consommerScannerStop);
+
+  // Consommer - Inventaire tab
+  document.getElementById('consommer-product')?.addEventListener('change', updateConsommerPreview);
+  document.getElementById('consommer-qty')?.addEventListener('input', updateConsommerPreview);
+
+  // Consommer - Recette tab
+  document.getElementById('consommer-recette')?.addEventListener('change', updateConsommerRecettePreview);
+  document.getElementById('consommer-recette-qty')?.addEventListener('input', updateConsommerRecettePreview);
 
   window.addEventListener('auth-changed', async (e) => {
     if (e.detail.email) {
@@ -209,30 +221,180 @@ async function submitManger(e) {
   }
 }
 
-// TASK 5: Consommer Modal Functions
+// TASK 5: Consommer Modal (4 tabs)
+let consommerScannerActive = false;
+let consommerQrScanner = null;
+
 function openConsommerModal() {
   const modal = document.getElementById('consommer-modal');
-  const select = document.getElementById('consommer-product');
+  const inventaireSelect = document.getElementById('consommer-product');
+  const recetteSelect = document.getElementById('consommer-recette');
 
-  // Populate products dropdown from inventory
-  select.innerHTML = '<option value="">-- Sélectionner --</option>';
+  // Populate inventory select
+  inventaireSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
   const items = InventoryAPI.getActiveItems();
   items.forEach(item => {
     const option = document.createElement('option');
-    option.value = item.ID;
-    option.textContent = item.Produit;
-    option.dataset.kcalPer100 = item.Kcal_per_100;
-    option.dataset.unit = item.Unité;
-    select.appendChild(option);
+    option.value = item.id;
+    option.textContent = `${item.name} (${item.calories_per_100} kcal/100g)`;
+    option.dataset.kcalPer100 = item.calories_per_100;
+    option.dataset.unit = item.unit;
+    inventaireSelect.appendChild(option);
   });
 
+  // Populate recette select
+  recetteSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+  if (window.recipesData) {
+    Object.keys(window.recipesData).forEach(key => {
+      const recipe = window.recipesData[key];
+      const option = document.createElement('option');
+      option.value = key;
+      option.textContent = recipe.name;
+      option.dataset.kcalPer100 = recipe.kcal_per_100;
+      recetteSelect.appendChild(option);
+    });
+  }
+
+  // Show first tab (scanner)
+  switchConsommerTab('scanner');
   modal.classList.remove('hidden');
 }
 
 function closeConsommerModal() {
   document.getElementById('consommer-modal').classList.add('hidden');
-  document.getElementById('consommer-form').reset();
+  consommerScannerStop();
+  document.getElementById('consommer-product').value = '';
+  document.getElementById('consommer-qty').value = '';
   document.getElementById('consommer-preview').innerHTML = '';
+  document.getElementById('consommer-recette').value = '';
+  document.getElementById('consommer-recette-qty').value = '';
+  document.getElementById('consommer-recette-preview').innerHTML = '';
+  document.getElementById('consommer-manuel-nom').value = '';
+  document.getElementById('consommer-manuel-kcal').value = '';
+  document.getElementById('consommer-scan-result').style.display = 'none';
+}
+
+function switchConsommerTab(tabName) {
+  // Hide all tabs
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+  // Show selected tab
+  const tabEl = document.getElementById(`tab-${tabName}`);
+  if (tabEl) tabEl.classList.add('active');
+
+  // Mark button active
+  const btn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+  if (btn) btn.classList.add('active');
+
+  // Stop scanner if leaving scanner tab
+  if (tabName !== 'scanner') {
+    consommerScannerStop();
+  }
+}
+
+// Scanner functions
+async function consommerScannerStart() {
+  if (consommerScannerActive) return;
+  consommerScannerActive = true;
+
+  const videoEl = document.getElementById('consommer-scanner-video');
+  const statusEl = document.getElementById('consommer-scanner-status');
+  const btnStart = document.getElementById('consommer-btn-scan');
+  const btnStop = document.getElementById('consommer-btn-stop-scan');
+
+  if (btnStart) btnStart.style.display = 'none';
+  if (btnStop) btnStop.style.display = 'inline-block';
+  if (videoEl) videoEl.style.display = 'block';
+
+  try {
+    consommerQrScanner = new Html5Qrcode('consommer-scanner-video');
+    await consommerQrScanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: 280 },
+      (decodedText) => {
+        consommerScannerStop();
+        consommerScannerOnDetect(decodedText);
+      },
+      (err) => console.warn('Scanner error:', err)
+    );
+    if (statusEl) statusEl.textContent = '🎯 Scanning...';
+  } catch (err) {
+    console.error('Failed to start scanner:', err);
+    if (statusEl) statusEl.textContent = '❌ Erreur caméra';
+    consommerScannerActive = false;
+    if (btnStart) btnStart.style.display = 'inline-block';
+    if (btnStop) btnStop.style.display = 'none';
+  }
+}
+
+function consommerScannerStop() {
+  if (!consommerScannerActive || !consommerQrScanner) return;
+
+  consommerQrScanner.stop().catch(err => console.warn('Failed to stop scanner:', err));
+  consommerQrScanner = null;
+  consommerScannerActive = false;
+
+  const videoEl = document.getElementById('consommer-scanner-video');
+  const btnStart = document.getElementById('consommer-btn-scan');
+  const btnStop = document.getElementById('consommer-btn-stop-scan');
+  const statusEl = document.getElementById('consommer-scanner-status');
+
+  if (videoEl) videoEl.style.display = 'none';
+  if (btnStart) btnStart.style.display = 'inline-block';
+  if (btnStop) btnStop.style.display = 'none';
+  if (statusEl) statusEl.textContent = '';
+}
+
+async function consommerScannerOnDetect(barcode) {
+  const resultEl = document.getElementById('consommer-scan-result');
+  const nameEl = document.getElementById('consommer-scan-name');
+  const kcalEl = document.getElementById('consommer-scan-kcal');
+  const qtyEl = document.getElementById('consommer-scan-qty');
+
+  // First check inventory
+  let product = InventoryAPI.findByBarcode(barcode);
+
+  // Otherwise fetch from Open Food Facts
+  if (!product) {
+    try {
+      product = await fetchProductFromOpenFoodFacts(barcode);
+    } catch (err) {
+      console.error('Product lookup failed:', err);
+      alert('Produit non trouvé');
+      return;
+    }
+  }
+
+  if (!product || !product.name) {
+    alert('Produit non trouvé');
+    return;
+  }
+
+  // Display result
+  const kcalPer100 = product.calories_per_100 || product.calories || 0;
+  if (nameEl) nameEl.textContent = product.name;
+  if (kcalEl) kcalEl.textContent = `${kcalPer100} kcal/100g`;
+  if (qtyEl) qtyEl.value = '';
+  if (resultEl) resultEl.style.display = 'block';
+
+  // Store for submit
+  window.consommerScanData = { name: product.name, kcalPer100, unit: product.unit || 'g', type: 'scan' };
+}
+
+function submitConsommerScan() {
+  const qtyEl = document.getElementById('consommer-scan-qty');
+  const qty = parseFloat(qtyEl.value);
+
+  if (!qty || qty <= 0) {
+    alert('Entrez une quantité');
+    return;
+  }
+
+  const data = window.consommerScanData;
+  const totalKcal = Math.round(qty * data.kcalPer100 / 100);
+
+  _enregistrerConsommation(data.name, qty, data.unit, data.kcalPer100, totalKcal, 'scan');
 }
 
 function updateConsommerPreview() {
@@ -246,62 +408,130 @@ function updateConsommerPreview() {
   }
 
   const items = InventoryAPI.getActiveItems();
-  const product = items.find(i => i.ID === productSelect.value);
+  const product = items.find(i => i.id === productSelect.value);
   if (!product) return;
 
   const qty = parseFloat(qtyInput.value);
-  const kcalPer100 = parseFloat(product.Kcal_per_100) || 0;
-  const totalKcal = Utils.calcPortionKcal(qty, kcalPer100);
+  const kcalPer100 = product.calories_per_100 || 0;
+  const totalKcal = Math.round(qty * kcalPer100 / 100);
 
   previewBox.innerHTML = `
     <div style="padding: 12px; background-color: var(--color-bg); border-radius: 6px;">
-      <p style="margin: 0; font-size: 0.9em;"><strong>${product.Produit}</strong></p>
-      <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${qty} ${product.Unité} · ${totalKcal} kcal</p>
+      <p style="margin: 0; font-size: 0.9em;"><strong>${product.name}</strong></p>
+      <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${qty}${product.unit} · ${totalKcal} kcal</p>
     </div>
   `;
 }
 
-async function submitConsommer(e) {
-  e.preventDefault();
-
+function submitConsommerInventaire() {
   const productSelect = document.getElementById('consommer-product');
   const qtyInput = document.getElementById('consommer-qty');
+  const qty = parseFloat(qtyInput.value);
 
-  if (!productSelect.value || !qtyInput.value) {
-    Utils.showToast('Veuillez remplir tous les champs', 'error');
+  if (!productSelect.value || !qty || qty <= 0) {
+    alert('Sélectionnez un produit et une quantité');
     return;
   }
 
   const items = InventoryAPI.getActiveItems();
-  const product = items.find(i => i.ID === productSelect.value);
+  const product = items.find(i => i.id === productSelect.value);
   if (!product) {
-    Utils.showToast('Produit non trouvé', 'error');
+    alert('Produit non trouvé');
     return;
   }
 
-  const qty = parseFloat(qtyInput.value);
-  const kcalPer100 = parseFloat(product.Kcal_per_100) || 0;
-  const totalKcal = Math.round(Utils.calcPortionKcal(qty, kcalPer100));
+  const kcalPer100 = product.calories_per_100 || 0;
+  const totalKcal = Math.round(qty * kcalPer100 / 100);
 
-  const now = new Date();
-  const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  const date = Utils.getTodayISO();
+  _enregistrerConsommation(product.name, qty, product.unit, kcalPer100, totalKcal, 'inventaire');
+}
 
-  try {
-    const email = UserContext.getCurrentEmail();
-    const tabName = `History_${email}`;
-    const values = [date, time, product.Produit, qty, product.Unité, totalKcal, 'consommer', productSelect.value];
+function updateConsommerRecettePreview() {
+  const recetteSelect = document.getElementById('consommer-recette');
+  const qtyInput = document.getElementById('consommer-recette-qty');
+  const previewBox = document.getElementById('consommer-recette-preview');
 
-    await SheetsAPI.appendRow(tabName, values, Auth.getToken());
-
-    closeConsommerModal();
-    loadTodayHistory();
-    renderConsumptionLog();
-    Utils.showToast('Consommation enregistrée', 'success');
-  } catch (err) {
-    console.error('Error submitting consommer:', err);
-    Utils.showToast('Erreur d\'enregistrement', 'error');
+  if (!recetteSelect.value || !qtyInput.value) {
+    previewBox.innerHTML = '';
+    return;
   }
+
+  const recipe = window.recipesData[recetteSelect.value];
+  if (!recipe) return;
+
+  const qty = parseFloat(qtyInput.value);
+  const totalKcal = Math.round(qty * recipe.kcal_per_100 / 100);
+
+  previewBox.innerHTML = `
+    <div style="padding: 12px; background-color: var(--color-bg); border-radius: 6px;">
+      <p style="margin: 0; font-size: 0.9em;"><strong>${recipe.name}</strong></p>
+      <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${qty}g · ${totalKcal} kcal</p>
+    </div>
+  `;
+}
+
+function submitConsommerRecette() {
+  const recetteSelect = document.getElementById('consommer-recette');
+  const qtyInput = document.getElementById('consommer-recette-qty');
+  const qty = parseFloat(qtyInput.value);
+
+  if (!recetteSelect.value || !qty || qty <= 0) {
+    alert('Sélectionnez une recette et une quantité');
+    return;
+  }
+
+  const recipe = window.recipesData[recetteSelect.value];
+  if (!recipe) {
+    alert('Recette non trouvée');
+    return;
+  }
+
+  const kcalPer100 = recipe.kcal_per_100 || 0;
+  const totalKcal = Math.round(qty * kcalPer100 / 100);
+
+  _enregistrerConsommation(recipe.name, qty, 'g', kcalPer100, totalKcal, 'recette');
+}
+
+function submitConsommerManuel() {
+  const nomEl = document.getElementById('consommer-manuel-nom');
+  const kcalEl = document.getElementById('consommer-manuel-kcal');
+  const nom = nomEl.value.trim();
+  const totalKcal = parseFloat(kcalEl.value);
+
+  if (!nom || !totalKcal || totalKcal <= 0) {
+    alert('Entrez un nom et des calories');
+    return;
+  }
+
+  _enregistrerConsommation(nom, totalKcal, 'kcal', null, totalKcal, 'manuel');
+}
+
+async function _enregistrerConsommation(nom, qty, unit, kcalPer100, totalKcal, type) {
+  const now = new Date();
+  const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const date = Utils.getTodayISO();
+  const user = getCurrentUser();
+  const token = getAccessToken?.();
+  const tabName = `History_${user}`;
+  const row = [date, time, nom, qty, unit, totalKcal, type];
+
+  // Local state
+  todaysConsumptions.push({ Heure: time, Nom: nom, Quantité: qty, Unité: unit, Kcal_total: totalKcal, Type: type });
+  caloriesConsumed = (caloriesConsumed || 0) + totalKcal;
+
+  // Sheets
+  if (token && window.SheetsAPI) {
+    try {
+      await window.SheetsAPI.appendRowWithToken(tabName, row, token);
+    } catch (err) {
+      console.error('Error saving to Sheets:', err);
+    }
+  }
+
+  closeConsommerModal();
+  renderConsumptionLog();
+  updateProgressDisplay();
+  renderWheel();
 }
 
 // TASK 6: Delete Consumption Function
