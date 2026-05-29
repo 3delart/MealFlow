@@ -144,8 +144,4 @@ async function processBarcodeDetection(barcode) {
     document.getElementById("info-carbs").textContent = product.carbs.toFixed(1) + "g";
   }
   document.getElementById("info-allergens").textContent = product.allergens;
-
-  const expiryDate = new Date();
-  expiryDate.setDate(expiryDate.getDate() + 7);
-  document.getElementById("field-expiry").value = expiryDate.toISOString().split("T")[0];
 }
