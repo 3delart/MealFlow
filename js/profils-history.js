@@ -109,25 +109,6 @@ function openStatsModal(userId) {
   loadUserHistory(userId).then(history => {
     renderCaloriesChart(userId, 7);
 
-    document.querySelectorAll(".tab-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const tab = btn.dataset.tab;
-        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-
-        document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
-        document.getElementById(`tab-${tab}`).classList.add("active");
-
-        if (tab === "calories") {
-          destroyChart("chart-calories");
-          renderCaloriesChart(currentStatsUser, currentStatsPeriod);
-        } else if (tab === "repartition") {
-          destroyChart("chart-repartition");
-          renderRepartitionChart(currentStatsUser);
-        }
-      });
-    });
-
     document.querySelectorAll(".period-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         const days = parseInt(btn.dataset.days);
@@ -234,52 +215,3 @@ function renderCaloriesChart(userId, days) {
   });
 }
 
-function renderRepartitionChart(userId) {
-  loadUserHistory(userId).then(history => {
-    const grouped = {};
-    history.forEach(item => {
-      if (!grouped[item.Type]) {
-        grouped[item.Type] = 0;
-      }
-      grouped[item.Type] += item.Kcal_total;
-    });
-
-    const typeMap = {
-      "manger": "Repas",
-      "inventaire": "Inventaire",
-      "scan": "Scan",
-      "recette": "Recette",
-      "manuel": "Manuel"
-    };
-
-    const labels = Object.keys(grouped).map(t => typeMap[t] || t);
-    const data = Object.values(grouped);
-    const colors = ["#2E7D32", "#FF8F00", "#1976D2", "#7B1FA2", "#C62828"];
-
-    const ctx = document.getElementById("chart-repartition").getContext("2d");
-
-    destroyChart("chart-repartition");
-
-    activeCharts["chart-repartition"] = new Chart(ctx, {
-      type: "doughnut",
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            data: data,
-            backgroundColor: colors.slice(0, labels.length),
-            borderColor: "var(--color-surface)",
-            borderWidth: 2
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: {
-          legend: { display: true, position: "bottom" }
-        }
-      }
-    });
-  });
-}

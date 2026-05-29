@@ -48,20 +48,11 @@
     <div class="modal-dialog modal-wide">
       <button class="modal-close" onclick="closeStatsModal()">&times;</button>
       <h2 id="stats-modal-title">Statistiques</h2>
-      <div class="consommer-tabs">
-        <button class="tab-btn active" data-tab="calories">📈 Calories</button>
-        <button class="tab-btn" data-tab="repartition">🥧 Répartition</button>
+      <div class="chart-period-btns">
+        <button class="period-btn active" data-days="7">7j</button>
+        <button class="period-btn" data-days="30">30j</button>
       </div>
-      <div id="tab-calories" class="tab-content active">
-        <div class="chart-period-btns">
-          <button class="period-btn active" data-days="7">7j</button>
-          <button class="period-btn" data-days="30">30j</button>
-        </div>
-        <canvas id="chart-calories" height="200"></canvas>
-      </div>
-      <div id="tab-repartition" class="tab-content">
-        <canvas id="chart-repartition" height="200"></canvas>
-      </div>
+      <canvas id="chart-calories" height="200"></canvas>
     </div>
   </div>
 
