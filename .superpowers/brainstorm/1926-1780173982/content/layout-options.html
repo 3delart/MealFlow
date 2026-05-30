@@ -1,0 +1,168 @@
+<h2>Planning mobile — quelle mise en page ?</h2>
+<p class="subtitle">3 approches pour afficher la semaine sur téléphone</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#fff;border-radius:12px;padding:12px;font-family:sans-serif;max-width:260px;margin:auto;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+        <!-- Week nav -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <button style="background:#FF8F00;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:13px">←</button>
+          <span style="font-weight:600;font-size:13px">Sam 30 mai – Ven 5 juin</span>
+          <button style="background:#FF8F00;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:13px">→</button>
+        </div>
+        <!-- Day cards -->
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <!-- Day 1 -->
+          <div style="background:#f5f5f5;border-radius:10px;overflow:hidden">
+            <div style="background:#FF8F00;color:#fff;padding:6px 12px;font-size:12px;font-weight:700">SAM 30 MAI</div>
+            <div style="padding:8px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div>
+                <div style="font-size:10px;color:#666;margin-bottom:4px;text-transform:uppercase;font-weight:600">🌞 Midi</div>
+                <div style="background:#FF8F00;color:#fff;border-radius:8px;padding:4px 8px;font-size:11px">Linguines 🍝 ×</div>
+              </div>
+              <div>
+                <div style="font-size:10px;color:#666;margin-bottom:4px;text-transform:uppercase;font-weight:600">🌙 Soir</div>
+                <div style="color:#aaa;font-size:18px;text-align:center">+</div>
+              </div>
+            </div>
+          </div>
+          <!-- Day 2 -->
+          <div style="background:#f5f5f5;border-radius:10px;overflow:hidden">
+            <div style="background:#2E7D32;color:#fff;padding:6px 12px;font-size:12px;font-weight:700">DIM 31 MAI</div>
+            <div style="padding:8px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div>
+                <div style="font-size:10px;color:#666;margin-bottom:4px;text-transform:uppercase;font-weight:600">🌞 Midi</div>
+                <div style="display:flex;flex-wrap:wrap;gap:3px">
+                  <div style="background:#FF8F00;color:#fff;border-radius:8px;padding:3px 6px;font-size:10px">Salade ×</div>
+                  <div style="background:#FF8F00;color:#fff;border-radius:8px;padding:3px 6px;font-size:10px">César ×</div>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:10px;color:#666;margin-bottom:4px;text-transform:uppercase;font-weight:600">🌙 Soir</div>
+                <div style="display:flex;flex-wrap:wrap;gap:3px">
+                  <div style="background:#FF8F00;color:#fff;border-radius:8px;padding:3px 6px;font-size:10px">Apéro ×</div>
+                  <div style="background:#FF8F00;color:#fff;border-radius:8px;padding:3px 6px;font-size:10px">Udon ×</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Day 3 empty -->
+          <div style="background:#f5f5f5;border-radius:10px;overflow:hidden">
+            <div style="background:#e0e0e0;color:#666;padding:6px 12px;font-size:12px;font-weight:700">LUN 1 JUIN</div>
+            <div style="padding:8px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="text-align:center;color:#ccc;font-size:20px">+</div>
+              <div style="text-align:center;color:#ccc;font-size:20px">+</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Cartes par jour</h3>
+      <p>Chaque jour = une carte avec bandeau coloré. Midi/Soir côte à côte à l'intérieur. Chips wrappent librement. Aujourd'hui en vert, jours passés en gris.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#fff;border-radius:12px;padding:12px;font-family:sans-serif;max-width:260px;margin:auto;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+        <!-- Week nav -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <button style="background:#FF8F00;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:13px">←</button>
+          <span style="font-weight:600;font-size:13px">Sam 30 mai – Ven 5 juin</span>
+          <button style="background:#FF8F00;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:13px">→</button>
+        </div>
+        <!-- Compact table with full-width slots -->
+        <div style="display:flex;flex-direction:column;gap:1px;background:#eee;border-radius:10px;overflow:hidden">
+          <!-- Header -->
+          <div style="display:grid;grid-template-columns:70px 1fr 1fr;background:#fff;padding:6px 8px">
+            <span style="font-size:10px;color:#999"></span>
+            <span style="font-size:11px;font-weight:700;color:#FF8F00;text-align:center">🌞 Midi</span>
+            <span style="font-size:11px;font-weight:700;color:#2E7D32;text-align:center">🌙 Soir</span>
+          </div>
+          <!-- Today highlighted -->
+          <div style="display:grid;grid-template-columns:70px 1fr 1fr;background:#FFF8E1;padding:8px;align-items:start;border-left:3px solid #FF8F00">
+            <div style="font-size:11px;font-weight:700;color:#FF8F00;line-height:1.3">SAM<br><span style="font-size:10px;color:#666">30 mai</span></div>
+            <div style="padding:0 4px">
+              <div style="background:#FF8F00;color:#fff;border-radius:6px;padding:3px 6px;font-size:10px;margin-bottom:2px">Linguines ×</div>
+            </div>
+            <div style="padding:0 4px;text-align:center;color:#ccc;font-size:18px">+</div>
+          </div>
+          <!-- Dim -->
+          <div style="display:grid;grid-template-columns:70px 1fr 1fr;background:#fff;padding:8px;align-items:start">
+            <div style="font-size:11px;font-weight:700;color:#333;line-height:1.3">DIM<br><span style="font-size:10px;color:#666">31 mai</span></div>
+            <div style="padding:0 4px;display:flex;flex-wrap:wrap;gap:2px">
+              <div style="background:#FF8F00;color:#fff;border-radius:6px;padding:2px 5px;font-size:10px">Salade ×</div>
+              <div style="background:#FF8F00;color:#fff;border-radius:6px;padding:2px 5px;font-size:10px">César ×</div>
+            </div>
+            <div style="padding:0 4px;display:flex;flex-wrap:wrap;gap:2px">
+              <div style="background:#FF8F00;color:#fff;border-radius:6px;padding:2px 5px;font-size:10px">Apéro ×</div>
+              <div style="background:#FF8F00;color:#fff;border-radius:6px;padding:2px 5px;font-size:10px">Udon ×</div>
+            </div>
+          </div>
+          <!-- Lun -->
+          <div style="display:grid;grid-template-columns:70px 1fr 1fr;background:#fff;padding:8px;align-items:start">
+            <div style="font-size:11px;font-weight:700;color:#333;line-height:1.3">LUN<br><span style="font-size:10px;color:#666">1 juin</span></div>
+            <div style="padding:0 4px;text-align:center;color:#ccc;font-size:18px">+</div>
+            <div style="padding:0 4px;text-align:center;color:#ccc;font-size:18px">+</div>
+          </div>
+          <div style="background:#f5f5f5;padding:6px;text-align:center;font-size:10px;color:#999">4 jours de plus…</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Grille compacte améliorée</h3>
+      <p>Garde la grille actuelle mais : colonne jour réduite à 70px, chips wrappent, aujourd'hui surligné avec bordure orange, labels Midi/Soir en couleur en haut.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#fff;border-radius:12px;padding:12px;font-family:sans-serif;max-width:260px;margin:auto;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+        <!-- Day tabs -->
+        <div style="display:flex;gap:4px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px;scrollbar-width:none">
+          <div style="background:#FF8F00;color:#fff;border-radius:20px;padding:4px 10px;font-size:11px;white-space:nowrap;font-weight:700">Sam 30</div>
+          <div style="background:#f0f0f0;color:#666;border-radius:20px;padding:4px 10px;font-size:11px;white-space:nowrap">Dim 31</div>
+          <div style="background:#f0f0f0;color:#666;border-radius:20px;padding:4px 10px;font-size:11px;white-space:nowrap">Lun 1</div>
+          <div style="background:#f0f0f0;color:#666;border-radius:20px;padding:4px 10px;font-size:11px;white-space:nowrap">Mar 2</div>
+          <div style="background:#f0f0f0;color:#666;border-radius:20px;padding:4px 10px;font-size:11px;white-space:nowrap">Mer 3</div>
+          <div style="background:#f0f0f0;color:#666;border-radius:20px;padding:4px 10px;font-size:11px;white-space:nowrap">Jeu 4</div>
+          <div style="background:#f0f0f0;color:#666;border-radius:20px;padding:4px 10px;font-size:11px;white-space:nowrap">Ven 5</div>
+        </div>
+        <!-- Single day view -->
+        <div style="background:#FFF8E1;border-radius:12px;padding:12px;border:2px solid #FF8F00">
+          <div style="font-size:16px;font-weight:700;color:#FF8F00;margin-bottom:12px">SAMEDI 30 MAI</div>
+          <!-- Midi -->
+          <div style="margin-bottom:12px">
+            <div style="font-size:12px;font-weight:700;color:#666;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+              <span>🌞</span> MIDI
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <div style="background:#FF8F00;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:500">Linguines Sautés tomates ×</div>
+              <div style="background:#f0f0f0;color:#999;border-radius:10px;padding:6px 12px;font-size:13px;border:2px dashed #ddd">+ Ajouter</div>
+            </div>
+          </div>
+          <!-- Soir -->
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#666;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+              <span>🌙</span> SOIR
+            </div>
+            <div style="background:#f0f0f0;color:#999;border-radius:10px;padding:6px 12px;font-size:13px;border:2px dashed #ddd;display:inline-block">+ Ajouter</div>
+          </div>
+        </div>
+        <!-- Nav hint -->
+        <div style="display:flex;justify-content:space-between;margin-top:10px">
+          <button style="background:#f0f0f0;border:none;border-radius:8px;padding:8px 16px;font-size:12px;color:#666">← Hier</button>
+          <button style="background:#f0f0f0;border:none;border-radius:8px;padding:8px 16px;font-size:12px;color:#666">Demain →</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Vue jour par jour</h3>
+      <p>Onglets scrollables en haut (1 pill par jour), vue focalisée sur le jour sélectionné. Midi et Soir empilés verticalement avec bouton "+ Ajouter" explicite. Semaine toujours visible via les pills.</p>
+    </div>
+  </div>
+
+</div>
