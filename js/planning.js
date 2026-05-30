@@ -127,8 +127,19 @@ function renderMealPlan() {
     const soirArray = dayMeal?.Soir || [];
     const midiRecipes = Array.isArray(midiArray) ? midiArray : (midiArray ? [midiArray] : []);
     const soirRecipes = Array.isArray(soirArray) ? soirArray : (soirArray ? [soirArray] : []);
-    const midiDisplay = midiRecipes.length > 0 ? midiRecipes.join(", ") : "+";
-    const soirDisplay = soirRecipes.length > 0 ? soirRecipes.join(", ") : "+";
+
+    // Generate chips HTML for recipes
+    const renderChips = (recipes, dateISO, mealTime) => {
+      if (recipes.length === 0) return '+';
+      return recipes.map(recipe => `
+        <span class="recipe-chip" onclick="event.stopPropagation()">${recipe}
+          <button class="chip-delete" onclick="removeRecipe('${dateISO}', '${mealTime}', '${recipe.replace(/'/g, "\\'")}')">×</button>
+        </span>
+      `).join('');
+    };
+
+    const midiDisplay = renderChips(midiRecipes, day.dateISO, 'Midi');
+    const soirDisplay = renderChips(soirRecipes, day.dateISO, 'Soir');
 
     html += `
       <div class="meal-plan-row">
@@ -144,6 +155,20 @@ function renderMealPlan() {
   });
 
   container.innerHTML = html;
+}
+
+/**
+ * Remove recipe from meal slot
+ */
+function removeRecipe(dateISO, mealTime, recipeName) {
+  if (!allPlanData[dateISO]) return;
+  const recipeArray = allPlanData[dateISO][mealTime];
+  if (!Array.isArray(recipeArray)) return;
+  allPlanData[dateISO][mealTime] = recipeArray.filter(r => r !== recipeName);
+  buildMealPlanForCurrentWindow();
+  renderMealPlan();
+  syncCoursesFromMealPlan();
+  savePlanningToSheets();
 }
 
 /**
@@ -263,13 +288,20 @@ function selectRecipe(recipeName) {
     allPlanData[dateISO] = { Midi: [], Soir: [] };
   }
 
-  // Append recipe to array (multi-recipe support)
-  const recipeArray = allPlanData[dateISO][mealTime];
-  if (!Array.isArray(recipeArray)) {
-    allPlanData[dateISO][mealTime] = recipeArray ? [recipeArray] : [];
-  }
-  if (!allPlanData[dateISO][mealTime].includes(recipeName)) {
-    allPlanData[dateISO][mealTime].push(recipeName);
+  // Handle "None" replacement or append to array
+  const recipeValue = allPlanData[dateISO][mealTime];
+
+  // If slot is empty or contains "None", replace it
+  if (!recipeValue || recipeValue === "None" || (Array.isArray(recipeValue) && recipeValue.length === 0)) {
+    allPlanData[dateISO][mealTime] = [recipeName];
+  } else {
+    // Otherwise append to array (multi-recipe support)
+    if (!Array.isArray(recipeValue)) {
+      allPlanData[dateISO][mealTime] = recipeValue ? [recipeValue] : [];
+    }
+    if (!allPlanData[dateISO][mealTime].includes(recipeName)) {
+      allPlanData[dateISO][mealTime].push(recipeName);
+    }
   }
 
   console.log(`Selected recipe: ${recipeName} for ${dateISO} ${mealTime}`);
