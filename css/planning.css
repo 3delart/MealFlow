@@ -82,6 +82,10 @@ main {
 }
 
 .recipe-name {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
   font-weight: 500;
   color: var(--color-text);
   word-wrap: break-word;
@@ -330,16 +334,18 @@ main {
 
 /* Recipe chips styling */
 .recipe-chip {
-  display: inline-flex;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 6px;
   background-color: var(--color-accent, #4CAF50);
   color: white;
   padding: 4px 8px;
   border-radius: 12px;
-  margin: 2px;
+  margin: 0;
   font-size: 13px;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .chip-delete {
