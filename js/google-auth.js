@@ -101,6 +101,115 @@ function isAuthenticated() {
   return !!getAccessToken();
 }
 
+/**
+ * Validate token by attempting a minimal API call
+ * Returns {valid: boolean, reason: string}
+ */
+async function validateToken() {
+  const token = getAccessToken();
+  if (!token) {
+    return { valid: false, reason: "No token found" };
+  }
+
+  try {
+    const sheetId = typeof getSheetId === 'function' ? getSheetId() : "1Dg9d-XIHzPqQIi4wZ2bTbnmHUKkn_V-IRzMOtRzQjOI";
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Recettes!A1?key=${typeof getApiKey === 'function' ? getApiKey() : "AIzaSyDZxRe3JtjbbqN9orW0xFCosxO4_3o6h74"}`;
+
+    const response = await fetch(url, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+
+    if (response.status === 401) {
+      return { valid: false, reason: "Token expired or invalid" };
+    }
+    if (!response.ok) {
+      return { valid: false, reason: `API error: ${response.statusText}` };
+    }
+
+    return { valid: true, reason: "Token valid" };
+  } catch (err) {
+    console.warn("Token validation error:", err);
+    return { valid: false, reason: err.message };
+  }
+}
+
+/**
+ * Show auth error modal and prompt logout/re-login
+ */
+function handleAuthError(reason = "Session expired or invalid") {
+  showAuthErrorModal(reason);
+}
+
+/**
+ * Display modal: "Session expired, please logout and re-login"
+ */
+function showAuthErrorModal(reason = "Session expired") {
+  const existingModal = document.getElementById("auth-error-modal");
+  if (existingModal) existingModal.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "auth-error-modal";
+  modal.style.cssText = `
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  `;
+
+  const content = document.createElement("div");
+  content.style.cssText = `
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  `;
+
+  content.innerHTML = `
+    <h2 style="margin: 0 0 12px; color: #d32f2f; font-size: 18px;">Session Expired</h2>
+    <p style="margin: 0 0 20px; color: #666; font-size: 14px;">${reason}</p>
+    <p style="margin: 0 0 20px; color: #999; font-size: 13px;">Please logout and re-login to continue.</p>
+    <div style="display: flex; gap: 10px;">
+      <button id="auth-logout-btn" style="flex: 1; padding: 10px; background: #d32f2f; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Logout</button>
+      <button id="auth-relogin-btn" style="flex: 1; padding: 10px; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Re-login</button>
+    </div>
+  `;
+
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+
+  document.getElementById("auth-logout-btn").onclick = () => {
+    modal.remove();
+    logoutGoogle();
+  };
+
+  document.getElementById("auth-relogin-btn").onclick = () => {
+    modal.remove();
+    logoutGoogle();
+  };
+}
+
+/**
+ * Validate token on page load
+ */
+async function initTokenValidation() {
+  if (!isAuthenticated()) {
+    return; // Not logged in yet, skip
+  }
+
+  const validation = await validateToken();
+  if (!validation.valid) {
+    console.warn("Token invalid:", validation.reason);
+    handleAuthError(validation.reason);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   setTimeout(initGoogleAuth, 100);
+  // Validate token after a short delay to allow UI initialization
+  setTimeout(initTokenValidation, 500);
 });

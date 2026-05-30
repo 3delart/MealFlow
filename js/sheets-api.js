@@ -131,6 +131,10 @@ async function appendRowWithToken(tabName, row, accessToken) {
     });
 
     if (!response.ok) {
+      if (response.status === 401 && typeof handleAuthError === 'function') {
+        handleAuthError("Token expired - please re-login");
+        return {};
+      }
       const error = await response.json();
       console.error(`Sheets API error: ${error.error.message}`);
       throw new Error(`Failed to append row: ${error.error.message}`);
@@ -205,6 +209,10 @@ async function updateSheetCell(range, value, accessToken) {
   });
 
   if (!response.ok) {
+    if (response.status === 401 && typeof handleAuthError === 'function') {
+      handleAuthError("Token expired - please re-login");
+      return;
+    }
     const error = await response.json();
     console.error(`Sheets API update error: ${error.error?.message || response.statusText}`);
     throw new Error(`Failed to update cell: ${error.error?.message || response.statusText}`);
@@ -242,6 +250,10 @@ async function clearSheetRange(range, accessToken) {
   });
 
   if (!response.ok) {
+    if (response.status === 401 && typeof handleAuthError === 'function') {
+      handleAuthError("Token expired - please re-login");
+      return;
+    }
     const error = await response.json();
     console.error(`Sheets API clear error: ${error.error?.message || response.statusText}`);
     throw new Error(`Failed to clear range: ${error.error?.message || response.statusText}`);
@@ -280,6 +292,10 @@ async function batchUpdateRange(range, values, accessToken) {
   });
 
   if (!response.ok) {
+    if (response.status === 401 && typeof handleAuthError === 'function') {
+      handleAuthError("Token expired - please re-login");
+      return {};
+    }
     const error = await response.json();
     throw new Error(`Sheets API update error: ${error.error?.message || response.statusText}`);
   }
