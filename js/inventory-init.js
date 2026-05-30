@@ -119,6 +119,15 @@ function setupEventHandlers() {
     filterCategoryEl.addEventListener("change", renderInventory);
   }
 
+  const searchInventoryEl = document.getElementById('search-inventory');
+  let _searchInventoryDebounce = null;
+  if (searchInventoryEl) {
+    searchInventoryEl.addEventListener('input', () => {
+      clearTimeout(_searchInventoryDebounce);
+      _searchInventoryDebounce = setTimeout(renderInventory, 300);
+    });
+  }
+
   const editForm = document.getElementById("edit-form");
   if (editForm) {
     editForm.addEventListener("submit", saveEditedItem);

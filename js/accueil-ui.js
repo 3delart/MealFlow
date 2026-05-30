@@ -1,6 +1,93 @@
 // js/accueil-ui.js
 let selectedMealData = null;
 let selectedProduct = null;
+let _consommerSelectedProductId = null;
+let _consommerSelectedRecetteKey = null;
+let _consommerProductDebounce = null;
+let _consommerRecetteDebounce = null;
+
+function _normStr(s) {
+  return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function onConsommerProductInput(e) {
+  clearTimeout(_consommerProductDebounce);
+  _consommerProductDebounce = setTimeout(() => {
+    const q = e.target.value.trim();
+    const dropdown = document.getElementById('consommer-product-dropdown');
+    const previewBox = document.getElementById('consommer-preview');
+    if (q.length < 1) {
+      dropdown.style.display = 'none';
+      _consommerSelectedProductId = null;
+      previewBox.innerHTML = '';
+      return;
+    }
+    const normQ = _normStr(q);
+    const items = InventoryAPI.getActiveItems();
+    const matches = items.filter(i => _normStr(i.name).includes(normQ)).slice(0, 5);
+    if (!matches.length) {
+      dropdown.style.display = 'none';
+      return;
+    }
+    dropdown.innerHTML = '';
+    matches.forEach(item => {
+      const div = document.createElement('div');
+      div.style.cssText = 'padding:8px 12px; cursor:pointer; font-size:14px;';
+      div.textContent = `${item.name} (${item.calories_per_100} kcal/100g)`;
+      div.addEventListener('mouseover', () => div.style.background = '#f0f0f0');
+      div.addEventListener('mouseout', () => div.style.background = '');
+      div.addEventListener('click', () => {
+        _consommerSelectedProductId = item.id;
+        document.getElementById('consommer-product-search').value = item.name;
+        dropdown.style.display = 'none';
+        updateConsommerPreview();
+      });
+      dropdown.appendChild(div);
+    });
+    dropdown.style.display = 'block';
+  }, 300);
+}
+
+function onConsommerRecetteInput(e) {
+  clearTimeout(_consommerRecetteDebounce);
+  _consommerRecetteDebounce = setTimeout(() => {
+    const q = e.target.value.trim();
+    const dropdown = document.getElementById('consommer-recette-dropdown');
+    const previewBox = document.getElementById('consommer-recette-preview');
+    if (q.length < 1) {
+      dropdown.style.display = 'none';
+      _consommerSelectedRecetteKey = null;
+      previewBox.innerHTML = '';
+      return;
+    }
+    const normQ = _normStr(q);
+    if (!window.recipesData) return;
+    const matches = Object.keys(window.recipesData)
+      .filter(key => _normStr(window.recipesData[key].name).includes(normQ))
+      .slice(0, 5);
+    if (!matches.length) {
+      dropdown.style.display = 'none';
+      return;
+    }
+    dropdown.innerHTML = '';
+    matches.forEach(key => {
+      const recipe = window.recipesData[key];
+      const div = document.createElement('div');
+      div.style.cssText = 'padding:8px 12px; cursor:pointer; font-size:14px;';
+      div.textContent = recipe.name;
+      div.addEventListener('mouseover', () => div.style.background = '#f0f0f0');
+      div.addEventListener('mouseout', () => div.style.background = '');
+      div.addEventListener('click', () => {
+        _consommerSelectedRecetteKey = key;
+        document.getElementById('consommer-recette-search').value = recipe.name;
+        dropdown.style.display = 'none';
+        updateConsommerRecettePreview();
+      });
+      dropdown.appendChild(div);
+    });
+    dropdown.style.display = 'block';
+  }, 300);
+}
 
 function debugLog(msg) {
   console.log(msg);
@@ -86,12 +173,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('consommer-btn-stop-scan')?.addEventListener('click', consommerScannerStop);
 
   // Consommer - Inventaire tab
-  document.getElementById('consommer-product')?.addEventListener('change', updateConsommerPreview);
+  document.getElementById('consommer-product-search')?.addEventListener('input', onConsommerProductInput);
   document.getElementById('consommer-qty')?.addEventListener('input', updateConsommerPreview);
 
   // Consommer - Recette tab
-  document.getElementById('consommer-recette')?.addEventListener('change', updateConsommerRecettePreview);
+  document.getElementById('consommer-recette-search')?.addEventListener('input', onConsommerRecetteInput);
   document.getElementById('consommer-recette-qty')?.addEventListener('input', updateConsommerRecettePreview);
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#tab-inventaire')) {
+      const dd = document.getElementById('consommer-product-dropdown');
+      if (dd) dd.style.display = 'none';
+    }
+    if (!e.target.closest('#tab-recette')) {
+      const dd = document.getElementById('consommer-recette-dropdown');
+      if (dd) dd.style.display = 'none';
+    }
+  });
 
   window.addEventListener('auth-changed', async (e) => {
     if (e.detail.email) {
@@ -407,35 +505,8 @@ let consommerQrScanner = null;
 
 function openConsommerModal() {
   const modal = document.getElementById('consommer-modal');
-  const inventaireSelect = document.getElementById('consommer-product');
-  const recetteSelect = document.getElementById('consommer-recette');
-
-  // Populate inventory select
-  inventaireSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
-  const items = InventoryAPI.getActiveItems();
-  items.forEach(item => {
-    const option = document.createElement('option');
-    option.value = item.id;
-    option.textContent = `${item.name} (${item.calories_per_100} kcal/100g)`;
-    option.dataset.kcalPer100 = item.calories_per_100;
-    option.dataset.unit = item.unit;
-    inventaireSelect.appendChild(option);
-  });
-
-  // Populate recette select
-  recetteSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
-  if (window.recipesData) {
-    Object.keys(window.recipesData).forEach(key => {
-      const recipe = window.recipesData[key];
-      const option = document.createElement('option');
-      option.value = key;
-      option.textContent = recipe.name;
-      option.dataset.kcalPer100 = recipe.kcal_per_100;
-      recetteSelect.appendChild(option);
-    });
-  }
-
-  // Show first tab (scanner)
+  _consommerSelectedProductId = null;
+  _consommerSelectedRecetteKey = null;
   switchConsommerTab('scanner');
   modal.classList.remove('hidden');
   modal.classList.add('open');
@@ -446,10 +517,18 @@ function closeConsommerModal() {
   modal.classList.add('hidden');
   modal.classList.remove('open');
   consommerScannerStop();
-  document.getElementById('consommer-product').value = '';
+  const productSearch = document.getElementById('consommer-product-search');
+  if (productSearch) productSearch.value = '';
+  const productDd = document.getElementById('consommer-product-dropdown');
+  if (productDd) productDd.style.display = 'none';
+  _consommerSelectedProductId = null;
   document.getElementById('consommer-qty').value = '';
   document.getElementById('consommer-preview').innerHTML = '';
-  document.getElementById('consommer-recette').value = '';
+  const recetteSearch = document.getElementById('consommer-recette-search');
+  if (recetteSearch) recetteSearch.value = '';
+  const recetteDd = document.getElementById('consommer-recette-dropdown');
+  if (recetteDd) recetteDd.style.display = 'none';
+  _consommerSelectedRecetteKey = null;
   document.getElementById('consommer-recette-qty').value = '';
   document.getElementById('consommer-recette-preview').innerHTML = '';
   document.getElementById('consommer-manuel-nom').value = '';
@@ -644,17 +723,16 @@ function submitConsommerScan() {
 }
 
 function updateConsommerPreview() {
-  const productSelect = document.getElementById('consommer-product');
   const qtyInput = document.getElementById('consommer-qty');
   const previewBox = document.getElementById('consommer-preview');
 
-  if (!productSelect.value || !qtyInput.value) {
+  if (!_consommerSelectedProductId || !qtyInput.value) {
     previewBox.innerHTML = '';
     return;
   }
 
   const items = InventoryAPI.getActiveItems();
-  const product = items.find(i => i.id === productSelect.value);
+  const product = items.find(i => i.id === _consommerSelectedProductId);
   if (!product) return;
 
   const qty = parseFloat(qtyInput.value);
@@ -670,17 +748,16 @@ function updateConsommerPreview() {
 }
 
 function submitConsommerInventaire() {
-  const productSelect = document.getElementById('consommer-product');
   const qtyInput = document.getElementById('consommer-qty');
   const qty = parseFloat(qtyInput.value);
 
-  if (!productSelect.value || !qty || qty <= 0) {
+  if (!_consommerSelectedProductId || !qty || qty <= 0) {
     alert('Sélectionnez un produit et une quantité');
     return;
   }
 
   const items = InventoryAPI.getActiveItems();
-  const product = items.find(i => i.id === productSelect.value);
+  const product = items.find(i => i.id === _consommerSelectedProductId);
   if (!product) {
     alert('Produit non trouvé');
     return;
@@ -693,16 +770,15 @@ function submitConsommerInventaire() {
 }
 
 function updateConsommerRecettePreview() {
-  const recetteSelect = document.getElementById('consommer-recette');
   const qtyInput = document.getElementById('consommer-recette-qty');
   const previewBox = document.getElementById('consommer-recette-preview');
 
-  if (!recetteSelect.value || !qtyInput.value) {
+  if (!_consommerSelectedRecetteKey || !qtyInput.value) {
     previewBox.innerHTML = '';
     return;
   }
 
-  const recipe = window.recipesData[recetteSelect.value];
+  const recipe = window.recipesData[_consommerSelectedRecetteKey];
   if (!recipe) return;
 
   const qty = parseFloat(qtyInput.value);
@@ -717,16 +793,15 @@ function updateConsommerRecettePreview() {
 }
 
 function submitConsommerRecette() {
-  const recetteSelect = document.getElementById('consommer-recette');
   const qtyInput = document.getElementById('consommer-recette-qty');
   const qty = parseFloat(qtyInput.value);
 
-  if (!recetteSelect.value || !qty || qty <= 0) {
+  if (!_consommerSelectedRecetteKey || !qty || qty <= 0) {
     alert('Sélectionnez une recette et une quantité');
     return;
   }
 
-  const recipe = window.recipesData[recetteSelect.value];
+  const recipe = window.recipesData[_consommerSelectedRecetteKey];
   if (!recipe) {
     alert('Recette non trouvée');
     return;

@@ -57,6 +57,14 @@ function renderInventory() {
     filtered = inventoryData;
   }
 
+  const searchEl = document.getElementById('search-inventory');
+  const searchTerm = searchEl ? searchEl.value.trim() : '';
+  if (searchTerm.length >= 1) {
+    const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const q = norm(searchTerm);
+    filtered = filtered.filter(item => norm(item.Produit).includes(q));
+  }
+
   if (filtered.length === 0) {
     container.innerHTML = '<div class="inventory-empty">Aucun article</div>';
     return;
