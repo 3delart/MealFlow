@@ -136,11 +136,11 @@ function searchInventoryProducts(query) {
   if (!query || query.length < 2) return [];
   if (!window.inventoryData) return [];
 
-  const q = query.toLowerCase();
+  const q = query.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   return window.inventoryData
     .filter(item => {
-      const prodName = (item.Produit || '').toLowerCase();
-      return prodName.includes(q) && parseFloat(item.Qty) > 0;
+      const prodName = (item.Produit || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      return prodName.includes(q);
     })
     .map(item => ({
       name: item.Produit,
