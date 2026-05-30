@@ -123,7 +123,11 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
       return row;
     });
 
-    await window.SheetsAPI.batchUpdateRange('Courses!A2:G1000', rows, token);
+    // Clear old rows first, then write new ones
+    await window.SheetsAPI.clearSheetRange('Courses!A2:G1000', token);
+    if (rows.length > 0) {
+      await window.SheetsAPI.batchUpdateRange('Courses!A2:G1000', rows, token);
+    }
     console.log(`Courses synced: ${rows.length} rows`);
   } catch (err) {
     console.warn('Courses sync failed:', err);
