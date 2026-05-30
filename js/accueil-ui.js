@@ -183,28 +183,73 @@ function openMangerModal(mealName) {
   const select = document.getElementById('manger-meal');
   const mealGroup = document.getElementById('manger-meal-group');
 
-  // Populate from todaysMeals with actual recipe data
-  select.innerHTML = '<option value="">-- Sélectionner --</option>';
-  const mealsWithRecipes = todaysMeals.filter(m => m.name && m.name.trim());
-  mealsWithRecipes.forEach(meal => {
-    const option = document.createElement('option');
-    option.value = meal.name;
-    option.textContent = `${meal.name} (${meal.kcal_per_100} kcal/100g)`;
-    option.dataset.kcalPer100 = meal.kcal_per_100;
-    select.appendChild(option);
-  });
+  // Find if meal is custom
+  const meal = todaysMeals.find(m => m.name === mealName);
+  const isCustom = meal && meal.isCustom;
 
-  // Pre-select meal if passed
-  if (mealName) {
-    select.value = mealName;
-    if (mealGroup) mealGroup.style.display = 'none'; // Hide dropdown, meal already selected
-    updateMangerPreview();
+  // Toggle between recipe and custom modes
+  const recipeMode = document.getElementById('manger-recipe-mode');
+  const customMode = document.getElementById('manger-custom-mode');
+
+  if (isCustom) {
+    // Show custom mode
+    recipeMode.style.display = 'none';
+    customMode.style.display = 'block';
+    document.getElementById('manger-custom-name').value = mealName || '';
+    document.getElementById('manger-custom-qty').value = '';
+    document.getElementById('manger-custom-kcal').value = '';
+    document.getElementById('manger-custom-qty').focus();
+
+    // Add event listeners for custom preview updates
+    const customQtyInput = document.getElementById('manger-custom-qty');
+    const customUnitInput = document.getElementById('manger-custom-unit');
+    const customKcalInput = document.getElementById('manger-custom-kcal');
+
+    customQtyInput.removeEventListener('input', updateMangerPreview);
+    customUnitInput.removeEventListener('change', updateMangerPreview);
+    customKcalInput.removeEventListener('input', updateMangerPreview);
+
+    customQtyInput.addEventListener('input', updateMangerPreview);
+    customUnitInput.addEventListener('change', updateMangerPreview);
+    customKcalInput.addEventListener('input', updateMangerPreview);
   } else {
-    if (mealGroup) mealGroup.style.display = 'block';
+    // Show recipe mode
+    recipeMode.style.display = 'block';
+    customMode.style.display = 'none';
+
+    // Populate from todaysMeals with actual recipe data
+    select.innerHTML = '<option value="">-- Sélectionner --</option>';
+    const mealsWithRecipes = todaysMeals.filter(m => m.name && m.name.trim());
+    mealsWithRecipes.forEach(m => {
+      const option = document.createElement('option');
+      option.value = m.name;
+      option.textContent = `${m.name} (${m.kcal_per_100} kcal/100g)`;
+      option.dataset.kcalPer100 = m.kcal_per_100;
+      option.dataset.isCustom = m.isCustom || false;
+      select.appendChild(option);
+    });
+
+    // Pre-select meal if passed
+    if (mealName) {
+      select.value = mealName;
+      if (mealGroup) mealGroup.style.display = 'none'; // Hide dropdown, meal already selected
+      updateMangerRecipePreview();
+    } else {
+      if (mealGroup) mealGroup.style.display = 'block';
+    }
+
+    document.getElementById('manger-qty').value = '';
+    document.getElementById('manger-qty').focus();
+
+    // Add event listeners for recipe preview updates
+    select.removeEventListener('change', updateMangerPreview);
+    const qtyInput = document.getElementById('manger-qty');
+    qtyInput.removeEventListener('input', updateMangerPreview);
+
+    select.addEventListener('change', updateMangerPreview);
+    qtyInput.addEventListener('input', updateMangerPreview);
   }
 
-  document.getElementById('manger-qty').value = '';
-  document.getElementById('manger-qty').focus();
   modal.classList.remove('hidden');
   modal.classList.add('open');
 }
@@ -220,6 +265,18 @@ function closeMangerModal() {
 }
 
 function updateMangerPreview() {
+  // Check which mode is active
+  const recipeMode = document.getElementById('manger-recipe-mode');
+  const customMode = document.getElementById('manger-custom-mode');
+
+  if (customMode && customMode.style.display !== 'none') {
+    updateMangerCustomPreview();
+  } else {
+    updateMangerRecipePreview();
+  }
+}
+
+function updateMangerRecipePreview() {
   const mealSelect = document.getElementById('manger-meal');
   const qtyInput = document.getElementById('manger-qty');
   const previewBox = document.getElementById('manger-preview');
@@ -243,22 +300,74 @@ function updateMangerPreview() {
   `;
 }
 
-async function submitManger(e) {
-  e.preventDefault();
+function updateMangerCustomPreview() {
+  const nameInput = document.getElementById('manger-custom-name');
+  const qtyInput = document.getElementById('manger-custom-qty');
+  const unitInput = document.getElementById('manger-custom-unit');
+  const kcalInput = document.getElementById('manger-custom-kcal');
+  const previewBox = document.getElementById('manger-preview');
 
-  const mealSelect = document.getElementById('manger-meal');
-  const qtyInput = document.getElementById('manger-qty');
-
-  if (!mealSelect.value || !qtyInput.value) {
-    alert('Remplissez les champs');
+  if (!qtyInput.value || !kcalInput.value) {
+    previewBox.innerHTML = '';
     return;
   }
 
-  const mealName = mealSelect.value;
+  const mealName = nameInput.value;
   const qty = parseFloat(qtyInput.value);
-  const selectedOption = mealSelect.options[mealSelect.selectedIndex];
-  const kcalPer100g = parseFloat(selectedOption.dataset.kcalPer100) || 0;
-  const totalKcal = Math.round(qty * (kcalPer100g / 100));
+  const unit = unitInput.value;
+  const totalKcal = parseFloat(kcalInput.value);
+
+  previewBox.innerHTML = `
+    <div style="padding: 12px; background-color: var(--color-bg); border-radius: 6px;">
+      <p style="margin: 0; font-size: 0.9em;"><strong>${mealName}</strong></p>
+      <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${qty}${unit} · ${totalKcal} kcal</p>
+    </div>
+  `;
+}
+
+async function submitManger(e) {
+  e.preventDefault();
+
+  // Determine which mode is active
+  const customMode = document.getElementById('manger-custom-mode');
+  const isCustom = customMode && customMode.style.display !== 'none';
+
+  let mealName, qty, unit, totalKcal, kcalPer100g = null;
+
+  if (isCustom) {
+    // Custom mode
+    const nameInput = document.getElementById('manger-custom-name');
+    const qtyInput = document.getElementById('manger-custom-qty');
+    const unitInput = document.getElementById('manger-custom-unit');
+    const kcalInput = document.getElementById('manger-custom-kcal');
+
+    if (!qtyInput.value || !kcalInput.value) {
+      alert('Remplissez les champs');
+      return;
+    }
+
+    mealName = nameInput.value;
+    qty = parseFloat(qtyInput.value);
+    unit = unitInput.value;
+    totalKcal = parseFloat(kcalInput.value);
+    kcalPer100g = null; // Custom meals don't have per-100g
+  } else {
+    // Recipe mode
+    const mealSelect = document.getElementById('manger-meal');
+    const qtyInput = document.getElementById('manger-qty');
+
+    if (!mealSelect.value || !qtyInput.value) {
+      alert('Remplissez les champs');
+      return;
+    }
+
+    mealName = mealSelect.value;
+    qty = parseFloat(qtyInput.value);
+    unit = 'g';
+    const selectedOption = mealSelect.options[mealSelect.selectedIndex];
+    kcalPer100g = parseFloat(selectedOption.dataset.kcalPer100) || 0;
+    totalKcal = Math.round(qty * (kcalPer100g / 100));
+  }
 
   const now = new Date();
   const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -268,10 +377,11 @@ async function submitManger(e) {
   try {
     const token = getAccessToken?.();
     const tabName = `History_${user}`;
-    const row = [date, time, mealName, qty, 'g', totalKcal, 'manger'];
+    // Row: [date, time, mealName, qty, unit, kcal_per_100, totalKcal, type]
+    const row = [date, time, mealName, qty, unit, kcalPer100g || '', totalKcal, 'manger'];
 
     // Add to local state (match sheet column names)
-    todaysConsumptions.push({ Heure: time, Nom: mealName, Quantité: qty, Unité: 'g', Kcal_total: totalKcal, Type: 'manger' });
+    todaysConsumptions.push({ Heure: time, Nom: mealName, Quantité: qty, Unité: unit, Kcal_total: totalKcal, Type: 'manger' });
 
     // Update global calories consumed
     caloriesConsumed = (caloriesConsumed || 0) + totalKcal;

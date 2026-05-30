@@ -234,6 +234,37 @@ function closeRecipePickerModal() {
 }
 
 /**
+ * Switch between recipe and free-text tabs in modal
+ */
+function switchRecipeTab(tabName) {
+  // Hide all tab contents
+  document.querySelectorAll(".recipe-tab-content").forEach(tab => {
+    tab.classList.remove("active");
+  });
+  // Remove active class from all tab buttons
+  document.querySelectorAll(".modal-tab").forEach(btn => {
+    btn.classList.remove("active");
+  });
+
+  // Show selected tab
+  const tabElement = document.getElementById(tabName);
+  if (tabElement) {
+    tabElement.classList.add("active");
+  }
+
+  // Set active button
+  const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
+  if (activeBtn) {
+    activeBtn.classList.add("active");
+  }
+
+  // Focus input in custom tab
+  if (tabName === "custom-tab") {
+    setTimeout(() => document.getElementById("custom-recipe-name").focus(), 0);
+  }
+}
+
+/**
  * TASK 4: Render recipe options in the modal
  * @param {Object[]} recipes - Array of recipe objects to display
  */
@@ -276,6 +307,13 @@ function escapeHTML(str) {
  * @param {string} recipeName - Name of the selected recipe
  */
 function selectRecipe(recipeName) {
+  // Trim input (for both recipes and custom names)
+  const cleanedName = (recipeName || "").trim();
+  if (!cleanedName) {
+    alert("Veuillez entrer un nom de recette");
+    return;
+  }
+
   const { dateISO, mealTime } = currentModalContext;
 
   if (!dateISO || !mealTime) {
@@ -293,18 +331,18 @@ function selectRecipe(recipeName) {
 
   // If slot is empty or contains "None", replace it
   if (!recipeValue || recipeValue === "None" || (Array.isArray(recipeValue) && recipeValue.length === 0)) {
-    allPlanData[dateISO][mealTime] = [recipeName];
+    allPlanData[dateISO][mealTime] = [cleanedName];
   } else {
     // Otherwise append to array (multi-recipe support)
     if (!Array.isArray(recipeValue)) {
       allPlanData[dateISO][mealTime] = recipeValue ? [recipeValue] : [];
     }
-    if (!allPlanData[dateISO][mealTime].includes(recipeName)) {
-      allPlanData[dateISO][mealTime].push(recipeName);
+    if (!allPlanData[dateISO][mealTime].includes(cleanedName)) {
+      allPlanData[dateISO][mealTime].push(cleanedName);
     }
   }
 
-  console.log(`Selected recipe: ${recipeName} for ${dateISO} ${mealTime}`);
+  console.log(`Selected recipe: ${cleanedName} for ${dateISO} ${mealTime}`);
 
   // Close modal and rebuild meal plan from allPlanData
   closeRecipePickerModal();
@@ -314,6 +352,25 @@ function selectRecipe(recipeName) {
   // Sync Courses list and persist to Sheets
   syncCoursesFromMealPlan();
   savePlanningToSheets();
+}
+
+/**
+ * Handle custom recipe name submission from texte libre tab
+ */
+function selectCustomRecipe() {
+  const input = document.getElementById("custom-recipe-name");
+  const recipeName = input.value.trim();
+
+  if (!recipeName) {
+    alert("Veuillez entrer un nom de recette");
+    return;
+  }
+
+  // Call selectRecipe with the custom name
+  selectRecipe(recipeName);
+
+  // Clear input after selection
+  input.value = "";
 }
 
 /**

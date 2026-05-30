@@ -471,10 +471,15 @@ async function loadTodaysMeals() {
 
         // Get actual recipe kcal_per_100 from window.recipesData
         let recipeKcal = mealDef.estimatedKcal;
+        let isCustom = false;
         if (window.recipesData) {
           const recipe = Object.values(window.recipesData).find(r => r.name === recipeName);
           if (recipe && recipe.kcal_per_100) {
             recipeKcal = recipe.kcal_per_100;
+          } else {
+            // Recipe not found in recipesData → treat as custom
+            isCustom = true;
+            recipeKcal = null; // Custom meals don't have per-100g
           }
         }
 
@@ -488,6 +493,7 @@ async function loadTodaysMeals() {
           actualKcal: null,
           eaten: false,
           timestamp: null,
+          isCustom: isCustom,
         });
       });
     });

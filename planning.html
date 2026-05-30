@@ -42,10 +42,22 @@
           <h2 id="modal-title">Sélectionner une recette</h2>
           <button class="btn-close" onclick="closeRecipePickerModal()">✕</button>
         </div>
+        <div class="modal-tabs">
+          <button class="modal-tab active" data-tab="recipe-tab" onclick="switchRecipeTab('recipe-tab')">Choisir une recette</button>
+          <button class="modal-tab" data-tab="custom-tab" onclick="switchRecipeTab('custom-tab')">Texte libre</button>
+        </div>
         <div class="modal-body">
-          <input type="text" id="recipe-search-input" class="search-input" placeholder="Rechercher une recette...">
-          <div id="recipe-options" class="recipe-options">
-            <!-- Dynamically populated -->
+          <!-- Recipe Search Tab -->
+          <div id="recipe-tab" class="recipe-tab-content active">
+            <input type="text" id="recipe-search-input" class="search-input" placeholder="Rechercher une recette...">
+            <div id="recipe-options" class="recipe-options">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+          <!-- Custom Name Tab -->
+          <div id="custom-tab" class="recipe-tab-content">
+            <input type="text" id="custom-recipe-name" class="search-input" placeholder="Ex: Salade composée maison" onkeypress="if(event.key==='Enter') selectCustomRecipe()">
+            <button class="btn btn-primary" onclick="selectCustomRecipe()" style="width: 100%; margin-top: 12px;">Ajouter</button>
           </div>
         </div>
       </div>
