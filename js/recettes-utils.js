@@ -35,6 +35,47 @@ const UNIT_CONVERSION_TABLE = {
 };
 
 /**
+ * Map of product name (normalized) → conversion_factor
+ * Loaded from Inventory sheet column F
+ * Used to override default 'piece' conversion per product
+ */
+let productConversionFactorMap = {};
+
+/**
+ * Load conversion factors from Inventory sheet
+ * Maps product names to their piece→gram conversions
+ */
+async function loadConversionFactors() {
+  try {
+    if (!window.SheetsAPI) return;
+    const rows = await window.SheetsAPI.readSheetTab('Inventory');
+    const objects = window.SheetsAPI.rowsToObjects(rows);
+
+    productConversionFactorMap = {};
+    objects.forEach(row => {
+      if (row.Produit && row.Conversion_factor) {
+        const key = (row.Produit || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+        productConversionFactorMap[key] = parseFloat(row.Conversion_factor);
+      }
+    });
+    console.log(`Loaded ${Object.keys(productConversionFactorMap).length} product conversion factors`);
+  } catch (err) {
+    console.warn('Failed to load conversion factors:', err);
+  }
+}
+
+/**
+ * Get conversion factor for a product
+ * @param {string} productName - product name
+ * @returns {number|null} conversion factor or null if not found
+ */
+function getProductConversionFactor(productName) {
+  if (!productName) return null;
+  const key = productName.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+  return productConversionFactorMap[key] || null;
+}
+
+/**
  * Convert quantity from any unit to grams
  * @param {number} qty - quantity value
  * @param {string} unit - unit name (g, ml, piece, litre, etc)

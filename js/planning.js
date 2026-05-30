@@ -516,6 +516,7 @@ async function initializePlanning() {
   UserContext.initializeUserToggle();
   await loadRecipes();  // Load recipes for modal
   await loadMealPlan();
+  if (window.loadConversionFactors) await window.loadConversionFactors();  // Load unit conversions
   syncCoursesFromMealPlan();
   updateWeekNavUI();
 

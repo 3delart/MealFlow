@@ -502,6 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function initCourses() {
   UserContext.applyUserStyling();
   UserContext.initializeUserToggle();
+  if (window.loadConversionFactors) await window.loadConversionFactors();  // Load unit conversions
 
   document.getElementById('loading-state').textContent = 'Chargement...';
 

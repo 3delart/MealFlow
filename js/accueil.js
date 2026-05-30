@@ -658,6 +658,7 @@ async function initAccueil() {
     loadDailyGoal(),
     loadTodaysMeals(),
     loadTodaysConsumptions(),
+    loadConversionFactors ? loadConversionFactors() : Promise.resolve(),
   ]);
 
   // Load saved meals state (eaten/calories) from localStorage
