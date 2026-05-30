@@ -296,6 +296,9 @@ function renderWheel() {
       wheelContainer.style.borderColor = "var(--color-success)";
     }
   }
+
+  // Sync SVG ring with the same computed percentage
+  renderProgressCircle(percentage);
 }
 
 /**
@@ -356,9 +359,7 @@ function loadMealsState() {
     }
   }
 
-  if (savedConsumed) {
-    caloriesConsumed = Number(savedConsumed);
-  }
+  // caloriesConsumed is computed from Sheets in loadTodaysConsumptions() — don't overwrite with localStorage
 }
 
 /* ============================================================================

@@ -164,14 +164,15 @@ function renderConsumptionLog() {
     return;
   }
 
-  validConsumptions.forEach((entry, index) => {
+  validConsumptions.forEach((entry) => {
+    const rawIndex = todaysConsumptions.indexOf(entry);
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${entry.Heure || ''}</td>
       <td>${entry.Nom || ''}</td>
       <td>${entry.Quantité} ${entry.Unité || ''}</td>
       <td>${entry.Kcal_total || '0'}</td>
-      <td><button class="btn btn-delete" onclick="deleteConsumption(${index})">✕</button></td>
+      <td><button class="btn btn-delete" onclick="deleteConsumption(${rawIndex})">✕</button></td>
     `;
     tbody.appendChild(row);
   });
@@ -377,8 +378,7 @@ async function submitManger(e) {
   try {
     const token = getAccessToken?.();
     const tabName = `History_${user}`;
-    // Row: [date, time, mealName, qty, unit, kcal_per_100, totalKcal, type]
-    const row = [date, time, mealName, qty, unit, kcalPer100g || '', totalKcal, 'manger'];
+    const row = [date, time, mealName, qty, unit, totalKcal, 'manger'];
 
     // Add to local state (match sheet column names)
     todaysConsumptions.push({ Heure: time, Nom: mealName, Quantité: qty, Unité: unit, Kcal_total: totalKcal, Type: 'manger' });
