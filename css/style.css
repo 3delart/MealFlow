@@ -1150,15 +1150,33 @@ tbody tr:hover {
 .step-row {
   display: flex;
   gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.step-row span {
+  min-width: 30px;
+  flex-shrink: 0;
 }
 
 .step-row input {
   flex: 1;
+  min-width: 200px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 14px;
 }
 
 .step-row button {
   padding: 4px 8px;
   font-size: 12px;
+  flex-shrink: 0;
+  background: #ff5252;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 /* Calorie display */

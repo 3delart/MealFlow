@@ -127,7 +127,7 @@ async function syncRecipesToSheets() {
         recipe.cook_minutes || 0,
         (recipe.tags || []).join(", "),
         JSON.stringify(recipe.ingredients || []),
-        JSON.stringify(recipe.steps || []),
+        JSON.stringify([...(recipe.steps || [])].reverse()),
         cals.kcal_per_100
       ];
       await window.SheetsAPI.appendRowWithToken("Recettes", row, token);
