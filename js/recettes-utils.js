@@ -23,6 +23,29 @@ function generateRecipeID(name) {
 }
 
 /**
+ * Unit conversion table: unit → grams conversion factor
+ * Default conversions used for all products unless overridden
+ */
+const UNIT_CONVERSION_TABLE = {
+  'g': 1,
+  'ml': 1,
+  'litre': 1000,
+  'piece': 100,
+  'pièce': 100
+};
+
+/**
+ * Convert quantity from any unit to grams
+ * @param {number} qty - quantity value
+ * @param {string} unit - unit name (g, ml, piece, litre, etc)
+ * @returns {number} quantity in grams (0 if unit not convertible)
+ */
+function convertToGrams(qty, unit) {
+  const factor = UNIT_CONVERSION_TABLE[unit] || 0;
+  return (parseFloat(qty) || 0) * factor;
+}
+
+/**
  * Calculate total calories and per 100g for a recipe
  * @param {Object[]} ingredients - Array of {name, quantity, unit, calories_per_100}
  * @returns {Object} {total_kcal, total_weight_grams, kcal_per_100}
@@ -36,18 +59,9 @@ function calculateRecipeCalories(ingredients) {
     const cal100 = parseFloat(ing.calories_per_100) || 0;
     const unit = ing.unit || 'g';
 
-    // Convert to grams if needed
-    let qtyGrams = qty;
-    if (unit === 'ml' || unit === 'l') {
-      qtyGrams = qty; // Assume 1ml ≈ 1g for liquids
-    } else if (unit === 'litre') {
-      qtyGrams = qty * 1000;
-    } else if (unit === 'pièce' || unit === 'piece') {
-      qtyGrams = 0; // Can't convert, skip from total weight
-    }
-
+    const qtyGrams = convertToGrams(qty, unit);
     totalWeightGrams += qtyGrams;
-    totalKcal += cal100 * (qty / 100);
+    totalKcal += cal100 * (qtyGrams / 100);
   });
 
   const kcalPer100 = totalWeightGrams > 0 ? totalKcal / (totalWeightGrams / 100) : 0;

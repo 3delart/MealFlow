@@ -37,6 +37,19 @@ function calculateRollingWindow(offset = 0) {
  * Load meal plan from Planning sheet
  * Populates allPlanData with all dates from sheet
  */
+/**
+ * Parse recipe value (single string or JSON array) into array of recipes
+ */
+function parseRecipeValue(value) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter(r => r) : [value];
+  } catch (e) {
+    return value ? [value] : [];
+  }
+}
+
 async function loadMealPlan() {
   try {
     // Load Planning tab from Sheets
@@ -49,8 +62,8 @@ async function loadMealPlan() {
       objects.forEach(row => {
         if (row.Date) {
           allPlanData[row.Date] = {
-            Midi: row.Midi || null,
-            Soir: row.Soir || null
+            Midi: parseRecipeValue(row.Midi),
+            Soir: parseRecipeValue(row.Soir)
           };
         }
       });
@@ -110,17 +123,21 @@ function renderMealPlan() {
   // Create 7 rows (one per day)
   rollingWindow.forEach((day, index) => {
     const dayMeal = mealPlan.find(m => m.dateISO === day.dateISO);
-    const midiRecipe = dayMeal ? (dayMeal.Midi || "") : "";
-    const soirRecipe = dayMeal ? (dayMeal.Soir || "") : "";
+    const midiArray = dayMeal?.Midi || [];
+    const soirArray = dayMeal?.Soir || [];
+    const midiRecipes = Array.isArray(midiArray) ? midiArray : (midiArray ? [midiArray] : []);
+    const soirRecipes = Array.isArray(soirArray) ? soirArray : (soirArray ? [soirArray] : []);
+    const midiDisplay = midiRecipes.length > 0 ? midiRecipes.join(", ") : "+";
+    const soirDisplay = soirRecipes.length > 0 ? soirRecipes.join(", ") : "+";
 
     html += `
       <div class="meal-plan-row">
         <div class="meal-day-label">${day.dayOfWeek}<br>${day.dateStr}</div>
-        <div class="meal-cell ${midiRecipe ? "recipe-name" : "meal-empty"}" onclick="openRecipePickerModal('${day.dateISO}', 'Midi')">
-          ${midiRecipe || "+"}
+        <div class="meal-cell ${midiRecipes.length > 0 ? "recipe-name" : "meal-empty"}" onclick="openRecipePickerModal('${day.dateISO}', 'Midi')">
+          ${midiDisplay}
         </div>
-        <div class="meal-cell ${soirRecipe ? "recipe-name" : "meal-empty"}" onclick="openRecipePickerModal('${day.dateISO}', 'Soir')">
-          ${soirRecipe || "+"}
+        <div class="meal-cell ${soirRecipes.length > 0 ? "recipe-name" : "meal-empty"}" onclick="openRecipePickerModal('${day.dateISO}', 'Soir')">
+          ${soirDisplay}
         </div>
       </div>
     `;
@@ -243,9 +260,17 @@ function selectRecipe(recipeName) {
 
   // Create or update entry in allPlanData
   if (!allPlanData[dateISO]) {
-    allPlanData[dateISO] = { Midi: null, Soir: null };
+    allPlanData[dateISO] = { Midi: [], Soir: [] };
   }
-  allPlanData[dateISO][mealTime] = recipeName;
+
+  // Append recipe to array (multi-recipe support)
+  const recipeArray = allPlanData[dateISO][mealTime];
+  if (!Array.isArray(recipeArray)) {
+    allPlanData[dateISO][mealTime] = recipeArray ? [recipeArray] : [];
+  }
+  if (!allPlanData[dateISO][mealTime].includes(recipeName)) {
+    allPlanData[dateISO][mealTime].push(recipeName);
+  }
 
   console.log(`Selected recipe: ${recipeName} for ${dateISO} ${mealTime}`);
 
@@ -269,15 +294,18 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
   // 1. Aggregate ingredients from recipes
   mealPlanArg.forEach(day => {
     ['Midi', 'Soir'].forEach(slot => {
-      const recipeName = day[slot];
-      if (!recipeName) return;
-      const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
-      if (!recipe?.ingredients) return;
-      recipe.ingredients.forEach(ing => {
-        const key = ing.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-        if (!map[key]) map[key] = { name: ing.name, qty: 0, unit: ing.unit || 'g', days: [] };
-        map[key].qty += parseFloat(ing.quantity) || 0;
-        if (!map[key].days.includes(day.dateISO)) map[key].days.push(day.dateISO);
+      const recipeValue = day[slot];
+      if (!recipeValue) return;
+      const recipeNames = Array.isArray(recipeValue) ? recipeValue : (recipeValue ? [recipeValue] : []);
+      recipeNames.forEach(recipeName => {
+        const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
+        if (!recipe?.ingredients) return;
+        recipe.ingredients.forEach(ing => {
+          const key = ing.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+          if (!map[key]) map[key] = { name: ing.name, qty: 0, unit: ing.unit || 'g', days: [] };
+          map[key].qty += parseFloat(ing.quantity) || 0;
+          if (!map[key].days.includes(day.dateISO)) map[key].days.push(day.dateISO);
+        });
       });
     });
   });
@@ -344,25 +372,28 @@ function syncCoursesFromMealPlan() {
 
   // Iterate through each day's meals
   mealPlan.forEach(dayMeal => {
-    [dayMeal.Midi, dayMeal.Soir].forEach(recipeName => {
-      if (!recipeName) return;
+    ['Midi', 'Soir'].forEach(slot => {
+      const recipeValue = dayMeal[slot];
+      if (!recipeValue) return;
+      const recipeNames = Array.isArray(recipeValue) ? recipeValue : (recipeValue ? [recipeValue] : []);
+      recipeNames.forEach(recipeName => {
+        // Find recipe in window.recipesData
+        const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
+        if (!recipe || !recipe.ingredients) return;
 
-      // Find recipe in window.recipesData
-      const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
-      if (!recipe || !recipe.ingredients) return;
-
-      // Aggregate ingredients
-      recipe.ingredients.forEach(ing => {
-        const key = ing.name;
-        if (!allIngredients[key]) {
-          allIngredients[key] = {
-            name: ing.name,
-            totalQuantity: 0,
-            unit: ing.unit || "g",
-            calories_per_100: ing.calories_per_100 || 0
-          };
-        }
-        allIngredients[key].totalQuantity += parseFloat(ing.quantity) || 0;
+        // Aggregate ingredients
+        recipe.ingredients.forEach(ing => {
+          const key = ing.name;
+          if (!allIngredients[key]) {
+            allIngredients[key] = {
+              name: ing.name,
+              totalQuantity: 0,
+              unit: ing.unit || "g",
+              calories_per_100: ing.calories_per_100 || 0
+            };
+          }
+          allIngredients[key].totalQuantity += parseFloat(ing.quantity) || 0;
+        });
       });
     });
   });
@@ -400,14 +431,18 @@ async function savePlanningToSheets() {
       }
     });
 
-    // Sort all dates and build values array
+    // Sort all dates and build values array (serialize recipe arrays as JSON)
     const values = Object.entries(allPlanData)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, meals]) => [
-        date,
-        meals.Midi || "",
-        meals.Soir || ""
-      ]);
+      .map(([date, meals]) => {
+        const midiVal = meals.Midi;
+        const soirVal = meals.Soir;
+        return [
+          date,
+          Array.isArray(midiVal) && midiVal.length > 0 ? JSON.stringify(midiVal) : (midiVal ? midiVal : ""),
+          Array.isArray(soirVal) && soirVal.length > 0 ? JSON.stringify(soirVal) : (soirVal ? soirVal : "")
+        ];
+      });
 
     await window.SheetsAPI.batchUpdateRange("Planning!A2:C1000", values, token);
     console.log(`Planning synced: ${values.length} rows to sheet`);

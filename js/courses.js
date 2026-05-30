@@ -37,15 +37,18 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
   // 1. Aggregate ingredients from recipes
   mealPlanArg.forEach(day => {
     ['Midi', 'Soir'].forEach(slot => {
-      const recipeName = day[slot];
-      if (!recipeName) return;
-      const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
-      if (!recipe?.ingredients) return;
-      recipe.ingredients.forEach(ing => {
-        const key = ing.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-        if (!map[key]) map[key] = { name: ing.name, qty: 0, unit: ing.unit || 'g', days: [] };
-        map[key].qty += parseFloat(ing.quantity) || 0;
-        if (!map[key].days.includes(day.dateISO)) map[key].days.push(day.dateISO);
+      const recipeValue = day[slot];
+      if (!recipeValue) return;
+      const recipeNames = Array.isArray(recipeValue) ? recipeValue : (recipeValue ? [recipeValue] : []);
+      recipeNames.forEach(recipeName => {
+        const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
+        if (!recipe?.ingredients) return;
+        recipe.ingredients.forEach(ing => {
+          const key = ing.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+          if (!map[key]) map[key] = { name: ing.name, qty: 0, unit: ing.unit || 'g', days: [] };
+          map[key].qty += parseFloat(ing.quantity) || 0;
+          if (!map[key].days.includes(day.dateISO)) map[key].days.push(day.dateISO);
+        });
       });
     });
   });
