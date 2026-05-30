@@ -309,21 +309,25 @@ function renderIngredientItem(ing, dimmed = false) {
   const priceText = ing.price > 0 ? `${ing.price.toFixed(2)}€` : '-€';
 
   let dayBadges = '';
+  const todayISO = today.toISOString().split('T')[0];
   ing.days.forEach(dateISO => {
     const d = new Date(dateISO);
     const dayNum = d.getDate();
     const dayAbbr = dayNames[d.getDay()];
     let badgeColor = '#e8f5e9';
 
-    if (dayAbbr === todayAbbr && dayNum === todayDay) {
+    if (dateISO === todayISO) {
       badgeColor = '#ffcdd2';
-    } else if (dayNum < todayDay) {
+    } else if (dateISO < todayISO) {
       badgeColor = '#e0e0e0';
     } else {
-      const tomorrow = todayDay + 1;
-      const dayAfter = todayDay + 2;
-      if ((dayAbbr === dayNames[(today.getDay() + 1) % 7] && dayNum === tomorrow) ||
-          (dayAbbr === dayNames[(today.getDay() + 2) % 7] && dayNum === dayAfter)) {
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowISO = tomorrow.toISOString().split('T')[0];
+      const dayAfter = new Date(today);
+      dayAfter.setDate(dayAfter.getDate() + 2);
+      const dayAfterISO = dayAfter.toISOString().split('T')[0];
+      if (dateISO === tomorrowISO || dateISO === dayAfterISO) {
         badgeColor = '#fff9c4';
       }
     }
