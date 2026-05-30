@@ -107,7 +107,13 @@ function calculateRecipeCalories(ingredients) {
     const cal100 = parseFloat(ing.calories_per_100) || 0;
     const unit = ing.unit || 'g';
 
-    const qtyGrams = convertToGrams(qty, unit);
+    // For piece ingredients, look up conversion_factor from inventory
+    let conversionFactor = null;
+    if (unit === 'piece' || unit === 'pièce') {
+      conversionFactor = getProductConversionFactor(ing.name);
+    }
+
+    const qtyGrams = convertToGrams(qty, unit, conversionFactor);
     totalWeightGrams += qtyGrams;
     totalKcal += cal100 * (qtyGrams / 100);
   });
