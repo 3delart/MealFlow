@@ -83,10 +83,26 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
 /**
  * Generate and write Courses sheet from current mealPlan
  */
+/**
+ * Ensure Courses sheet has proper headers with Date_utilisation column
+ */
+async function ensureCoursesHeaders(token) {
+  try {
+    const headerRow = ['Produit', 'Catégorie', 'Qty', 'Unité', 'Prix', 'Date_utilisation', 'Acheté'];
+    await window.SheetsAPI.batchUpdateRange('Courses!A1:G1', [headerRow], token);
+    console.log('Courses headers initialized');
+  } catch (err) {
+    console.warn('Could not ensure Courses headers:', err);
+  }
+}
+
 async function generateAndWriteCourses(token, existingAcheté = {}) {
   if (!window.SheetsAPI || !token) return;
 
   try {
+    // Ensure headers exist first
+    await ensureCoursesHeaders(token);
+
     const invRows = await window.SheetsAPI.readSheetTab('Inventory');
     const inventory = window.SheetsAPI.rowsToObjects(invRows);
 
