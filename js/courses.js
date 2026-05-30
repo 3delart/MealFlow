@@ -185,19 +185,19 @@ function colorDayBadges() {
   });
 
   // Strike entire item if ALL dates are past
-  document.querySelectorAll('#courses-list label').forEach(label => {
-    const dateSpans = label.querySelectorAll('span[style*="background"]');
-    if (dateSpans.length === 0) return;
-
-    let allPast = true;
-    dateSpans.forEach(span => {
-      const text = span.textContent.trim();
-      const dayNum = parseInt(text.split(/\s+/)[1]);
-      if (dayNum >= todayDay) allPast = false;
-    });
+  const todayISO = new Date().toISOString().split('T')[0];
+  Object.values(ingredientMap).forEach(ing => {
+    // Check if all dates for this ingredient are past
+    const allPast = ing.days && ing.days.length > 0 && ing.days.every(dateISO => dateISO < todayISO);
 
     if (allPast) {
-      label.classList.add('past-day');
+      // Find label element for this ingredient
+      document.querySelectorAll('#courses-list label').forEach(label => {
+        const ingName = label.querySelector('span')?.textContent.split('(')[0].trim();
+        if (ingName === ing.name) {
+          label.classList.add('past-day');
+        }
+      });
     }
   });
 }
