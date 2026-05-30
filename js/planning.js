@@ -41,12 +41,12 @@ function calculateRollingWindow(offset = 0) {
  * Parse recipe value (single string or JSON array) into array of recipes
  */
 function parseRecipeValue(value) {
-  if (!value) return [];
+  if (!value || value === "None") return [];
   try {
     const parsed = JSON.parse(value);
     return Array.isArray(parsed) ? parsed.filter(r => r) : [value];
   } catch (e) {
-    return value ? [value] : [];
+    return value && value !== "None" ? [value] : [];
   }
 }
 
