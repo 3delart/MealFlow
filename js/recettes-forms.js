@@ -204,23 +204,25 @@ function updateCalories() {
   let totalWeight = 0;
 
   rows.forEach(row => {
+    const nameInput = row.querySelector("td:nth-child(1) input");
     const qtyInput = row.querySelector("td:nth-child(2) input");
     const unitSelect = row.querySelector("td:nth-child(3) select");
     const calSpan = row.querySelector("td:nth-child(4) span");
 
+    const name = nameInput.value || "";
     const qty = parseFloat(qtyInput.value) || 0;
     const unit = unitSelect.value;
     const cal100 = parseFloat(calSpan.dataset.caloriesPer100 || 0) || 0;
 
-    // Convert to grams
-    let qtyGrams = qty;
-    if (unit === "litre") {
-      qtyGrams = qty * 1000;
+    // Convert to grams (use convertToGrams like calculateRecipeCalories)
+    let conversionFactor = null;
+    if (unit === "piece" || unit === "pièce") {
+      conversionFactor = window.getProductConversionFactor ? window.getProductConversionFactor(name) : null;
     }
-    // ml ≈ g for liquids, pièce has 0 weight
+    const qtyGrams = window.convertToGrams ? window.convertToGrams(qty, unit, conversionFactor) : qty;
 
     totalWeight += qtyGrams;
-    totalKcal += cal100 * (qty / 100);
+    totalKcal += cal100 * (qtyGrams / 100);
   });
 
   const kcalPer100 = totalWeight > 0 ? totalKcal / (totalWeight / 100) : 0;
