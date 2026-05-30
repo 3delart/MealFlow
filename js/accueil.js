@@ -226,14 +226,9 @@ function toggleMealEaten(mealType) {
 
   meal.eaten = !meal.eaten;
 
-  // Recalculate consumed calories (for local meal tracking, not consumptions)
-  caloriesConsumed = todaysMeals
-    .filter(m => m.eaten)
-    .reduce((sum, m) => sum + (m.actualKcal || m.estimatedKcal), 0);
-
-  // Also add consumptions from todaysConsumptions
-  const consumptionTotal = todaysConsumptions.reduce((sum, c) => sum + (c.Kcal_total || 0), 0);
-  caloriesConsumed += consumptionTotal;
+  // Calorie wheel tracks ONLY History consumption (real meals logged), not Planning
+  // Planning is just a plan, not actual consumption
+  caloriesConsumed = todaysConsumptions.reduce((sum, c) => sum + (c.Kcal_total || 0), 0);
 
   // Persist to localStorage
   saveMealsState();
