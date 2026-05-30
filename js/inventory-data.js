@@ -197,7 +197,7 @@ async function addItem(item) {
     Consommé: false,
     Barcode: barcode,
     Prix: item.price || "",
-    Conversion_factor: item.conversion_factor ? parseFloat(item.conversion_factor) : null,
+    Conversion_factor: item.conversion_factor || "",
     calories_per_100: parseFloat(item.calories_per_100) || scannedProductData?.calories || null,
     proteins: scannedProductData?.proteins || null,
     fats: scannedProductData?.fats || null,

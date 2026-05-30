@@ -44,7 +44,7 @@ async function saveEditedItem(e) {
     Péremption: document.getElementById("edit-expiry").value || item.Péremption,
     Prix: priceValue.toString().replace(".", ","),
     Calories_per_100: caloriesValue ? parseFloat(caloriesValue) : item.Calories_per_100,
-    Conversion_factor: conversionValue ? parseFloat(conversionValue) : item.Conversion_factor
+    Conversion_factor: conversionValue || item.Conversion_factor || ""
   };
 
   // Clear expiry date if quantity is 0 (explicitly set to empty)
