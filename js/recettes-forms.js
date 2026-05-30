@@ -370,6 +370,9 @@ function validateRecipeForm() {
  * @returns {void}
  */
 function openCreateModal() {
+  // Load conversion factors for piece calculations
+  if (window.loadConversionFactors) window.loadConversionFactors();
+
   const modal = document.getElementById("modal-recipe-form");
   const title = document.getElementById("modal-form-title");
   const form = document.getElementById("recipe-form");
@@ -401,6 +404,9 @@ function openCreateModal() {
 function openEditModal(recipeID) {
   const recipe = window.recipesData[recipeID];
   if (!recipe) return;
+
+  // Load conversion factors for piece calculations
+  if (window.loadConversionFactors) window.loadConversionFactors();
 
   const modal = document.getElementById("modal-recipe-form");
   const title = document.getElementById("modal-form-title");

@@ -391,6 +391,7 @@ async function initializeRecipes() {
 
   try {
     await loadRecipes();
+    if (window.loadConversionFactors) await window.loadConversionFactors();
   } catch (err) {
     console.error("Failed to load recipes:", err);
   }
