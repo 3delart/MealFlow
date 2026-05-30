@@ -1285,3 +1285,24 @@ tbody tr:hover {
 .btn-info:hover:not(:disabled) {
   background: var(--color-primary-dark);
 }
+
+/* Mobile responsive for recipe steps */
+@media (max-width: 600px) {
+  .step-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .step-row span {
+    margin-bottom: 4px;
+  }
+
+  .step-row input {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .step-row button {
+    width: 100%;
+  }
+}
