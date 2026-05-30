@@ -469,10 +469,16 @@ async function savePlanningToSheets() {
       .map(([date, meals]) => {
         const midiVal = meals.Midi;
         const soirVal = meals.Soir;
+        const formatMeal = (val) => {
+          if (Array.isArray(val)) {
+            return val.length > 0 ? JSON.stringify(val) : "";
+          }
+          return val || "";
+        };
         return [
           date,
-          Array.isArray(midiVal) && midiVal.length > 0 ? JSON.stringify(midiVal) : (midiVal ? midiVal : ""),
-          Array.isArray(soirVal) && soirVal.length > 0 ? JSON.stringify(soirVal) : (soirVal ? soirVal : "")
+          formatMeal(midiVal),
+          formatMeal(soirVal)
         ];
       });
 
