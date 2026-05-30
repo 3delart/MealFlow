@@ -38,10 +38,17 @@ const UNIT_CONVERSION_TABLE = {
  * Convert quantity from any unit to grams
  * @param {number} qty - quantity value
  * @param {string} unit - unit name (g, ml, piece, litre, etc)
+ * @param {number} productConversionFactor - per-product override for piece/pièce (e.g., 200 for tomate)
  * @returns {number} quantity in grams (0 if unit not convertible)
  */
-function convertToGrams(qty, unit) {
-  const factor = UNIT_CONVERSION_TABLE[unit] || 0;
+function convertToGrams(qty, unit, productConversionFactor = null) {
+  let factor = UNIT_CONVERSION_TABLE[unit] || 0;
+
+  // If piece/pièce and product has custom conversion, use it
+  if ((unit === 'piece' || unit === 'pièce') && productConversionFactor) {
+    factor = parseFloat(productConversionFactor);
+  }
+
   return (parseFloat(qty) || 0) * factor;
 }
 

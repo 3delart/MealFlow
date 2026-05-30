@@ -443,35 +443,53 @@ async function loadTodaysMeals() {
       return;
     }
 
+    // Parse recipe value (JSON array or single string) into array
+    function parseRecipeValue(value) {
+      if (!value) return [];
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed.filter(r => r) : [value];
+      } catch (e) {
+        return value ? [value] : [];
+      }
+    }
+
     // Build meals array from ONLY Midi and Soir columns
     const mealTypesToLoad = [
       { type: "midi", label: "Midi", emoji: "🍽️", estimatedKcal: 700, columnName: "Midi" },
       { type: "soir", label: "Soir", emoji: "🌙", estimatedKcal: 600, columnName: "Soir" }
     ];
 
-    todaysMeals = mealTypesToLoad.map(mealDef => {
-      const mealName = (todayRow[mealDef.columnName] || "").trim();
+    todaysMeals = [];
+    mealTypesToLoad.forEach(mealDef => {
+      const mealValue = todayRow[mealDef.columnName] || "";
+      const recipeNames = parseRecipeValue(mealValue);
 
-      // Get actual recipe kcal_per_100 from window.recipesData
-      let recipeKcal = mealDef.estimatedKcal;
-      if (mealName && window.recipesData) {
-        const recipe = Object.values(window.recipesData).find(r => r.name === mealName);
-        if (recipe && recipe.kcal_per_100) {
-          recipeKcal = recipe.kcal_per_100;
+      // Create entry for each recipe (support multiple recipes per meal)
+      recipeNames.forEach(recipeName => {
+        if (!recipeName) return;
+
+        // Get actual recipe kcal_per_100 from window.recipesData
+        let recipeKcal = mealDef.estimatedKcal;
+        if (window.recipesData) {
+          const recipe = Object.values(window.recipesData).find(r => r.name === recipeName);
+          if (recipe && recipe.kcal_per_100) {
+            recipeKcal = recipe.kcal_per_100;
+          }
         }
-      }
 
-      return {
-        mealType: mealDef.type,
-        label: mealDef.label,
-        emoji: mealDef.emoji,
-        name: mealName,
-        kcal_per_100: recipeKcal,
-        estimatedKcal: recipeKcal,
-        actualKcal: null,
-        eaten: false,
-        timestamp: null,
-      };
+        todaysMeals.push({
+          mealType: mealDef.type,
+          label: mealDef.label,
+          emoji: mealDef.emoji,
+          name: recipeName,
+          kcal_per_100: recipeKcal,
+          estimatedKcal: recipeKcal,
+          actualKcal: null,
+          eaten: false,
+          timestamp: null,
+        });
+      });
     });
 
     console.log(`Accueil: Loaded ${todaysMeals.length} meals for today (Midi/Soir only)`);
