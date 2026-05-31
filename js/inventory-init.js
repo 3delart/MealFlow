@@ -105,7 +105,7 @@ function setupEventHandlers() {
         cooking_factor: parseFloat(document.getElementById("field-cooking-factor").value) || 1.0
       };
 
-      if (!formData.product_name || !formData.quantity || !formData.unit || !formData.category) {
+      if (!formData.product_name || formData.quantity === "" || !formData.unit || !formData.category) {
         alert("Veuillez remplir les champs obligatoires (produit, quantité, unité, catégorie).");
         return;
       }
