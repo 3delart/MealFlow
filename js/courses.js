@@ -63,11 +63,7 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
     if (match) {
       ing.category = match.Catégorie || 'Autres';
       ing.price = parseFloat(match.Prix) || 0;
-      const stock = parseFloat(match.Qty) || 0;
-      const unitMatch = ing.unit === match.Unité ||
-        (ing.unit === 'piece' && match.Unité === 'pièce') ||
-        (ing.unit === 'pièce' && match.Unité === 'piece');
-      if (unitMatch) ing.qty = Math.max(0, ing.qty - stock);
+      // Store original qty — deduction happens in populateIngredientMap via live inventory lookup
     } else {
       ing.category = 'Autres';
       ing.price = 0;
@@ -149,22 +145,29 @@ function populateIngredientMap(objects) {
 
   objects.forEach((row, idx) => {
     if (!row.Produit) return;
-    const needed = parseFloat(row.Qty) || 0;
+    const totalNeeded = parseFloat(row.Qty) || 0;
 
-    // Look up current stock in inventory
+    // Look up current stock in live inventory
     const invItem = (window.inventoryData || []).find(item => {
       const k = norm(item.Produit);
       const n = norm(row.Produit);
       return k === n || k.includes(n) || n.includes(k);
     });
-    const stock = invItem ? (parseFloat(invItem.Qty) || 0) : 0;
+    const unit = row.Unité || 'g';
+    const invUnit = invItem ? (invItem.Unité || 'g') : unit;
+    const unitMatch = unit === invUnit ||
+      (unit === 'piece' && invUnit === 'pièce') ||
+      (unit === 'pièce' && invUnit === 'piece');
+    const stock = (invItem && unitMatch) ? (parseFloat(invItem.Qty) || 0) : 0;
+    const needed = Math.max(0, totalNeeded - stock);
 
     ingredientMap[row.Produit] = {
       name: row.Produit,
       category: row.Catégorie || 'Autres',
+      totalNeeded,
       needed,
       stock,
-      unit: row.Unité || 'g',
+      unit,
       price: parseFloat(row.Prix) || 0,
       days: row['Date_utilisation'] ? row['Date_utilisation'].split(',').filter(Boolean) : [],
       acheté: row.Acheté === '1' || row.Acheté === 1,
@@ -319,14 +322,12 @@ function renderIngredientItem(ing, dimmed = false) {
   const todayAbbr = dayNames[today.getDay()];
 
   const dimmClass = dimmed ? ' dimmed' : '';
-  let qtyDisplay = '';
-  if (ing.needed > 0) {
-    const total = ing.stock + ing.needed;
-    const stockStr = ing.stock > 0
-      ? `<span style="color:#2E7D32;">${ing.stock.toFixed(0)}</span>`
-      : `<span style="color:#999;">0</span>`;
-    qtyDisplay = ` <small style="font-size:0.85em;">(${stockStr}<span style="color:#999;"> / ${total.toFixed(0)}${ing.unit}</span>)</small>`;
-  }
+  const stockStr = ing.stock > 0
+    ? `<span style="color:#2E7D32;">${ing.stock.toFixed(0)}</span>`
+    : `<span style="color:#c62828;">0</span>`;
+  const qtyDisplay = ing.totalNeeded > 0
+    ? ` <small style="font-size:0.85em;">(${stockStr}<span style="color:#999;"> / ${ing.totalNeeded.toFixed(0)}${ing.unit}</span>)</small>`
+    : '';
 
   const priceText = ing.price > 0 ? `${ing.price.toFixed(2)}€` : '-€';
 

@@ -430,11 +430,7 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
     if (match) {
       ing.category = match.Catégorie || 'Autres';
       ing.price = parseFloat(match.Prix) || 0;
-      const stock = parseFloat(match.Qty) || 0;
-      const unitMatch = ing.unit === match.Unité ||
-        (ing.unit === 'piece' && match.Unité === 'pièce') ||
-        (ing.unit === 'pièce' && match.Unité === 'piece');
-      if (unitMatch) ing.qty = Math.max(0, ing.qty - stock);
+      // Store original qty — deduction happens in UI via live inventory lookup
     } else {
       ing.category = 'Autres';
       ing.price = 0;
