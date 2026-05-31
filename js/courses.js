@@ -325,9 +325,12 @@ function renderIngredientItem(ing, dimmed = false) {
   const stockStr = ing.stock > 0
     ? `<span style="color:#2E7D32;">${ing.stock.toFixed(0)}</span>`
     : `<span style="color:#c62828;">0</span>`;
-  const qtyDisplay = ing.totalNeeded > 0
-    ? ` <small style="font-size:0.85em;">(${stockStr}<span style="color:#999;"> / ${ing.totalNeeded.toFixed(0)}${ing.unit}</span>)</small>`
-    : '';
+  let qtyDisplay = '';
+  if (ing.totalNeeded > 0) {
+    qtyDisplay = ` <small style="font-size:0.85em;">(${stockStr}<span style="color:#999;"> / ${ing.totalNeeded.toFixed(0)}${ing.unit}</span>)</small>`;
+  } else if (ing.stock > 0) {
+    qtyDisplay = ` <small style="font-size:0.85em;color:#2E7D32;">(${ing.stock.toFixed(0)}${ing.unit})</small>`;
+  }
 
   const priceText = ing.price > 0 ? `${ing.price.toFixed(2)}€` : '-€';
 
@@ -554,28 +557,20 @@ async function initCourses() {
     const rows = await SheetsAPI.readSheetTab('Courses', 'A:G');
     const objects = SheetsAPI.rowsToObjects(rows);
 
-    // Auto-refresh si sheet vide ou date périmée
-    const firstDate = objects[0]?.['Date_utilisation']?.split(',')[0];
-    const today = Utils.getDateISO(0);
-    const isStale = !firstDate || !objects[0]?.Produit || !objects.some(r => r['Date_utilisation']?.includes(today));
-
-    if (isStale) {
-      const token = window.getAccessToken ? window.getAccessToken() : null;
-      if (token) {
-        await loadRecipes();
-        const existingAcheté = {};
-        objects.forEach(r => {
-          if (r.Produit && r.Acheté === '1') {
-            const k = r.Produit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-            existingAcheté[k] = '1';
-          }
-        });
-        await generateAndWriteCourses(token, existingAcheté);
-        const updated = await SheetsAPI.readSheetTab('Courses');
-        populateIngredientMap(SheetsAPI.rowsToObjects(updated));
-      } else {
-        populateIngredientMap(objects);
-      }
+    // Toujours régénérer au chargement pour refléter planning + inventaire actuels
+    const token = window.getAccessToken ? window.getAccessToken() : null;
+    if (token) {
+      await loadRecipes();
+      const existingAcheté = {};
+      objects.forEach(r => {
+        if (r.Produit && r.Acheté === '1') {
+          const k = r.Produit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+          existingAcheté[k] = '1';
+        }
+      });
+      await generateAndWriteCourses(token, existingAcheté);
+      const updated = await SheetsAPI.readSheetTab('Courses');
+      populateIngredientMap(SheetsAPI.rowsToObjects(updated));
     } else {
       populateIngredientMap(objects);
     }
