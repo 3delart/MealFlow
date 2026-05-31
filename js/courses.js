@@ -557,23 +557,8 @@ async function initCourses() {
     const rows = await SheetsAPI.readSheetTab('Courses', 'A:G');
     const objects = SheetsAPI.rowsToObjects(rows);
 
-    // Toujours régénérer au chargement pour refléter planning + inventaire actuels
-    const token = window.getAccessToken ? window.getAccessToken() : null;
-    if (token) {
-      await loadRecipes();
-      const existingAcheté = {};
-      objects.forEach(r => {
-        if (r.Produit && r.Acheté === '1') {
-          const k = r.Produit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-          existingAcheté[k] = '1';
-        }
-      });
-      await generateAndWriteCourses(token, existingAcheté);
-      const updated = await SheetsAPI.readSheetTab('Courses');
-      populateIngredientMap(SheetsAPI.rowsToObjects(updated));
-    } else {
-      populateIngredientMap(objects);
-    }
+    // Afficher les données du sheet — la régénération se fait depuis planning.html
+    populateIngredientMap(objects);
 
     renderCoursesList();
   } catch (error) {
