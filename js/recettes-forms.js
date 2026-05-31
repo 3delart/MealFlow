@@ -327,6 +327,8 @@ function collectRecipeFormData() {
     if (step) steps.push(step);
   });
 
+  const portionVal = parseInt(document.getElementById("field-portion-g").value) || null;
+
   return {
     name,
     description,
@@ -334,7 +336,8 @@ function collectRecipeFormData() {
     cook_minutes: cookMin,
     tags,
     ingredients,
-    steps
+    steps,
+    portion_g: portionVal
   };
 }
 
@@ -437,6 +440,8 @@ function openEditModal(recipeID) {
     addStepRow(step);
   });
 
+  document.getElementById("field-portion-g").value = recipe.portion_g || "";
+
   currentRecipeID = recipeID;
   updateCalories();
 
@@ -482,7 +487,8 @@ function handleRecipeFormSubmit(e) {
     cook_minutes: data.cook_minutes,
     tags: data.tags,
     ingredients: data.ingredients,
-    steps: data.steps
+    steps: data.steps,
+    portion_g: data.portion_g || null
   };
 
   // Sync to Sheets and close modal

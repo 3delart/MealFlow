@@ -197,7 +197,7 @@ function renderMeals() {
               <span class="meal-time-icon">${meal.emoji}</span>
               <div>
                 <p class="meal-name">${displayName}</p>
-                <p class="meal-kcal">${meal.kcal_per_100} kcal/100g</p>
+                <p class="meal-kcal">${meal.kcal_per_100} kcal/100g${(() => { const r = window.recipesData && Object.values(window.recipesData).find(r => r.name === meal.name); return r && r.portion_g ? ` · 🍽️ ${r.portion_g}g = ${Math.round(r.portion_g * meal.kcal_per_100 / 100)} kcal` : ''; })()}</p>
               </div>
             </div>
           </div>

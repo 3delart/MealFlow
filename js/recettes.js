@@ -54,7 +54,8 @@ async function loadRecipes() {
         tags: row[4] ? row[4].split(",").map(t => t.trim()) : [],
         ingredients: safeParseJSON(row[5], []),
         steps: safeParseJSON(row[6], []),
-        kcal_per_100: parseFloat(row[7]) || 0
+        kcal_per_100: parseFloat(row[7]) || 0,
+        portion_g: parseFloat(row[8]) || null
       };
     });
 
@@ -115,7 +116,7 @@ async function syncRecipesToSheets() {
     }
 
     // Clear existing data rows (keep header)
-    await window.SheetsAPI.clearSheetRange("Recettes!A2:H1000", token);
+    await window.SheetsAPI.clearSheetRange("Recettes!A2:I1000", token);
 
     // Append one row per recipe
     for (const recipe of Object.values(recipesData)) {
@@ -128,7 +129,8 @@ async function syncRecipesToSheets() {
         (recipe.tags || []).join(", "),
         JSON.stringify(recipe.ingredients || []),
         JSON.stringify(recipe.steps || []),
-        cals.kcal_per_100
+        cals.kcal_per_100,
+        recipe.portion_g || ""
       ];
       await window.SheetsAPI.appendRowWithToken("Recettes", row, token);
     }
@@ -186,6 +188,13 @@ function renderRecipeCard(recipeID, recipe) {
   const calSpan = document.createElement("span");
   calSpan.textContent = `🔥 ${cals.kcal_per_100} kcal/100g`;
   meta.appendChild(calSpan);
+
+  if (recipe.portion_g) {
+    const portionKcal = Math.round(recipe.portion_g * cals.kcal_per_100 / 100);
+    const portionSpan = document.createElement("span");
+    portionSpan.textContent = `🍽️ Portion ${recipe.portion_g}g = ${portionKcal} kcal`;
+    meta.appendChild(portionSpan);
+  }
 
   // Buttons
   const buttons = document.createElement("div");
@@ -280,6 +289,7 @@ function openViewModal(recipeID) {
       <div>🍳 <strong>Cuisson:</strong> ${recipe.cook_minutes || 0}m</div>
       <div>🔥 <strong>Calories total:</strong> ${cals.total_kcal} kcal</div>
       <div>🔥 <strong>Par 100g:</strong> ${cals.kcal_per_100} kcal</div>
+      ${recipe.portion_g ? `<div>🍽️ <strong>Portion recommandée:</strong> ${recipe.portion_g}g = ${Math.round(recipe.portion_g * cals.kcal_per_100 / 100)} kcal</div>` : ''}
     </div>
 
     <h3 style="margin-top: 16px; color: var(--color-primary, #2e7d32);">INGRÉDIENTS</h3>
