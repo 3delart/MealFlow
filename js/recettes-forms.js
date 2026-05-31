@@ -229,6 +229,16 @@ function updateCalories() {
 
   document.getElementById("calorie-total").textContent = Math.round(totalKcal);
   document.getElementById("calorie-per-100").textContent = Math.round(kcalPer100);
+  const weightEl = document.getElementById("recipe-total-weight");
+  if (weightEl) weightEl.textContent = Math.round(totalWeight);
+
+  const portionG = parseInt(document.getElementById("field-portion-g")?.value) || 0;
+  const portionPreview = document.getElementById("calorie-portion-preview");
+  if (portionPreview) {
+    portionPreview.textContent = portionG > 0
+      ? ` · 🍽️ ${portionG}g = ${Math.round(portionG * kcalPer100 / 100)} kcal`
+      : "";
+  }
 }
 
 /**
@@ -522,6 +532,10 @@ function initializeRecipeFormEvents() {
 
   // Form submission
   form.addEventListener("submit", handleRecipeFormSubmit);
+
+  // Portion preview
+  const portionInput = document.getElementById("field-portion-g");
+  if (portionInput) portionInput.addEventListener("input", updateCalories);
 
   // Add ingredient row button
   if (addIngBtn) {
