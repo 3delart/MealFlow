@@ -145,12 +145,25 @@ function populateIngredientMap(objects) {
   document.getElementById('week-range-label').textContent = `${first.dateStr} – ${last.dateStr}`;
   document.getElementById('loading-state').textContent = '';
 
+  const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+
   objects.forEach((row, idx) => {
     if (!row.Produit) return;
+    const needed = parseFloat(row.Qty) || 0;
+
+    // Look up current stock in inventory
+    const invItem = (window.inventoryData || []).find(item => {
+      const k = norm(item.Produit);
+      const n = norm(row.Produit);
+      return k === n || k.includes(n) || n.includes(k);
+    });
+    const stock = invItem ? (parseFloat(invItem.Qty) || 0) : 0;
+
     ingredientMap[row.Produit] = {
       name: row.Produit,
       category: row.Catégorie || 'Autres',
-      needed: parseFloat(row.Qty) || 0,
+      needed,
+      stock,
       unit: row.Unité || 'g',
       price: parseFloat(row.Prix) || 0,
       days: row['Date_utilisation'] ? row['Date_utilisation'].split(',').filter(Boolean) : [],
@@ -306,9 +319,14 @@ function renderIngredientItem(ing, dimmed = false) {
   const todayAbbr = dayNames[today.getDay()];
 
   const dimmClass = dimmed ? ' dimmed' : '';
-  const qtyDisplay = ing.needed <= 0
-    ? ''
-    : ` <small style="color:#999;font-size:0.85em;">(${ing.needed.toFixed(0)}${ing.unit})</small>`;
+  let qtyDisplay = '';
+  if (ing.needed > 0) {
+    const total = ing.stock + ing.needed;
+    const stockStr = ing.stock > 0
+      ? `<span style="color:#2E7D32;">${ing.stock.toFixed(0)}</span>`
+      : `<span style="color:#999;">0</span>`;
+    qtyDisplay = ` <small style="font-size:0.85em;">(${stockStr}<span style="color:#999;"> / ${total.toFixed(0)}${ing.unit}</span>)</small>`;
+  }
 
   const priceText = ing.price > 0 ? `${ing.price.toFixed(2)}€` : '-€';
 
