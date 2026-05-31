@@ -65,15 +65,15 @@ async function saveEditedItem(e) {
 
   if (authenticated && item.sheetRowNumber && token) {
     try {
+      await SheetsAPI.updateSheetCell(`Inventory!B${item.sheetRowNumber}`, newName, token);
       await SheetsAPI.updateSheetCell(`Inventory!C${item.sheetRowNumber}`, item.Catégorie, token);
       await SheetsAPI.updateSheetCell(`Inventory!D${item.sheetRowNumber}`, item.Qty, token);
       await SheetsAPI.updateSheetCell(`Inventory!E${item.sheetRowNumber}`, item.Unité, token);
-      await SheetsAPI.updateSheetCell(`Inventory!F${item.sheetRowNumber}`, item.Date_ajout, token);
-      await SheetsAPI.updateSheetCell(`Inventory!G${item.sheetRowNumber}`, item.Péremption, token);
-      await SheetsAPI.updateSheetCell(`Inventory!H${item.sheetRowNumber}`, item.Prix, token);
-      await SheetsAPI.updateSheetCell(`Inventory!I${item.sheetRowNumber}`, item.Calories_per_100 || "", token);
       await SheetsAPI.updateSheetCell(`Inventory!F${item.sheetRowNumber}`, item.Conversion_factor || "", token);
-      await SheetsAPI.updateSheetCell(`Inventory!B${item.sheetRowNumber}`, newName, token);
+      await SheetsAPI.updateSheetCell(`Inventory!G${item.sheetRowNumber}`, item.Date_ajout, token);
+      await SheetsAPI.updateSheetCell(`Inventory!H${item.sheetRowNumber}`, item.Péremption, token);
+      await SheetsAPI.updateSheetCell(`Inventory!I${item.sheetRowNumber}`, item.Prix, token);
+      await SheetsAPI.updateSheetCell(`Inventory!J${item.sheetRowNumber}`, item.Calories_per_100 || "", token);
       console.log("Item updated in Sheets");
     } catch (err) {
       console.error("Failed to update Sheets:", err);
