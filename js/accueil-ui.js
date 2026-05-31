@@ -662,6 +662,7 @@ async function consommerScannerOnDetect(barcode) {
             newItem.Catégorie,
             newItem.Qty,
             newItem.Unité,
+            "",
             newItem.Date_ajout,
             newItem.Péremption,
             newItem.Prix,
