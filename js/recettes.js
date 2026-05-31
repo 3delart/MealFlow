@@ -12,6 +12,9 @@
 let recipesData = {};
 window.recipesData = recipesData;  // Expose globally for forms
 
+/** @type {boolean} True only when recipesData was successfully loaded from Sheets */
+let recipesLoadedFromSheets = false;
+
 // ============================================================================
 // STEP 1: DATA LOADING
 // ============================================================================
@@ -60,6 +63,7 @@ async function loadRecipes() {
     });
 
     window.recipesData = recipesData;
+    recipesLoadedFromSheets = true;
     console.log("Recipes loaded from Recettes:", Object.keys(recipesData).length, "recipes");
   } catch (err) {
     console.warn("Recettes: Sheets API unavailable, falling back to localStorage", err.message);
@@ -111,6 +115,13 @@ async function syncRecipesToSheets() {
     const token = window.getAccessToken ? window.getAccessToken() : null;
     if (!token) {
       console.warn("No OAuth token, skipping Sheets sync");
+      saveRecipesToLocalStorage();
+      return;
+    }
+
+    // Safety guard: never overwrite Sheets with localStorage fallback data
+    if (!recipesLoadedFromSheets) {
+      console.warn("Skipping Sheets sync — recipes were not loaded from Sheets (localStorage fallback active)");
       saveRecipesToLocalStorage();
       return;
     }
