@@ -557,6 +557,9 @@ async function initCourses() {
     const rows = await SheetsAPI.readSheetTab('Courses', 'A:G');
     const objects = SheetsAPI.rowsToObjects(rows);
 
+    // Charger l'inventaire pour le calcul stock/totalNeeded
+    if (typeof loadInventory === 'function') await loadInventory();
+
     // Afficher les données du sheet — la régénération se fait depuis planning.html
     populateIngredientMap(objects);
 
