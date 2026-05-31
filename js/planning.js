@@ -6,6 +6,7 @@ let weekOffset = 0;
 const MAX_WEEK_OFFSET = 4;
 let allPlanData = {};
 let planningLoadedFromSheets = false;
+let _coursesDebounceTimer = null;
 
 /**
  * Calculate rolling window of 7 days
@@ -73,6 +74,24 @@ async function loadMealPlan() {
       console.log("Planning: empty sheet");
     }
     planningLoadedFromSheets = true;
+
+    // Resync courses on load so they always reflect current planning state
+    const token = window.getAccessToken ? window.getAccessToken() : null;
+    if (token) {
+      (async () => {
+        try {
+          const oldCourses = await window.SheetsAPI.readSheetTab('Courses');
+          const existingAcheté = {};
+          window.SheetsAPI.rowsToObjects(oldCourses).forEach(row => {
+            if (row.Produit && row.Acheté === '1') {
+              const key = row.Produit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+              existingAcheté[key] = '1';
+            }
+          });
+          await generateAndWriteCourses(token, existingAcheté);
+        } catch(e) { console.warn('Courses resync on load failed:', e); }
+      })();
+    }
   } catch (error) {
     console.error("Error reading planning:", error);
     allPlanData = {};
@@ -552,8 +571,9 @@ async function savePlanningToSheets() {
     await window.SheetsAPI.batchUpdateRange("Planning!A2:C1000", values, token);
     console.log(`Planning synced: ${values.length} rows to sheet`);
 
-    // Fire-and-forget Courses sync
-    ;(async () => {
+    // Debounced Courses sync — 800ms delay prevents race conditions on rapid removes
+    clearTimeout(_coursesDebounceTimer);
+    _coursesDebounceTimer = setTimeout(async () => {
       try {
         const oldCourses = await window.SheetsAPI.readSheetTab('Courses');
         const existingAcheté = {};
@@ -565,7 +585,7 @@ async function savePlanningToSheets() {
         });
         await generateAndWriteCourses(token, existingAcheté);
       } catch(e) { console.warn('Courses sync failed:', e); }
-    })();
+    }, 800);
   } catch (err) {
     console.error("Failed to sync planning to Sheets:", err);
   }
