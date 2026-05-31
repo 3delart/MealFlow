@@ -58,12 +58,14 @@ async function loadRecipes() {
         ingredients: safeParseJSON(row[5], []),
         steps: safeParseJSON(row[6], []),
         kcal_per_100: parseFloat(row[7]) || 0,
-        portion_g: parseFloat(row[8]) || null
+        portion_g: parseFloat(row[8]) || null,
+        sheetRowNumber: idx + 2
       };
     });
 
     window.recipesData = recipesData;
     recipesLoadedFromSheets = true;
+    window.recipesLoadedFromSheets = true;
     console.log("Recipes loaded from Recettes:", Object.keys(recipesData).length, "recipes");
   } catch (err) {
     console.warn("Recettes: Sheets API unavailable, falling back to localStorage", err.message);
@@ -98,6 +100,7 @@ function loadRecipesFromLocalStorage() {
 function saveRecipesToLocalStorage() {
   localStorage.setItem("mealflow_recipes", JSON.stringify(recipesData));
 }
+window.saveRecipesToLocalStorage = saveRecipesToLocalStorage;
 
 /**
  * Sync recipes to Google Sheets (Recettes tab, one row per recipe)
@@ -224,11 +227,25 @@ function renderRecipeCard(recipeID, recipe) {
   const deleteBtn = document.createElement("button");
   deleteBtn.className = "btn btn-danger";
   deleteBtn.textContent = "🗑️ Supprimer";
-  deleteBtn.addEventListener("click", () => {
+  deleteBtn.addEventListener("click", async () => {
     if (confirm("Confirmer la suppression de cette recette ?")) {
+      const rowNum = recipesData[recipeID]?.sheetRowNumber;
       delete recipesData[recipeID];
-      syncRecipesToSheets();
+      // Decrement sheetRowNumber for all recipes after the deleted row
+      if (rowNum) {
+        Object.values(recipesData).forEach(r => {
+          if (r.sheetRowNumber > rowNum) r.sheetRowNumber--;
+        });
+      }
+      saveRecipesToLocalStorage();
       renderRecipeList();
+      if (rowNum && window.SheetsAPI && recipesLoadedFromSheets) {
+        const token = window.getAccessToken ? window.getAccessToken() : null;
+        if (token) {
+          try { await window.SheetsAPI.deleteSheetRow('Recettes', rowNum, token); }
+          catch (err) { console.error('Failed to delete recipe row:', err); }
+        }
+      }
     }
   });
 

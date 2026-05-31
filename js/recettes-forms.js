@@ -506,9 +506,34 @@ function handleRecipeFormSubmit(e) {
     portion_g: data.portion_g || null
   };
 
-  // Sync to Sheets and close modal
+  // Targeted Sheets write (row update or append — no full clear)
   try {
-    window.syncRecipesToSheets();
+    const token = window.getAccessToken ? window.getAccessToken() : null;
+    if (token && window.SheetsAPI && window.recipesLoadedFromSheets) {
+      const recipe = window.recipesData[recipeID];
+      const cals = window.RecettesUtils.calculateRecipeCalories(data.ingredients || []);
+      const row = [
+        data.name,
+        data.description || "",
+        data.prep_minutes || 0,
+        data.cook_minutes || 0,
+        (data.tags || []).join(", "),
+        JSON.stringify(data.ingredients || []),
+        JSON.stringify(data.steps || []),
+        cals.kcal_per_100,
+        data.portion_g || ""
+      ];
+      if (recipe.sheetRowNumber) {
+        // Edit existing row
+        await window.SheetsAPI.batchUpdateRange(`Recettes!A${recipe.sheetRowNumber}:I${recipe.sheetRowNumber}`, [row], token);
+      } else {
+        // New recipe — append and assign row number
+        await window.SheetsAPI.appendRowWithToken("Recettes", row, token);
+        const allRows = await window.SheetsAPI.readSheetTab("Recettes");
+        recipe.sheetRowNumber = allRows.length;
+      }
+      window.saveRecipesToLocalStorage();
+    }
   } catch (err) {
     alert("Erreur: la recette n'a pas pu être sauvegardée sur Google Sheets. Elle est enregistrée localement.");
     console.error("Sheets sync error:", err);
