@@ -303,9 +303,52 @@ async function batchUpdateRange(range, values, accessToken) {
   return response.json();
 }
 
+/**
+ * Delete a single row from a sheet tab by 1-based row number.
+ * Safer than clear+rewrite for single-row deletions.
+ * @param {string} tabName - Sheet tab name (e.g. "History_florian")
+ * @param {number} rowNumber - 1-based row number (row 1 = header, row 2 = first data row)
+ * @param {string} accessToken - OAuth2 access token
+ */
+async function deleteSheetRow(tabName, rowNumber, accessToken) {
+  const spreadsheetId = getSheetId();
+  const token = accessToken || (typeof getAccessToken === 'function' ? getAccessToken() : null);
+  if (!token) throw new Error("No access token for deleteSheetRow");
+
+  const metaResp = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!metaResp.ok) throw new Error("deleteSheetRow: failed to get sheet metadata");
+  const meta = await metaResp.json();
+  const tab = (meta.sheets || []).find(s => s.properties.title === tabName);
+  if (!tab) throw new Error(`deleteSheetRow: tab "${tabName}" not found`);
+
+  const startIndex = rowNumber - 1; // convert to 0-based
+  const delResp = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requests: [{
+          deleteDimension: {
+            range: { sheetId: tab.properties.sheetId, dimension: 'ROWS', startIndex, endIndex: startIndex + 1 }
+          }
+        }]
+      })
+    }
+  );
+  if (!delResp.ok) {
+    const err = await delResp.json();
+    throw new Error(`deleteSheetRow failed: ${err.error?.message || delResp.statusText}`);
+  }
+}
+
 // Export all functions to the window object so they can be used globally (in browser)
 if (typeof window !== 'undefined') {
   window.SheetsAPI = {
+    getSheetId,
     readSheetTab,
     rowsToObjects,
     writeSheetTab,
@@ -313,7 +356,8 @@ if (typeof window !== 'undefined') {
     appendConsumptionRecord,
     updateSheetCell,
     clearSheetRange,
-    batchUpdateRange
+    batchUpdateRange,
+    deleteSheetRow
   };
 }
 

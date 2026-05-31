@@ -891,29 +891,20 @@ async function deleteConsumption(index) {
         const rows = await window.SheetsAPI.readSheetTab(tabName);
         const objects = window.SheetsAPI.rowsToObjects(rows);
 
-        // Filter out the deleted entry by matching Date, Time, and Product
-        const filtered = objects.filter(row => {
-          const rowDate = (row.Date || "").trim();
-          const rowTime = (row.Time || row.Heure || "").trim();
-          const rowProduct = (row.Product || row.Nom || "").trim();
-
-          return !(rowDate === today && rowTime === entry.Heure && rowProduct === entry.Nom);
+        // Find exact row numbers to delete (idx+2: row 1=header, idx 0 = row 2)
+        const toDelete = [];
+        objects.forEach((obj, idx) => {
+          const rowDate = (obj.Date || "").trim();
+          const rowTime = (obj.Heure || obj.Time || "").trim();
+          const rowProduct = (obj.Nom || obj.Product || "").trim();
+          if (rowDate === today && rowTime === entry.Heure && rowProduct === entry.Nom) {
+            toDelete.push(idx + 2);
+          }
         });
 
-        // Clear data range and re-append filtered rows
-        await window.SheetsAPI.clearSheetRange(`${tabName}!A2:Z999`, token);
-
-        for (const obj of filtered) {
-          const row = [
-            obj.Date,
-            obj.Time || obj.Heure,
-            obj.Product || obj.Nom,
-            obj.Quantity || obj.Quantité,
-            obj.Unit || obj.Unité,
-            obj.Total_calories || obj.Kcal_total,
-            obj.Type
-          ];
-          await window.SheetsAPI.appendRowWithToken(tabName, row, token);
+        // Delete from highest row first to avoid index shifts
+        for (const rowNum of toDelete.sort((a, b) => b - a)) {
+          await window.SheetsAPI.deleteSheetRow(tabName, rowNum, token);
         }
       }
     } catch (err) {

@@ -611,15 +611,7 @@ async function ensureHistorySheetExists(user, token) {
     // Sheet doesn't exist, create it with header row
     console.log(`Accueil: Creating history sheet "${sheetName}"`);
 
-    const headerRow = [
-      "Date",
-      "Product",
-      "Quantity",
-      "Unit",
-      "Calories_per_100g",
-      "Total_calories",
-      "Type"
-    ];
+    const headerRow = ["Date", "Heure", "Nom", "Quantité", "Unité", "Kcal_total", "Type"];
 
     try {
       await appendRowWithToken(sheetName, headerRow, token);

@@ -5,6 +5,7 @@ let currentModalContext = { dateISO: null, mealTime: null };
 let weekOffset = 0;
 const MAX_WEEK_OFFSET = 4;
 let allPlanData = {};
+let planningLoadedFromSheets = false;
 
 /**
  * Calculate rolling window of 7 days
@@ -71,6 +72,7 @@ async function loadMealPlan() {
     } else {
       console.log("Planning: empty sheet");
     }
+    planningLoadedFromSheets = true;
   } catch (error) {
     console.error("Error reading planning:", error);
     allPlanData = {};
@@ -538,6 +540,11 @@ async function savePlanningToSheets() {
           formatMeal(soirVal)
         ];
       });
+
+    if (!planningLoadedFromSheets) {
+      console.warn("Skipping Planning sync — not loaded from Sheets (would overwrite with incomplete data)");
+      return;
+    }
 
     await window.SheetsAPI.batchUpdateRange("Planning!A2:C1000", values, token);
     console.log(`Planning synced: ${values.length} rows to sheet`);
