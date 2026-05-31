@@ -14,6 +14,7 @@ function openEditModal(item) {
   document.getElementById("edit-price").value = (item.Prix || "").toString().replace(",", ".");
   document.getElementById("edit-calories").value = item.Calories_per_100 || "";
   document.getElementById("edit-conversion").value = item.Conversion_factor || "";
+  document.getElementById("edit-cooking-factor").value = item.cooking_factor || 1.0;
   modal.setAttribute("aria-hidden", "false");
   modal.classList.remove("hidden");
   modal.setAttribute("data-item-id", item.id);
@@ -49,7 +50,8 @@ async function saveEditedItem(e) {
     Péremption: document.getElementById("edit-expiry").value || item.Péremption,
     Prix: priceValue.toString().replace(".", ","),
     Calories_per_100: caloriesValue ? parseFloat(caloriesValue) : item.Calories_per_100,
-    Conversion_factor: conversionValue || item.Conversion_factor || ""
+    Conversion_factor: conversionValue || item.Conversion_factor || "",
+    cooking_factor: parseFloat(document.getElementById("edit-cooking-factor").value) || 1.0
   };
 
   // Clear expiry date if quantity is 0 (explicitly set to empty)
@@ -74,6 +76,7 @@ async function saveEditedItem(e) {
       await SheetsAPI.updateSheetCell(`Inventory!H${item.sheetRowNumber}`, item.Péremption, token);
       await SheetsAPI.updateSheetCell(`Inventory!I${item.sheetRowNumber}`, item.Prix, token);
       await SheetsAPI.updateSheetCell(`Inventory!J${item.sheetRowNumber}`, item.Calories_per_100 || "", token);
+      await SheetsAPI.updateSheetCell(`Inventory!O${item.sheetRowNumber}`, item.cooking_factor || 1.0, token);
       console.log("Item updated in Sheets");
     } catch (err) {
       console.error("Failed to update Sheets:", err);

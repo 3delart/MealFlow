@@ -83,7 +83,8 @@ async function loadInventory() {
         proteins: parseFloat(row["Proteins"]) || 0,
         fats: parseFloat(row["Fats"]) || 0,
         carbs: parseFloat(row["Carbs"]) || 0,
-        allergens: row["Allergens"] || ""
+        allergens: row["Allergens"] || "",
+        cooking_factor: parseFloat(row["Cooking_factor"]) || 1.0
       }));
       console.log("Inventory loaded from Sheets:", inventoryData.length, "items");
       mergeDuplicatesByBarcode();
@@ -224,7 +225,8 @@ async function addItem(item) {
       newItem.proteins,
       newItem.fats,
       newItem.carbs,
-      newItem.allergens
+      newItem.allergens,
+      newItem.cooking_factor || 1.0
     ];
 
     SheetsAPI.appendRowWithToken("Inventory", row, token)

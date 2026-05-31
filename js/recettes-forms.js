@@ -22,7 +22,7 @@ let currentRecipeID = null;
  * @param {string|number} calories - Calories per 100g
  * @returns {void}
  */
-function addIngredientRow(productName = "", quantity = "", unit = "g", calories = 0) {
+function addIngredientRow(productName = "", quantity = "", unit = "g", calories = 0, cookingFactor = 1.0) {
   const tbody = document.getElementById("ingredients-tbody");
   const row = document.createElement("tr");
 
@@ -84,6 +84,7 @@ function addIngredientRow(productName = "", quantity = "", unit = "g", calories 
   const calSpan = document.createElement("span");
   calSpan.textContent = calories;
   calSpan.dataset.caloriesPer100 = calories;
+  calSpan.dataset.cookingFactor = cookingFactor;
   calCell.appendChild(calSpan);
 
   // Delete button
@@ -157,6 +158,7 @@ function updateIngredientCalories(input) {
         input.value = match.name;
         calSpan.textContent = match.calories_per_100;
         calSpan.dataset.caloriesPer100 = match.calories_per_100;
+        calSpan.dataset.cookingFactor = match.cooking_factor || 1.0;
         dropdownEl.style.display = "none";
         updateCalories();
       });
@@ -170,6 +172,7 @@ function updateIngredientCalories(input) {
       const match = matches[0];
       calSpan.textContent = match.calories_per_100;
       calSpan.dataset.caloriesPer100 = match.calories_per_100;
+      calSpan.dataset.cookingFactor = match.cooking_factor || 1.0;
     }
   } else {
     // No match found, show placeholder
@@ -220,8 +223,9 @@ function updateCalories() {
       conversionFactor = window.getProductConversionFactor ? window.getProductConversionFactor(name) : null;
     }
     const qtyGrams = window.convertToGrams ? window.convertToGrams(qty, unit, conversionFactor) : qty;
+    const cookingFactor = parseFloat(calSpan.dataset.cookingFactor) || 1.0;
 
-    totalWeight += qtyGrams;
+    totalWeight += qtyGrams * cookingFactor;
     totalKcal += cal100 * (qtyGrams / 100);
   });
 
@@ -325,7 +329,8 @@ function collectRecipeFormData() {
         name: product,
         quantity: qty,
         unit: unit,
-        calories_per_100: cal100
+        calories_per_100: cal100,
+        cooking_factor: parseFloat(calSpan.dataset.cookingFactor) || 1.0
       });
     }
   });
@@ -441,7 +446,7 @@ function openEditModal(recipeID) {
   // Clear and populate ingredients
   document.getElementById("ingredients-tbody").innerHTML = "";
   (recipe.ingredients || []).forEach(ing => {
-    addIngredientRow(ing.name, ing.quantity, ing.unit, ing.calories_per_100);
+    addIngredientRow(ing.name, ing.quantity, ing.unit, ing.calories_per_100, ing.cooking_factor || 1.0);
   });
 
   // Clear and populate steps

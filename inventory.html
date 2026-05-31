@@ -112,6 +112,12 @@
         </div>
 
         <div class="form-group">
+          <label for="field-cooking-factor">Facteur de cuisson <span style="color:#999;font-weight:normal;">(optionnel, défaut 1.0)</span></label>
+          <input type="number" id="field-cooking-factor" step="0.01" min="0.1" max="5" placeholder="1.0">
+          <small style="color:#999;">1.0 = inchangé · &gt;1 = prend du poids (pâtes 2.3, riz 2.7) · &lt;1 = perd du poids (viande 0.7)</small>
+        </div>
+
+        <div class="form-group">
           <label for="field-conversion">Conversion (1 pièce = ? g)</label>
           <input type="number" id="field-conversion" name="conversion_factor" min="0" step="0.1" placeholder="ex. 200">
         </div>
@@ -249,6 +255,11 @@
         <div class="form-group">
           <label for="edit-calories">Calories (kcal/100g)</label>
           <input type="number" id="edit-calories" step="0.1" min="0" placeholder="ex. 350">
+        </div>
+
+        <div class="form-group">
+          <label for="edit-cooking-factor">Facteur de cuisson <span style="color:#999;font-weight:normal;">(défaut 1.0)</span></label>
+          <input type="number" id="edit-cooking-factor" step="0.01" min="0.1" max="5" placeholder="1.0">
         </div>
 
         <div class="form-group">

@@ -114,7 +114,8 @@ function calculateRecipeCalories(ingredients) {
     }
 
     const qtyGrams = convertToGrams(qty, unit, conversionFactor);
-    totalWeightGrams += qtyGrams;
+    const cookingFactor = parseFloat(ing.cooking_factor) || 1.0;
+    totalWeightGrams += qtyGrams * cookingFactor;
     totalKcal += cal100 * (qtyGrams / 100);
   });
 
@@ -145,7 +146,8 @@ function searchInventoryProducts(query) {
     .map(item => ({
       name: item.Produit,
       calories_per_100: parseFloat(item.calories_per_100) || 0,
-      unit: item.Unité || 'g'
+      unit: item.Unité || 'g',
+      cooking_factor: parseFloat(item.cooking_factor) || 1.0
     }))
     .slice(0, 10); // Top 10 results
 }

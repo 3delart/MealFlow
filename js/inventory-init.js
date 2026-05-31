@@ -101,7 +101,8 @@ function setupEventHandlers() {
         category: document.getElementById("field-category").value,
         expiry_date: document.getElementById("field-expiry").value,
         price: document.getElementById("field-price").value || "",
-        calories_per_100: document.getElementById("field-calories").value || null
+        calories_per_100: document.getElementById("field-calories").value || null,
+        cooking_factor: parseFloat(document.getElementById("field-cooking-factor").value) || 1.0
       };
 
       if (!formData.product_name || !formData.quantity || !formData.unit || !formData.category) {
