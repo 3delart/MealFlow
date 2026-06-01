@@ -230,9 +230,11 @@ async function addItem(item) {
     ];
 
     SheetsAPI.appendRowWithToken("Inventory", row, token)
-      .then(() => {
+      .then(async () => {
         console.log("Item synced to Sheets");
-        sortSheetByCategory(token);
+        await sortSheetByCategory(token);
+        // Reload inventory to refresh sheetRowNumbers (sort changes row positions)
+        await loadInventory();
       })
       .catch(err => console.error("Failed to sync to Sheets:", err));
   }
@@ -256,8 +258,9 @@ async function markConsumed(itemId) {
 
   if (item.sheetRowNumber && window.SheetsAPI) {
     try {
+      const token = typeof getAccessToken === 'function' ? getAccessToken() : null;
       const range = `Inventory!D${item.sheetRowNumber}`;
-      await window.SheetsAPI.updateSheetCell(range, "0");
+      await window.SheetsAPI.updateSheetCell(range, "0", token);
       console.log(`Marked as consumed in Sheets: row ${item.sheetRowNumber}`);
     } catch (err) {
       console.warn(`Failed to update Sheets for item ${itemId}:`, err);

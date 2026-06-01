@@ -108,7 +108,14 @@ window.saveRecipesToLocalStorage = saveRecipesToLocalStorage;
  * @returns {Promise<void>}
  */
 async function syncRecipesToSheets() {
-  if (!window.SheetsAPI) {
+  // DISABLED: All recipe writes are now targeted (batchUpdateRange per row, deleteSheetRow).
+  // This function used clearSheetRange+appendRowWithToken which risks data loss.
+  // Called only as fallback — save to localStorage only.
+  console.warn("syncRecipesToSheets: disabled (use targeted writes). Saving to localStorage only.");
+  saveRecipesToLocalStorage();
+  return;
+
+  if (!window.SheetsAPI) { // unreachable — kept for reference only
     console.warn("SheetsAPI not available, skipping Sheets sync");
     saveRecipesToLocalStorage();
     return;

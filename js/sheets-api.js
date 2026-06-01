@@ -324,6 +324,10 @@ async function batchUpdateCells(updates, accessToken) {
     }
   );
   if (!response.ok) {
+    if (response.status === 401 && typeof handleAuthError === 'function') {
+      handleAuthError("Token expired - please re-login");
+      return;
+    }
     const err = await response.json();
     throw new Error(`batchUpdateCells failed: ${err.error?.message || response.statusText}`);
   }
@@ -345,7 +349,10 @@ async function deleteSheetRow(tabName, rowNumber, accessToken) {
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
-  if (!metaResp.ok) throw new Error("deleteSheetRow: failed to get sheet metadata");
+  if (!metaResp.ok) {
+    if (metaResp.status === 401 && typeof handleAuthError === 'function') { handleAuthError("Token expired - please re-login"); return; }
+    throw new Error("deleteSheetRow: failed to get sheet metadata");
+  }
   const meta = await metaResp.json();
   const tab = (meta.sheets || []).find(s => s.properties.title === tabName);
   if (!tab) throw new Error(`deleteSheetRow: tab "${tabName}" not found`);
@@ -366,6 +373,7 @@ async function deleteSheetRow(tabName, rowNumber, accessToken) {
     }
   );
   if (!delResp.ok) {
+    if (delResp.status === 401 && typeof handleAuthError === 'function') { handleAuthError("Token expired - please re-login"); return; }
     const err = await delResp.json();
     throw new Error(`deleteSheetRow failed: ${err.error?.message || delResp.statusText}`);
   }
