@@ -335,7 +335,6 @@ function renderCoursesList() {
   });
 
   updateProgress();
-  renderCustomItems();
   colorDayBadges();
 }
 
