@@ -66,7 +66,6 @@ async function loadRecipes() {
     window.recipesData = recipesData;
     recipesLoadedFromSheets = true;
     window.recipesLoadedFromSheets = true;
-    console.log("Recipes loaded from Recettes:", Object.keys(recipesData).length, "recipes");
   } catch (err) {
     console.warn("Recettes: Sheets API unavailable, falling back to localStorage", err.message);
     loadRecipesFromLocalStorage();
@@ -83,7 +82,6 @@ function loadRecipesFromLocalStorage() {
     try {
       recipesData = JSON.parse(stored);
       window.recipesData = recipesData;
-      console.log("Recipes loaded from localStorage:", Object.keys(recipesData).length, "recipes");
     } catch (err) {
       console.error("Failed to parse localStorage recipes:", err);
       recipesData = {};
@@ -156,7 +154,6 @@ async function syncRecipesToSheets() {
       await window.SheetsAPI.appendRowWithToken("Recettes", row, token);
     }
 
-    console.log("Recipes synced to Recettes sheet");
   } catch (err) {
     console.error("Failed to sync recipes to Sheets:", err);
     saveRecipesToLocalStorage();

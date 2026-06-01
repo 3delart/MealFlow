@@ -58,7 +58,6 @@ async function loadConversionFactors() {
         productConversionFactorMap[key] = parseFloat(row.Conversion_factor);
       }
     });
-    console.log(`Loaded ${Object.keys(productConversionFactorMap).length} product conversion factors`);
   } catch (err) {
     console.warn('Failed to load conversion factors:', err);
   }

@@ -43,7 +43,6 @@ function startScanner() {
   scannerActive = true;
   status.textContent = "⏳ Initialisation caméra...";
 
-  console.log("Starting Html5Qrcode scanner");
 
   qrScanner = new Html5Qrcode("scanner-video");
 
@@ -54,7 +53,6 @@ function startScanner() {
       qrbox: { width: 280, height: 280 }
     },
     function(decodedText, decodedResult) {
-      console.log("Barcode detected:", decodedText);
       stopScanner();
       processBarcodeDetection(decodedText);
     },
@@ -78,7 +76,6 @@ function stopScanner() {
   if (!scannerActive || !qrScanner) return;
 
   qrScanner.stop().then(() => {
-    console.log("Scanner stopped");
     scannerActive = false;
     qrScanner = null;
 

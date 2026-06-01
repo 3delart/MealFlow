@@ -544,7 +544,6 @@ async function handleRecipeFormSubmit(e) {
   document.getElementById("modal-recipe-form").classList.remove("open");
   window.renderRecipeList();
 
-  console.log(`Recipe saved: ${data.name}`);
 }
 
 // ============================================================================

@@ -4,7 +4,6 @@
 
 function openEditModal(item) {
   const modal = document.getElementById("edit-modal");
-  console.log('[Edit Modal] Item loaded:', { Produit: item.Produit, Prix: item.Prix, allKeys: Object.keys(item) });
   document.getElementById("edit-product-name").value = item.Produit;
   document.getElementById("edit-category").value = item.Catégorie;
   document.getElementById("edit-quantity").value = item.Qty;
@@ -77,7 +76,6 @@ async function saveEditedItem(e) {
       await SheetsAPI.updateSheetCell(`Inventory!I${item.sheetRowNumber}`, item.Prix, token);
       await SheetsAPI.updateSheetCell(`Inventory!J${item.sheetRowNumber}`, item.Calories_per_100 || "", token);
       await SheetsAPI.updateSheetCell(`Inventory!O${item.sheetRowNumber}`, item.cooking_factor || 1.0, token);
-      console.log("Item updated in Sheets");
     } catch (err) {
       console.error("Failed to update Sheets:", err);
     }

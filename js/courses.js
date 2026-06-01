@@ -96,7 +96,6 @@ async function ensureCoursesHeaders(token) {
   try {
     const headerRow = ['Produit', 'Catégorie', 'Qty', 'Unité', 'Prix', 'Date_utilisation', 'Acheté', 'Ajout'];
     await window.SheetsAPI.batchUpdateRange('Courses!A1:H1', [headerRow], token);
-    console.log('Courses headers initialized');
   } catch (err) {
     console.warn('Could not ensure Courses headers:', err);
   }
@@ -147,7 +146,6 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
     for (const row of rows) {
       await window.SheetsAPI.appendRowWithToken('Courses', row, token);
     }
-    console.log(`Courses synced: ${rows.length} planning rows`);
   } catch (err) {
     console.warn('Courses sync failed:', err);
   }
@@ -586,7 +584,6 @@ async function saveEditedIngredient(e) {
     if (token && window.SheetsAPI) {
       const range = `Courses!A${ing.sheetRow}:G${ing.sheetRow}`;
       await window.SheetsAPI.batchUpdateRange(range, [[ing.name, category, quantity, unit, price.toFixed(2), ing.days.join(','), ing.acheté ? '1' : '']], token);
-      console.log(`Ingredient updated: ${ingredientName}`);
     }
   } catch (err) {
     console.warn('Failed to save to Sheets:', err);

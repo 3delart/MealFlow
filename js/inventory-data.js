@@ -53,7 +53,6 @@ async function sortSheetByCategory(accessToken) {
     });
 
     if (response.ok) {
-      console.log("Inventory sorted by Catégorie");
     } else {
       console.warn("Failed to sort Inventory sheet:", response.statusText);
     }
@@ -86,7 +85,6 @@ async function loadInventory() {
         allergens: row["Allergens"] || "",
         cooking_factor: parseFloat((row["Cooking_factor"] || "1").toString().replace(",", ".")) || 1.0
       }));
-      console.log("Inventory loaded from Sheets:", inventoryData.length, "items");
       mergeDuplicatesByBarcode();
       window.inventoryData = inventoryData;
       return;
@@ -99,7 +97,6 @@ async function loadInventory() {
   if (stored) {
     try {
       inventoryData = JSON.parse(stored);
-      console.log("Inventory loaded from localStorage:", inventoryData.length, "items");
     } catch (err) {
       console.error("Failed to parse localStorage inventory:", err);
       inventoryData = [];
@@ -121,7 +118,6 @@ function mergeDuplicatesByBarcode() {
       const qty2 = parseFloat(item.Qty) || 0;
       first.Qty = (qty1 + qty2).toString();
       toRemove.push(idx);
-      console.log(`Merged ${item.Produit}: ${qty1} + ${qty2} = ${first.Qty}`);
     } else {
       seen.set(item.Barcode, idx);
     }
@@ -131,14 +127,10 @@ function mergeDuplicatesByBarcode() {
     inventoryData.splice(idx, 1);
   });
 
-  if (toRemove.length > 0) {
-    console.log(`Inventory: merged ${toRemove.length} duplicate(s)`);
-  }
 }
 
 function saveInventory() {
   localStorage.setItem("mealflow_inventory", JSON.stringify(inventoryData));
-  console.log("Inventory saved to localStorage");
 }
 
 function findItemByBarcode(barcode) {
@@ -164,7 +156,6 @@ async function addItem(item) {
         existing.Prix = item.price;
       }
 
-      console.log(`Added ${quantity} to existing ${existing.Produit}: new qty = ${existing.Qty}`);
       saveInventory();
 
       if (typeof isAuthenticated === "function" && isAuthenticated() && window.SheetsAPI) {
@@ -172,7 +163,6 @@ async function addItem(item) {
           const token = getAccessToken();
           const range = `Inventory!D${existing.sheetRowNumber}`;
           window.SheetsAPI.updateSheetCell(range, existing.Qty, token)
-            .then(() => console.log("Updated Sheets with new quantity"))
             .catch(err => console.error("Failed to update Sheets:", err));
         } catch (err) {
           console.error("Error updating Sheets:", err);
@@ -231,7 +221,6 @@ async function addItem(item) {
 
     SheetsAPI.appendRowWithToken("Inventory", row, token)
       .then(async () => {
-        console.log("Item synced to Sheets");
         await sortSheetByCategory(token);
         // Reload inventory to refresh sheetRowNumbers (sort changes row positions)
         await loadInventory();
@@ -261,7 +250,6 @@ async function markConsumed(itemId) {
       const token = typeof getAccessToken === 'function' ? getAccessToken() : null;
       const range = `Inventory!D${item.sheetRowNumber}`;
       await window.SheetsAPI.updateSheetCell(range, "0", token);
-      console.log(`Marked as consumed in Sheets: row ${item.sheetRowNumber}`);
     } catch (err) {
       console.warn(`Failed to update Sheets for item ${itemId}:`, err);
     }
@@ -281,7 +269,6 @@ async function deleteItem(itemId) {
     try {
       const range = `Inventory!D${item.sheetRowNumber}`;
       await window.SheetsAPI.updateSheetCell(range, "0");
-      console.log(`Deleted from inventory: row ${item.sheetRowNumber}`);
     } catch (err) {
       console.warn(`Failed to update Sheets for item ${itemId}:`, err);
     }

@@ -103,7 +103,6 @@ function setupModalHandlers() {
     });
 
     const newPrenom = profilesData[userId]["Prénom"] || userId;
-    console.log(`Profil de ${newPrenom} enregistré avec succès.`);
   });
 }
 

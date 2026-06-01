@@ -32,7 +32,6 @@ async function reduceQuantity(itemId, currentQty, productName) {
       const token = typeof getAccessToken === 'function' ? getAccessToken() : null;
       const range = `Inventory!D${item.sheetRowNumber}`;
       await window.SheetsAPI.updateSheetCell(range, newQty.toString(), token);
-      console.log(`Reduced ${productName} by ${reduceAmount}: new qty = ${newQty}`);
     } catch (err) {
       console.warn(`Failed to update Sheets for item ${itemId}:`, err);
     }

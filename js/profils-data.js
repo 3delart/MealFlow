@@ -48,7 +48,6 @@ async function loadProfiles() {
       }
     });
 
-    console.log("Profils: loaded", Object.keys(profilesData).length, "profiles from Sheets");
   } catch (err) {
     console.warn("Profils: Sheets API unavailable, using fallback data.", err.message);
     useFallbackProfiles();
@@ -69,7 +68,6 @@ function loadProfileOverrides() {
       const userId = key.replace("mealflow_profile_", "");
       if (!profilesData[userId]) {
         localStorage.removeItem(key);
-        console.log(`Profils: Cleaned up stale localStorage for ${userId}`);
       }
     }
   }
@@ -125,7 +123,6 @@ function saveProfileData(userId, formData) {
   localStorage.setItem(`mealflow_profile_${userId}`, JSON.stringify(updatedProfile));
   profilesData[userId] = updatedProfile;
 
-  console.log(`Profile saved for user: ${userId}`);
 
   if (typeof isAuthenticated === "function" && isAuthenticated()) {
     syncProfileToSheets(userId, updatedProfile);
@@ -167,7 +164,6 @@ async function syncProfileToSheets(userId, profile) {
         const range = `Profils!${col}${rowNum}`;
         await window.SheetsAPI.updateSheetCell(range, value, token);
       }
-      console.log(`Profils: Updated ${userId} in Sheets`);
     } else {
       const row = [
         userId,
@@ -188,7 +184,6 @@ async function syncProfileToSheets(userId, profile) {
       ];
 
       await window.SheetsAPI.appendRowWithToken("Profils", row, token);
-      console.log(`Profils: Added ${userId} to Sheets`);
     }
   } catch (err) {
     console.error("Profils: Failed to sync to Sheets:", err);
