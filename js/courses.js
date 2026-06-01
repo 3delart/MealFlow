@@ -131,7 +131,7 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
     const planningRowNums = [];
     for (let i = 1; i < existingRaw.length; i++) { // i=0 is header
       const ajout = (existingRaw[i][7] || '').toString().trim();
-      if (ajout !== 'custom') planningRowNums.push(i + 1);
+      if (ajout === 'planning') planningRowNums.push(i + 1);
     }
 
     if (planningRowNums.length > 0) {

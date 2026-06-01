@@ -7,6 +7,7 @@ const MAX_WEEK_OFFSET = 4;
 let allPlanData = {};
 let planningLoadedFromSheets = false;
 let _coursesDebounceTimer = null;
+let _coursesSyncInProgress = false;
 
 /**
  * Calculate rolling window of 7 days
@@ -467,6 +468,8 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
  */
 async function generateAndWriteCourses(token, existingAcheté = {}) {
   if (!window.SheetsAPI || !token) return;
+  if (_coursesSyncInProgress) return; // prevent concurrent runs → duplicates
+  _coursesSyncInProgress = true;
 
   try {
     // Ensure col H header "Ajout" exists — without this rowsToObjects won't map col H
@@ -494,7 +497,7 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
     const planningRowNums = [];
     for (let i = 1; i < existingRaw.length; i++) { // i=0 is header
       const ajout = (existingRaw[i][7] || '').toString().trim();
-      if (ajout !== 'custom') planningRowNums.push(i + 1); // 1-based row number
+      if (ajout === 'planning') planningRowNums.push(i + 1); // only explicitly-tagged planning rows
     }
 
     if (planningRowNums.length > 0) {
@@ -505,6 +508,8 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
     }
   } catch (err) {
     console.warn('Courses sync failed:', err);
+  } finally {
+    _coursesSyncInProgress = false;
   }
 }
 
