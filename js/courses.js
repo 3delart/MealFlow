@@ -459,7 +459,8 @@ function initCustomAutocomplete() {
         div.addEventListener('click', () => {
           input.value = item.Produit;
           input.dataset.category = item.Catégorie || 'Autres';
-          document.getElementById('item-category').value = item.Catégorie || 'Autres';
+          const catEl = document.getElementById('item-category');
+          if (catEl) catEl.value = item.Catégorie || 'Autres';
           document.getElementById('item-unit').value = item.Unité || 'g';
           dd.style.display = 'none';
         });
@@ -482,7 +483,7 @@ function showAddModal() {
   overlay.classList.add('open');
   document.getElementById('item-name').value = '';
   document.getElementById('item-name').dataset.category = '';
-  document.getElementById('item-category').value = '';
+  document.getElementById('item-category').value = 'Autres';
   document.getElementById('item-qty').value = '';
   document.getElementById('item-unit').value = 'g';
   setTimeout(() => { document.getElementById('item-name').focus(); initCustomAutocomplete(); }, 50);
