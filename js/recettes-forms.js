@@ -472,7 +472,7 @@ function openEditModal(recipeID) {
  * @param {Event} e - Form submit event
  * @returns {void}
  */
-function handleRecipeFormSubmit(e) {
+async function handleRecipeFormSubmit(e) {
   e.preventDefault();
 
   if (!validateRecipeForm()) return;
@@ -494,7 +494,8 @@ function handleRecipeFormSubmit(e) {
     recipeID = uniqueID;
   }
 
-  // Save recipe to in-memory store
+  // Save recipe to in-memory store (preserve sheetRowNumber)
+  const existingSheetRow = window.recipesData[recipeID]?.sheetRowNumber;
   window.recipesData[recipeID] = {
     name: data.name,
     description: data.description,
@@ -503,7 +504,8 @@ function handleRecipeFormSubmit(e) {
     tags: data.tags,
     ingredients: data.ingredients,
     steps: data.steps,
-    portion_g: data.portion_g || null
+    portion_g: data.portion_g || null,
+    sheetRowNumber: existingSheetRow || null
   };
 
   // Targeted Sheets write (row update or append — no full clear)
