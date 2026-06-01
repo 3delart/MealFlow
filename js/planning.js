@@ -46,10 +46,13 @@ function parseRecipeValue(value) {
   if (!value || value === "None") return [];
   try {
     const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter(r => r) : [value];
-  } catch (e) {
-    return value && value !== "None" ? [value] : [];
-  }
+    if (Array.isArray(parsed)) {
+      return parsed.filter(r => r).map(item =>
+        typeof item === 'string' ? { name: item, portions: 1 } : item
+      );
+    }
+  } catch (e) {}
+  return value && value !== "None" ? [{ name: value, portions: 1 }] : [];
 }
 
 async function loadMealPlan() {
@@ -152,11 +155,16 @@ function renderMealPlan() {
     // Generate chips HTML for recipes
     const renderChips = (recipes, dateISO, mealTime) => {
       if (recipes.length === 0) return '+';
-      return recipes.map(recipe => `
-        <span class="recipe-chip" onclick="event.stopPropagation()">${recipe}
-          <button class="chip-delete" onclick="removeRecipe('${dateISO}', '${mealTime}', '${recipe.replace(/'/g, "\\'")}')">×</button>
+      return recipes.map(item => {
+        const name = item.name || item;
+        const portions = item.portions || 1;
+        const label = portions > 1 ? `${name} ×${portions}` : name;
+        return `
+        <span class="recipe-chip" onclick="event.stopPropagation()">${label}
+          <button class="chip-delete" onclick="removeRecipe('${dateISO}', '${mealTime}', '${name.replace(/'/g, "\\'")}')">×</button>
         </span>
-      `).join('');
+        `;
+      }).join('');
     };
 
     const midiDisplay = renderChips(midiRecipes, day.dateISO, 'Midi');
@@ -185,7 +193,7 @@ function removeRecipe(dateISO, mealTime, recipeName) {
   if (!allPlanData[dateISO]) return;
   const recipeArray = allPlanData[dateISO][mealTime];
   if (!Array.isArray(recipeArray)) return;
-  allPlanData[dateISO][mealTime] = recipeArray.filter(r => r !== recipeName);
+  allPlanData[dateISO][mealTime] = recipeArray.filter(r => (r.name || r) !== recipeName);
   buildMealPlanForCurrentWindow();
   renderMealPlan();
   syncCoursesFromMealPlan();
@@ -350,16 +358,20 @@ function selectRecipe(recipeName) {
   // Handle "None" replacement or append to array
   const recipeValue = allPlanData[dateISO][mealTime];
 
-  // If slot is empty or contains "None", replace it
+  const portionsEl = document.getElementById('modal-portions');
+  const isCustomTab = document.getElementById('custom-tab')?.classList.contains('active');
+  const portions = (!isCustomTab && portionsEl) ? (parseInt(portionsEl.value) || 1) : 1;
+  const newEntry = { name: cleanedName, portions };
+
   if (!recipeValue || recipeValue === "None" || (Array.isArray(recipeValue) && recipeValue.length === 0)) {
-    allPlanData[dateISO][mealTime] = [cleanedName];
+    allPlanData[dateISO][mealTime] = [newEntry];
   } else {
-    // Otherwise append to array (multi-recipe support)
     if (!Array.isArray(recipeValue)) {
-      allPlanData[dateISO][mealTime] = recipeValue ? [recipeValue] : [];
+      allPlanData[dateISO][mealTime] = recipeValue ? [{ name: recipeValue, portions: 1 }] : [];
     }
-    if (!allPlanData[dateISO][mealTime].includes(cleanedName)) {
-      allPlanData[dateISO][mealTime].push(cleanedName);
+    const existing = allPlanData[dateISO][mealTime];
+    if (!existing.some(r => (r.name || r) === cleanedName)) {
+      existing.push(newEntry);
     }
   }
 
@@ -406,14 +418,16 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
     ['Midi', 'Soir'].forEach(slot => {
       const recipeValue = day[slot];
       if (!recipeValue) return;
-      const recipeNames = Array.isArray(recipeValue) ? recipeValue : (recipeValue ? [recipeValue] : []);
-      recipeNames.forEach(recipeName => {
+      const recipeEntries = Array.isArray(recipeValue) ? recipeValue : (recipeValue ? [recipeValue] : []);
+      recipeEntries.forEach(entry => {
+        const recipeName = entry.name || entry;
+        const portions = entry.portions || 1;
         const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
         if (!recipe?.ingredients) return;
         recipe.ingredients.forEach(ing => {
           const key = ing.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
           if (!map[key]) map[key] = { name: ing.name, qty: 0, unit: ing.unit || 'g', days: [] };
-          map[key].qty += parseFloat(ing.quantity) || 0;
+          map[key].qty += (parseFloat(ing.quantity) || 0) * portions;
           if (!map[key].days.includes(day.dateISO)) map[key].days.push(day.dateISO);
         });
       });

@@ -107,19 +107,21 @@ window.debugLog = debugLog;
 function viewMealRecipe(mealName) {
   if (!window.recipesData) return;
 
-  // Find recipe by name
-  const recipeID = Object.keys(window.recipesData).find(id => {
-    return window.recipesData[id].name === mealName;
-  });
+  const recipeID = Object.keys(window.recipesData).find(id =>
+    window.recipesData[id].name === mealName
+  );
 
   if (!recipeID) {
     alert("Recette non trouvée");
     return;
   }
 
-  // Use openViewModal from recettes.js if available
+  // Find portions from todaysMeals
+  const meal = (window.todaysMeals || []).find(m => m.name === mealName);
+  const portions = meal?.portions || 1;
+
   if (typeof openViewModal === "function") {
-    openViewModal(recipeID);
+    openViewModal(recipeID, portions);
   } else {
     alert("Modal recette non disponible");
   }

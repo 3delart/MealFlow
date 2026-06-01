@@ -197,7 +197,7 @@ function renderMeals() {
               <span class="meal-time-icon">${meal.emoji}</span>
               <div>
                 <p class="meal-name">${displayName}</p>
-                <p class="meal-kcal">${meal.kcal_per_100} kcal/100g${(() => { const r = window.recipesData && Object.values(window.recipesData).find(r => r.name === meal.name); return r && r.portion_g ? ` · 🍽️ ${r.portion_g}g = ${Math.round(r.portion_g * meal.kcal_per_100 / 100)} kcal` : ''; })()}</p>
+                <p class="meal-kcal">${meal.kcal_per_100 ? meal.kcal_per_100 + ' kcal/100g' : ''}${(meal.portions||1) > 1 ? ` · ${meal.portions} portions` : ''}${(() => { const r = window.recipesData && Object.values(window.recipesData).find(r => r.name === meal.name); const p = meal.portions||1; return r && r.portion_g ? ` · 🍽️ ${r.portion_g*p}g = ${Math.round(r.portion_g*p*(meal.kcal_per_100||0)/100)} kcal` : ''; })()}</p>
               </div>
             </div>
           </div>
@@ -439,15 +439,18 @@ async function loadTodaysMeals() {
       return;
     }
 
-    // Parse recipe value (JSON array or single string) into array
+    // Parse recipe value — returns [{name, portions}] objects
     function parseRecipeValue(value) {
       if (!value) return [];
       try {
         const parsed = JSON.parse(value);
-        return Array.isArray(parsed) ? parsed.filter(r => r) : [value];
-      } catch (e) {
-        return value ? [value] : [];
-      }
+        if (Array.isArray(parsed)) {
+          return parsed.filter(r => r).map(item =>
+            typeof item === 'string' ? { name: item, portions: 1 } : item
+          );
+        }
+      } catch (e) {}
+      return value ? [{ name: value, portions: 1 }] : [];
     }
 
     // Build meals array from ONLY Midi and Soir columns
@@ -462,10 +465,11 @@ async function loadTodaysMeals() {
       const recipeNames = parseRecipeValue(mealValue);
 
       // Create entry for each recipe (support multiple recipes per meal)
-      recipeNames.forEach(recipeName => {
+      recipeNames.forEach(entry => {
+        const recipeName = entry.name || entry;
+        const portions = entry.portions || 1;
         if (!recipeName) return;
 
-        // Get actual recipe kcal_per_100 from window.recipesData
         let recipeKcal = mealDef.estimatedKcal;
         let isCustom = false;
         if (window.recipesData) {
@@ -473,9 +477,8 @@ async function loadTodaysMeals() {
           if (recipe && recipe.kcal_per_100) {
             recipeKcal = recipe.kcal_per_100;
           } else {
-            // Recipe not found in recipesData → treat as custom
             isCustom = true;
-            recipeKcal = null; // Custom meals don't have per-100g
+            recipeKcal = null;
           }
         }
 
@@ -484,12 +487,13 @@ async function loadTodaysMeals() {
           label: mealDef.label,
           emoji: mealDef.emoji,
           name: recipeName,
+          portions,
           kcal_per_100: recipeKcal,
           estimatedKcal: recipeKcal,
           actualKcal: null,
           eaten: false,
           timestamp: null,
-          isCustom: isCustom,
+          isCustom,
         });
       });
     });
@@ -664,6 +668,9 @@ async function initAccueil() {
   updateProgressDisplay();
   renderWheel();
 
+  // Deduct past meals from inventory (once per day)
+  await deductPastMeals();
+
   // Ensure History sheet exists for current user
   const accessToken = getAccessToken();
   if (accessToken) {
@@ -674,6 +681,111 @@ async function initAccueil() {
 
   // Initialize search (searches within meal names) — DEFERRED: Task 5 feature
   // Initialize Grignottage button — DEFERRED: Task 5 feature
+}
+
+/* ============================================================================
+   AUTOMATIC INVENTORY DEDUCTION
+   ============================================================================ */
+
+const DEDUCTED_KEY = 'mealflow:deducted_dates';
+
+function getDeductedDates() {
+  try { return JSON.parse(localStorage.getItem(DEDUCTED_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function markDateDeducted(dateISO) {
+  const dates = getDeductedDates();
+  if (!dates.includes(dateISO)) {
+    dates.push(dateISO);
+    const cutoff = getDateISO(-30);
+    localStorage.setItem(DEDUCTED_KEY, JSON.stringify(dates.filter(d => d >= cutoff)));
+  }
+}
+
+function parseRecipeValueLocal(value) {
+  if (!value || value === "None") return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed.filter(r => r).map(item =>
+        typeof item === 'string' ? { name: item, portions: 1 } : item
+      );
+    }
+  } catch (e) {}
+  return value ? [{ name: value, portions: 1 }] : [];
+}
+
+async function deductPastMeals() {
+  const token = getAccessToken?.();
+  if (!token || !window.SheetsAPI) return;
+
+  const deducted = getDeductedDates();
+  const todayISO = getTodayISO();
+
+  // Find undeducted past days (up to 7 days back)
+  const toDeductDates = [];
+  for (let i = 1; i <= 7; i++) {
+    const dateISO = getDateISO(-i);
+    if (!deducted.includes(dateISO)) toDeductDates.push(dateISO);
+  }
+  if (toDeductDates.length === 0) return;
+
+  // Read Planning sheet
+  let planByDate = {};
+  try {
+    const planRows = await window.SheetsAPI.readSheetTab('Planning');
+    window.SheetsAPI.rowsToObjects(planRows).forEach(row => {
+      if (row.Date && toDeductDates.includes(row.Date)) {
+        planByDate[row.Date] = {
+          Midi: parseRecipeValueLocal(row.Midi),
+          Soir: parseRecipeValueLocal(row.Soir)
+        };
+      }
+    });
+  } catch (e) {
+    console.warn('deductPastMeals: could not read Planning sheet', e);
+    return;
+  }
+
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+
+  for (const dateISO of toDeductDates) {
+    const dayPlan = planByDate[dateISO];
+    if (!dayPlan) { markDateDeducted(dateISO); continue; }
+
+    const entries = [...(dayPlan.Midi || []), ...(dayPlan.Soir || [])];
+    for (const { name: recipeName, portions } of entries) {
+      const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
+      if (!recipe?.ingredients) continue; // texte libre ou recette inconnue → skip
+
+      for (const ing of recipe.ingredients) {
+        const item = (window.inventoryData || []).find(i => norm(i.Produit) === norm(ing.name));
+        if (!item) continue;
+
+        const recipeUnit = ing.unit || 'g';
+        const invUnit = item.Unité || 'g';
+        const unitOk = recipeUnit === invUnit ||
+          (recipeUnit === 'piece' && invUnit === 'pièce') ||
+          (recipeUnit === 'pièce' && invUnit === 'piece');
+        if (!unitOk) continue;
+
+        const qtyToDeduct = (parseFloat(ing.quantity) || 0) * (portions || 1);
+        const newQty = Math.max(0, (parseFloat(item.Qty) || 0) - qtyToDeduct);
+        item.Qty = newQty.toString();
+
+        if (item.sheetRowNumber) {
+          try {
+            await window.SheetsAPI.updateSheetCell(`Inventory!D${item.sheetRowNumber}`, newQty.toString(), token);
+          } catch (e) { console.warn('deductPastMeals: failed to update inventory', e); }
+        }
+      }
+    }
+    markDateDeducted(dateISO);
+  }
+
+  if (typeof saveInventory === 'function') saveInventory();
+  console.log(`Déduction inventaire effectuée pour : ${toDeductDates.join(', ')}`);
 }
 
 /* ============================================================================

@@ -297,17 +297,19 @@ function renderRecipeList() {
  * @param {string} recipeID - Recipe ID
  * @returns {void}
  */
-function openViewModal(recipeID) {
+function openViewModal(recipeID, portions = 1) {
   const recipe = recipesData[recipeID];
   if (!recipe) return;
 
   const modal = document.getElementById("modal-recipe-view");
   const title = document.getElementById("modal-view-title");
   const content = document.getElementById("recipe-view-content");
+  const p = Math.max(1, parseInt(portions) || 1);
 
-  title.textContent = recipe.name;
+  title.textContent = p > 1 ? `${recipe.name} ×${p}` : recipe.name;
 
   const cals = calculateRecipeCalories(recipe.ingredients || []);
+  const totalKcal = Math.round(cals.total_kcal * p);
 
   const html = `
     <p style="color: #999; margin-bottom: 16px;">${recipe.description || ""}</p>
@@ -315,26 +317,25 @@ function openViewModal(recipeID) {
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
       <div>⏱️ <strong>Préparation:</strong> ${recipe.prep_minutes || 0}m</div>
       <div>🍳 <strong>Cuisson:</strong> ${recipe.cook_minutes || 0}m</div>
-      <div>🔥 <strong>Calories total:</strong> ${cals.total_kcal} kcal</div>
+      <div>🔥 <strong>Calories total:</strong> ${totalKcal} kcal${p > 1 ? ` (${p}×${cals.total_kcal})` : ''}</div>
       <div>🔥 <strong>Par 100g:</strong> ${cals.kcal_per_100} kcal</div>
-      ${recipe.portion_g ? `<div>🍽️ <strong>Portion recommandée:</strong> ${recipe.portion_g}g = ${Math.round(recipe.portion_g * cals.kcal_per_100 / 100)} kcal</div>` : ''}
+      ${recipe.portion_g ? `<div>🍽️ <strong>Portion:</strong> ${recipe.portion_g * p}g = ${Math.round(recipe.portion_g * p * cals.kcal_per_100 / 100)} kcal</div>` : ''}
     </div>
 
-    <h3 style="margin-top: 16px; color: var(--color-primary, #2e7d32);">INGRÉDIENTS</h3>
+    <h3 style="margin-top: 16px; color: var(--color-primary, #2e7d32);">INGRÉDIENTS${p > 1 ? ` (×${p} portions)` : ''}</h3>
     <ul style="margin-left: 16px; line-height: 1.8;">
       ${(recipe.ingredients || [])
         .map(ing => {
-          const ingCals = Math.round((parseFloat(ing.calories_per_100) || 0) * (parseFloat(ing.quantity) || 0) / 100);
-          return `<li>${ing.name}: ${ing.quantity} ${ing.unit} (${ingCals} kcal)</li>`;
+          const qty = ((parseFloat(ing.quantity) || 0) * p);
+          const ingCals = Math.round((parseFloat(ing.calories_per_100) || 0) * qty / 100);
+          return `<li>${ing.name}: ${qty % 1 === 0 ? qty : qty.toFixed(1)} ${ing.unit} (${ingCals} kcal)</li>`;
         })
         .join("")}
     </ul>
 
     <h3 style="margin-top: 16px; color: var(--color-primary, #2e7d32);">ÉTAPES</h3>
     <ol style="margin-left: 16px; line-height: 1.8;">
-      ${(recipe.steps || [])
-        .map(step => `<li>${step}</li>`)
-        .join("")}
+      ${(recipe.steps || []).map(step => `<li>${step}</li>`).join("")}
     </ol>
   `;
 
