@@ -196,8 +196,18 @@ function renderMeals() {
             <div style="display: flex; align-items: center;">
               <span class="meal-time-icon">${meal.emoji}</span>
               <div>
-                <p class="meal-name">${displayName}</p>
-                <p class="meal-kcal">${meal.kcal_per_100 ? meal.kcal_per_100 + ' kcal/100g' : ''}${(meal.portions||1) > 1 ? ` · ${meal.portions} portions` : ''}${(() => { const r = window.recipesData && Object.values(window.recipesData).find(r => r.name === meal.name); const p = meal.portions||1; return r && r.portion_g ? ` · 🍽️ ${r.portion_g*p}g = ${Math.round(r.portion_g*p*(meal.kcal_per_100||0)/100)} kcal` : ''; })()}</p>
+                <p class="meal-name">${displayName}${(meal.portions||1) > 1 ? ` <span style="color:#999;font-size:0.85em;font-weight:normal;">(${meal.portions} portions)</span>` : ''}</p>
+                <p class="meal-kcal">${(() => {
+                  if (!meal.kcal_per_100) return '';
+                  const r = window.recipesData && Object.values(window.recipesData).find(r => r.name === meal.name);
+                  const p = meal.portions || 1;
+                  if (r && r.portion_g) {
+                    const totalG = r.portion_g * p;
+                    const totalKcal = Math.round(totalG * meal.kcal_per_100 / 100);
+                    return `${meal.kcal_per_100} kcal/100g · portion = ${totalG}g : ${totalKcal} kcal`;
+                  }
+                  return `${meal.kcal_per_100} kcal/100g`;
+                })()}</p>
               </div>
             </div>
           </div>
