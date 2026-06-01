@@ -107,57 +107,8 @@ window.saveRecipesToLocalStorage = saveRecipesToLocalStorage;
  */
 async function syncRecipesToSheets() {
   // DISABLED: All recipe writes are now targeted (batchUpdateRange per row, deleteSheetRow).
-  // This function used clearSheetRange+appendRowWithToken which risks data loss.
-  // Called only as fallback — save to localStorage only.
-  console.warn("syncRecipesToSheets: disabled (use targeted writes). Saving to localStorage only.");
+  // Disabled — all recipe writes are now targeted (batchUpdateRange/deleteSheetRow).
   saveRecipesToLocalStorage();
-  return;
-
-  if (!window.SheetsAPI) { // unreachable — kept for reference only
-    console.warn("SheetsAPI not available, skipping Sheets sync");
-    saveRecipesToLocalStorage();
-    return;
-  }
-
-  try {
-    const token = window.getAccessToken ? window.getAccessToken() : null;
-    if (!token) {
-      console.warn("No OAuth token, skipping Sheets sync");
-      saveRecipesToLocalStorage();
-      return;
-    }
-
-    // Safety guard: never overwrite Sheets with localStorage fallback data
-    if (!recipesLoadedFromSheets) {
-      console.warn("Skipping Sheets sync — recipes were not loaded from Sheets (localStorage fallback active)");
-      saveRecipesToLocalStorage();
-      return;
-    }
-
-    // Clear existing data rows (keep header)
-    await window.SheetsAPI.clearSheetRange("Recettes!A2:I1000", token);
-
-    // Append one row per recipe
-    for (const recipe of Object.values(recipesData)) {
-      const cals = calculateRecipeCalories(recipe.ingredients || []);
-      const row = [
-        recipe.name,
-        recipe.description || "",
-        recipe.prep_minutes || 0,
-        recipe.cook_minutes || 0,
-        (recipe.tags || []).join(", "),
-        JSON.stringify(recipe.ingredients || []),
-        JSON.stringify(recipe.steps || []),
-        cals.kcal_per_100,
-        recipe.portion_g || ""
-      ];
-      await window.SheetsAPI.appendRowWithToken("Recettes", row, token);
-    }
-
-  } catch (err) {
-    console.error("Failed to sync recipes to Sheets:", err);
-    saveRecipesToLocalStorage();
-  }
 }
 
 // ============================================================================

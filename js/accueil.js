@@ -255,7 +255,6 @@ function showRecipe(mealType) {
   const meal = todaysMeals.find(m => m.mealType === mealType);
   if (!meal) return;
 
-  console.log(`Recipe requested for: ${meal.name}`);
 }
 
 /**
@@ -263,7 +262,6 @@ function showRecipe(mealType) {
  */
 function updateProgressDisplay() {
   const pct = dailyGoal > 0 ? (caloriesConsumed / dailyGoal) * 100 : 0;
-  console.log(`updateProgressDisplay: target=${dailyGoal}, consumed=${caloriesConsumed}, pct=${pct}%`);
   renderProgressCircle(pct);
 }
 
@@ -397,8 +395,6 @@ async function loadDailyGoal() {
     const rows = await window.SheetsAPI.readSheetTab("Profils");
     const objects = window.SheetsAPI.rowsToObjects(rows);
 
-    console.log("Accueil: Profils columns available:", objects.length > 0 ? Object.keys(objects[0]) : "no data");
-
     const user = getCurrentUser();
 
     // Find profile for current user
@@ -408,11 +404,9 @@ async function loadDailyGoal() {
     });
 
     if (profile) {
-      console.log(`Accueil: Loaded profile ${user}:`, profile);
       const kcal = Number(profile.Calories_cible || profile.Objectif || profile.objectifKcal || 0);
       dailyGoal = kcal;
       window.dailyGoal = dailyGoal;
-      console.log(`Accueil: Daily goal for ${user} = ${dailyGoal} kcal`);
     } else {
       console.warn(`Accueil: No profile found for ${user}`);
       dailyGoal = 0;
@@ -508,7 +502,6 @@ async function loadTodaysMeals() {
     });
 
     window.todaysMeals = todaysMeals;
-    console.log(`Accueil: Loaded ${todaysMeals.length} meals for today (Midi/Soir only)`);
   } catch (err) {
     console.warn("Accueil: Could not load Planning tab:", err.message);
     todaysMeals = [];
@@ -533,7 +526,6 @@ async function loadTodaysConsumptions() {
 
     const rows = await window.SheetsAPI.readSheetTab(historyTabName);
     if (!rows || rows.length === 0) {
-      console.log(`Accueil: No consumptions in ${historyTabName}`);
       todaysConsumptions = [];
       return;
     }
@@ -556,7 +548,6 @@ async function loadTodaysConsumptions() {
     // Recalculate total consumed calories
     caloriesConsumed = todaysConsumptions.reduce((sum, c) => sum + (c.Kcal_total || 0), 0);
 
-    console.log(`Accueil: Loaded ${todaysConsumptions.length} consumptions for today, total=${caloriesConsumed} kcal`);
     renderWheel();
   } catch (err) {
     console.warn(`Accueil: Could not load History tab for ${user}:`, err.message);
@@ -568,7 +559,6 @@ async function loadTodaysConsumptions() {
       if (saved) {
         todaysConsumptions = JSON.parse(saved);
         caloriesConsumed = todaysConsumptions.reduce((sum, c) => sum + (c.Kcal_total || 0), 0);
-        console.log(`Accueil: Loaded ${todaysConsumptions.length} consumptions from localStorage, total=${caloriesConsumed} kcal`);
         renderWheel();
         return;
       }
@@ -620,16 +610,13 @@ async function ensureHistorySheetExists(user, token) {
   try {
     // Attempt to read the sheet to check if it exists
     await readSheetTab(sheetName);
-    console.log(`Accueil: History sheet "${sheetName}" already exists`);
   } catch (error) {
     // Sheet doesn't exist, create it with header row
-    console.log(`Accueil: Creating history sheet "${sheetName}"`);
 
     const headerRow = ["Date", "Heure", "Nom", "Quantité", "Unité", "Kcal_total", "Type"];
 
     try {
       await appendRowWithToken(sheetName, headerRow, token);
-      console.log(`Accueil: History sheet "${sheetName}" created successfully`);
     } catch (appendError) {
       console.error(`Accueil: Failed to create history sheet "${sheetName}":`, appendError);
       // Don't throw - user can still use app, just won't sync to Sheets
@@ -823,7 +810,6 @@ async function deductPastMeals() {
   if (updates.length > 0) {
     try {
       await window.SheetsAPI.batchUpdateCells(updates, token);
-      console.log(`Déduction: ${updates.length} cellules inventaire mises à jour`);
     } catch (e) {
       console.warn('deductPastMeals: batch update failed', e);
       // Don't update derniere_deduction if writes failed
@@ -834,7 +820,6 @@ async function deductPastMeals() {
   // Update last deduction date to yesterday (single write)
   await writeParametre('derniere_deduction', yesterdayISO, token);
   if (typeof saveInventory === 'function') saveInventory();
-  console.log(`Déduction inventaire effectuée jusqu'au ${yesterdayISO}`);
 }
 
 /* ============================================================================

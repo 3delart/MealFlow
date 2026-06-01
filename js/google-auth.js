@@ -3,7 +3,6 @@ let googleAccessToken = null;
 let tokenClient = null;
 
 function handleCredentialResponse(response) {
-  console.log("Sign-In success");
   localStorage.setItem("googleIdToken", response.credential);
 
   requestAccessToken();
@@ -11,7 +10,6 @@ function handleCredentialResponse(response) {
 
 function requestAccessToken() {
   if (!tokenClient) {
-    console.log("Initializing token client...");
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: GOOGLE_CLIENT_ID,
       scope: "https://www.googleapis.com/auth/spreadsheets",
@@ -26,11 +24,9 @@ function handleTokenResponse(response) {
   if (response.access_token) {
     googleAccessToken = response.access_token;
     localStorage.setItem("googleAccessToken", googleAccessToken);
-    console.log("Access token obtained");
 
     updateUI();
   } else {
-    console.log("No access token, prompting user...");
     tokenClient.requestAccessToken({ prompt: "consent" });
   }
 }
@@ -76,7 +72,6 @@ function restoreToken() {
   const token = localStorage.getItem("googleAccessToken");
   if (token) {
     googleAccessToken = token;
-    console.log("Access token restored");
   }
 }
 

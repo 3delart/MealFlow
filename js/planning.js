@@ -72,9 +72,7 @@ async function loadMealPlan() {
           };
         }
       });
-      console.log(`Planning: loaded ${Object.keys(allPlanData).length} dates from Sheets`);
     } else {
-      console.log("Planning: empty sheet");
     }
     planningLoadedFromSheets = true;
 
@@ -375,7 +373,6 @@ function selectRecipe(recipeName) {
     }
   }
 
-  console.log(`Selected recipe: ${cleanedName} for ${dateISO} ${mealTime}`);
 
   // Close modal and rebuild meal plan from allPlanData
   closeRecipePickerModal();
@@ -505,7 +502,6 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
     for (const row of taggedRows) {
       await window.SheetsAPI.appendRowWithToken('Courses', row, token);
     }
-    console.log(`Courses synced: ${taggedRows.length} planning rows`);
   } catch (err) {
     console.warn('Courses sync failed:', err);
   }
@@ -547,7 +543,6 @@ function syncCoursesFromMealPlan() {
     });
   });
 
-  console.log("Synced Courses list from meal plan:", Object.values(allIngredients));
 
   // Store in window for access by Courses page
   window.syncedCourses = Object.values(allIngredients);
@@ -605,7 +600,6 @@ async function savePlanningToSheets() {
     }
 
     await window.SheetsAPI.batchUpdateRange("Planning!A2:C1000", values, token);
-    console.log(`Planning synced: ${values.length} rows to sheet`);
 
     // Debounced Courses sync — 800ms delay prevents race conditions on rapid removes
     clearTimeout(_coursesDebounceTimer);

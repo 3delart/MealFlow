@@ -140,9 +140,7 @@ async function appendRowWithToken(tabName, row, accessToken) {
       throw new Error(`Failed to append row: ${error.error.message}`);
     }
 
-    const result = await response.json();
-    console.log(`Row appended to ${tabName}:`, result);
-    return result;
+    return response.json();
   } catch (error) {
     console.error(`Error appending row to ${tabName}:`, error);
     throw error;
@@ -218,7 +216,6 @@ async function updateSheetCell(range, value, accessToken) {
     throw new Error(`Failed to update cell: ${error.error?.message || response.statusText}`);
   }
 
-  console.log(`Updated cell ${range} to "${value}"`);
 }
 
 /**
@@ -259,7 +256,6 @@ async function clearSheetRange(range, accessToken) {
     throw new Error(`Failed to clear range: ${error.error?.message || response.statusText}`);
   }
 
-  console.log(`Cleared range ${range}`);
 }
 
 /**
