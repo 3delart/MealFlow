@@ -459,6 +459,7 @@ function initCustomAutocomplete() {
         div.addEventListener('click', () => {
           input.value = item.Produit;
           input.dataset.category = item.Catégorie || 'Autres';
+          document.getElementById('item-category').value = item.Catégorie || 'Autres';
           document.getElementById('item-unit').value = item.Unité || 'g';
           dd.style.display = 'none';
         });
@@ -476,16 +477,21 @@ function initCustomAutocomplete() {
 }
 
 function showAddModal() {
-  document.getElementById('modal-overlay').classList.add('active');
+  const overlay = document.getElementById('modal-overlay');
+  overlay.classList.remove('hidden');
+  overlay.classList.add('open');
   document.getElementById('item-name').value = '';
   document.getElementById('item-name').dataset.category = '';
+  document.getElementById('item-category').value = '';
   document.getElementById('item-qty').value = '';
   document.getElementById('item-unit').value = 'g';
   setTimeout(() => { document.getElementById('item-name').focus(); initCustomAutocomplete(); }, 50);
 }
 
 function hideAddModal() {
-  document.getElementById('modal-overlay').classList.remove('active');
+  const overlay = document.getElementById('modal-overlay');
+  overlay.classList.add('hidden');
+  overlay.classList.remove('open');
   const dd = document.getElementById('custom-item-dropdown');
   if (dd) dd.style.display = 'none';
 }

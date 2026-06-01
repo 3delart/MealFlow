@@ -96,27 +96,42 @@
 
   <button class="add-btn" onclick="showAddModal()">+</button>
 
-  <div class="modal-overlay" id="modal-overlay" onclick="hideModal(event)">
-    <div class="modal">
-      <h3>Ajouter un article</h3>
-      <div style="position:relative;margin-bottom:8px;">
-        <input type="text" id="item-name" placeholder="Rechercher un produit..."
-          autocomplete="off" style="width:100%;padding:8px;box-sizing:border-box;border:1px solid #ddd;border-radius:4px;" />
-        <div id="custom-item-dropdown" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:4px;max-height:150px;overflow-y:auto;z-index:200;display:none;"></div>
+  <div class="modal hidden" id="modal-overlay">
+    <div class="modal-content" style="max-width:380px;">
+      <div class="modal-header">
+        <h3>➕ Ajouter un article</h3>
+        <button class="modal-close" onclick="hideAddModal()">&times;</button>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:8px;">
-        <input type="number" id="item-qty" placeholder="Quantité" min="0" step="0.1"
-          style="flex:1;padding:8px;border:1px solid #ddd;border-radius:4px;" />
-        <select id="item-unit" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:4px;">
-          <option value="g">g</option>
-          <option value="ml">ml</option>
-          <option value="pièce">pièce</option>
-          <option value="litre">litre</option>
-        </select>
-      </div>
-      <div class="modal-btns">
-        <button class="btn-cancel" onclick="hideAddModal()">Annuler</button>
-        <button class="btn-add" onclick="saveCustomItem()">Ajouter ✓</button>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="form-group" style="position:relative;">
+          <label for="item-name">Produit</label>
+          <input type="text" id="item-name" placeholder="Rechercher un produit..." autocomplete="off" />
+          <div id="custom-item-dropdown" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:4px;max-height:150px;overflow-y:auto;z-index:300;display:none;margin-top:2px;"></div>
+        </div>
+        <div class="form-group">
+          <label for="item-category">Catégorie</label>
+          <input type="text" id="item-category" placeholder="Auto depuis inventaire" readonly
+            style="background:var(--color-bg);cursor:not-allowed;opacity:0.7;" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="item-qty">Quantité</label>
+            <input type="number" id="item-qty" min="0" step="0.1" placeholder="0" />
+          </div>
+          <div class="form-group">
+            <label for="item-unit">Unité</label>
+            <select id="item-unit">
+              <option value="g">g</option>
+              <option value="ml">ml</option>
+              <option value="pièce">pièce</option>
+              <option value="litre">litre</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="hideAddModal()">Annuler</button>
+          <button class="btn btn-primary" onclick="saveCustomItem()">Ajouter</button>
+        </div>
       </div>
     </div>
   </div>
