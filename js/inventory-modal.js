@@ -11,8 +11,8 @@ function openEditModal(item) {
   document.getElementById("edit-date-added").value = item.Date_ajout;
   document.getElementById("edit-expiry").value = item.Péremption;
   document.getElementById("edit-price").value = (item.Prix || "").toString().replace(",", ".");
-  document.getElementById("edit-calories").value = item.Calories_per_100 || "";
-  document.getElementById("edit-conversion").value = item.Conversion_factor || "";
+  document.getElementById("edit-calories").value = item.calories_per_100 || item.Calories_per_100 || "";
+  document.getElementById("edit-conversion").value = item.Conversion_factor || item.conversion_factor || "";
   document.getElementById("edit-cooking-factor").value = item.cooking_factor || 1.0;
   modal.setAttribute("aria-hidden", "false");
   modal.classList.remove("hidden");

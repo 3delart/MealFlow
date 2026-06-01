@@ -96,6 +96,7 @@ async function loadInventory() {
         fats: parseFloat(row["Fats"]) || 0,
         carbs: parseFloat(row["Carbs"]) || 0,
         allergens: row["Allergens"] || "",
+        Conversion_factor: row["Conversion_factor"] || "",
         cooking_factor: parseFloat((row["Cooking_factor"] || "1").toString().replace(",", ".")) || 1.0
       }));
       mergeDuplicatesByBarcode();
