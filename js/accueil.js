@@ -687,22 +687,6 @@ async function initAccueil() {
    AUTOMATIC INVENTORY DEDUCTION
    ============================================================================ */
 
-const DEDUCTED_KEY = 'mealflow:deducted_dates';
-
-function getDeductedDates() {
-  try { return JSON.parse(localStorage.getItem(DEDUCTED_KEY) || '[]'); }
-  catch { return []; }
-}
-
-function markDateDeducted(dateISO) {
-  const dates = getDeductedDates();
-  if (!dates.includes(dateISO)) {
-    dates.push(dateISO);
-    const cutoff = getDateISO(-30);
-    localStorage.setItem(DEDUCTED_KEY, JSON.stringify(dates.filter(d => d >= cutoff)));
-  }
-}
-
 function parseRecipeValueLocal(value) {
   if (!value || value === "None") return [];
   try {
@@ -716,19 +700,52 @@ function parseRecipeValueLocal(value) {
   return value ? [{ name: value, portions: 1 }] : [];
 }
 
+async function readParametre(key, token) {
+  try {
+    const rows = await window.SheetsAPI.readSheetTab('Parametres');
+    const obj = window.SheetsAPI.rowsToObjects(rows).find(r => r.Cle === key);
+    return obj ? { value: obj.Valeur || '', rowNum: rows.findIndex((r,i) => i > 0 && r[0] === key) + 1 } : null;
+  } catch (e) { return null; }
+}
+
+async function writeParametre(key, value, token) {
+  try {
+    const rows = await window.SheetsAPI.readSheetTab('Parametres');
+    const objects = window.SheetsAPI.rowsToObjects(rows);
+    const idx = objects.findIndex(r => r.Cle === key);
+    if (idx >= 0) {
+      await window.SheetsAPI.updateSheetCell(`Parametres!B${idx + 2}`, value, token);
+    } else {
+      // Init headers if empty
+      if (rows.length <= 1) {
+        await window.SheetsAPI.batchUpdateRange('Parametres!A1:B1', [['Cle', 'Valeur']], token);
+      }
+      await window.SheetsAPI.appendRowWithToken('Parametres', [key, value], token);
+    }
+  } catch (e) { console.warn('writeParametre failed:', e); }
+}
+
 async function deductPastMeals() {
   const token = getAccessToken?.();
   if (!token || !window.SheetsAPI) return;
 
-  const deducted = getDeductedDates();
-  const todayISO = getTodayISO();
+  const yesterdayISO = getDateISO(-1);
 
-  // Find undeducted past days (up to 7 days back)
+  // Read last deduction date from Sheets Parametres
+  const param = await readParametre('derniere_deduction', token);
+  const lastDeduction = param?.value || null;
+
+  // If already deducted up to yesterday → nothing to do
+  if (lastDeduction >= yesterdayISO) return;
+
+  // Calculate dates to deduct: lastDeduction+1 to yesterday (max 7 days)
   const toDeductDates = [];
   for (let i = 1; i <= 7; i++) {
     const dateISO = getDateISO(-i);
-    if (!deducted.includes(dateISO)) toDeductDates.push(dateISO);
+    if (!lastDeduction || dateISO > lastDeduction) toDeductDates.push(dateISO);
   }
+  // Sort chronologically
+  toDeductDates.sort();
   if (toDeductDates.length === 0) return;
 
   // Read Planning sheet
@@ -752,12 +769,12 @@ async function deductPastMeals() {
 
   for (const dateISO of toDeductDates) {
     const dayPlan = planByDate[dateISO];
-    if (!dayPlan) { markDateDeducted(dateISO); continue; }
+    if (!dayPlan) continue;
 
     const entries = [...(dayPlan.Midi || []), ...(dayPlan.Soir || [])];
     for (const { name: recipeName, portions } of entries) {
       const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
-      if (!recipe?.ingredients) continue; // texte libre ou recette inconnue → skip
+      if (!recipe?.ingredients) continue;
 
       for (const ing of recipe.ingredients) {
         const item = (window.inventoryData || []).find(i => norm(i.Produit) === norm(ing.name));
@@ -781,11 +798,12 @@ async function deductPastMeals() {
         }
       }
     }
-    markDateDeducted(dateISO);
   }
 
+  // Update last deduction date to yesterday
+  await writeParametre('derniere_deduction', yesterdayISO, token);
   if (typeof saveInventory === 'function') saveInventory();
-  console.log(`Déduction inventaire effectuée pour : ${toDeductDates.join(', ')}`);
+  console.log(`Déduction inventaire effectuée jusqu'au ${yesterdayISO}`);
 }
 
 /* ============================================================================
