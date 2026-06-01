@@ -469,6 +469,10 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
   if (!window.SheetsAPI || !token) return;
 
   try {
+    // Ensure col H header "Ajout" exists so custom items are preserved
+    await window.SheetsAPI.batchUpdateRange('Courses!A1:H1',
+      [['Produit','Catégorie','Qty','Unité','Prix','Date_utilisation','Acheté','Ajout']], token);
+
     const invRows = await window.SheetsAPI.readSheetTab('Inventory');
     const inventory = window.SheetsAPI.rowsToObjects(invRows);
 

@@ -171,8 +171,10 @@ function populateIngredientMap(objects) {
     const isChecked = !!achetéVal;
 
     if (isCustom) {
-      ingredientMap[row.Produit] = {
+      const customKey = `${row.Produit}__perso`;
+      ingredientMap[customKey] = {
         name: row.Produit,
+        mapKey: customKey,
         category: row.Catégorie || 'Autres',
         totalNeeded: parseFloat(row.Qty) || 0,
         needed: parseFloat(row.Qty) || 0,
@@ -203,6 +205,7 @@ function populateIngredientMap(objects) {
 
     ingredientMap[row.Produit] = {
       name: row.Produit,
+      mapKey: row.Produit,
       category: row.Catégorie || 'Autres',
       totalNeeded,
       needed,
@@ -402,14 +405,15 @@ function renderIngredientItem(ing, dimmed = false) {
 
   const customBadge = ing.isCustom
     ? ' <small style="color:#E65100;font-size:0.75em;">(perso)</small>' : '';
+  const safeKey = (ing.mapKey || ing.name).replace(/'/g, "\\'");
   const deleteBtn = ing.isCustom
-    ? `<button onclick="deleteCustomItem('${ing.name.replace(/'/g, "\\'")}',event)"
+    ? `<button onclick="deleteCustomItem('${safeKey}',event)"
          style="background:none;border:none;color:#bbb;cursor:pointer;font-size:18px;padding:0 4px;line-height:1;">×</button>`
     : '';
 
   return `
     <label${dimmClass} style="position:relative;">
-      <input type="checkbox" data-key="${ing.name.replace(/'/g, "\\'")}" />
+      <input type="checkbox" data-key="${safeKey}" />
       <span style="flex:1;">
         ${ing.name}${customBadge}${qtyDisplay}
         <div style="color:#2E7D32;font-size:0.75em;margin-top:2px;">${dayBadges}</div>
@@ -432,9 +436,9 @@ function updateProgress() {
   document.getElementById('progress').textContent = `${checked} / ${allBoxes.length} articles cochés (${percent}%)`;
 }
 
-async function deleteCustomItem(name, e) {
+async function deleteCustomItem(mapKey, e) {
   if (e) { e.preventDefault(); e.stopPropagation(); }
-  const ing = ingredientMap[name];
+  const ing = ingredientMap[mapKey];
   if (!ing || !ing.isCustom) return;
   const token = window.getAccessToken ? window.getAccessToken() : null;
   if (token && window.SheetsAPI && ing.sheetRow) {
@@ -443,7 +447,7 @@ async function deleteCustomItem(name, e) {
       Object.values(ingredientMap).forEach(i => { if (i.sheetRow > ing.sheetRow) i.sheetRow--; });
     } catch (e) { console.error('Failed to delete custom item:', e); }
   }
-  delete ingredientMap[name];
+  delete ingredientMap[mapKey];
   renderCoursesList();
 }
 
