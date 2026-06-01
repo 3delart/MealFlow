@@ -498,6 +498,7 @@ async function loadTodaysMeals() {
       });
     });
 
+    window.todaysMeals = todaysMeals;
     console.log(`Accueil: Loaded ${todaysMeals.length} meals for today (Midi/Soir only)`);
   } catch (err) {
     console.warn("Accueil: Could not load Planning tab:", err.message);

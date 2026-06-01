@@ -418,7 +418,15 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
     ['Midi', 'Soir'].forEach(slot => {
       const recipeValue = day[slot];
       if (!recipeValue) return;
-      const recipeEntries = Array.isArray(recipeValue) ? recipeValue : (recipeValue ? [recipeValue] : []);
+      const recipeEntries = (() => {
+        if (!recipeValue) return [];
+        if (Array.isArray(recipeValue)) return recipeValue;
+        try {
+          const parsed = JSON.parse(recipeValue);
+          if (Array.isArray(parsed)) return parsed.map(i => typeof i === 'string' ? {name:i,portions:1} : i);
+        } catch(e) {}
+        return [{name: recipeValue, portions: 1}];
+      })();
       recipeEntries.forEach(entry => {
         const recipeName = entry.name || entry;
         const portions = entry.portions || 1;
