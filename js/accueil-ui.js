@@ -883,14 +883,6 @@ async function deleteConsumption(index) {
     }
     todaysConsumptions.splice(index, 1);
 
-    // Persist deletion to localStorage
-    try {
-      localStorage.setItem(`mealflow:consumptions:${user}:${today}`, JSON.stringify(todaysConsumptions));
-      localStorage.setItem(`mealflow:consumed:${user}:${today}`, String(caloriesConsumed || 0));
-    } catch (err) {
-      console.warn("Could not save consumptions to localStorage:", err);
-    }
-
     // Delete from Sheets
     try {
       const token = getAccessToken?.();

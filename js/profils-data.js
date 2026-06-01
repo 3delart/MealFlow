@@ -62,26 +62,7 @@ function useFallbackProfiles() {
 }
 
 function loadProfileOverrides() {
-  for (let i = localStorage.length - 1; i >= 0; i--) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith("mealflow_profile_")) {
-      const userId = key.replace("mealflow_profile_", "");
-      if (!profilesData[userId]) {
-        localStorage.removeItem(key);
-      }
-    }
-  }
-
-  Object.keys(profilesData).forEach(userId => {
-    const stored = localStorage.getItem(`mealflow_profile_${userId}`);
-    if (stored) {
-      try {
-        profilesData[userId] = JSON.parse(stored);
-      } catch (err) {
-        console.warn(`Failed to parse localStorage profile for ${userId}:`, err);
-      }
-    }
-  });
+  // no-op: Sheets is the source of truth for profiles
 }
 
 function saveProfileData(userId, formData) {
@@ -120,7 +101,6 @@ function saveProfileData(userId, formData) {
     Calories_cible: formData["Calories_cible"]
   };
 
-  localStorage.setItem(`mealflow_profile_${userId}`, JSON.stringify(updatedProfile));
   profilesData[userId] = updatedProfile;
 
 

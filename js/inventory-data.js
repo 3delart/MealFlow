@@ -104,17 +104,8 @@ async function loadInventory() {
       return;
     }
   } catch (err) {
-    console.warn("Inventory: Sheets API unavailable, using localStorage", err.message);
-  }
-
-  const stored = localStorage.getItem("mealflow_inventory");
-  if (stored) {
-    try {
-      inventoryData = JSON.parse(stored);
-    } catch (err) {
-      console.error("Failed to parse localStorage inventory:", err);
-      inventoryData = [];
-    }
+    console.error("Inventory: failed to load from Sheets:", err.message);
+    throw err; // propagate to trigger Sheets-unavailable guard
   }
 }
 
@@ -144,7 +135,7 @@ function mergeDuplicatesByBarcode() {
 }
 
 function saveInventory() {
-  localStorage.setItem("mealflow_inventory", JSON.stringify(inventoryData));
+  // no-op: Sheets is the source of truth
 }
 
 function findItemByBarcode(barcode) {

@@ -67,8 +67,8 @@ async function loadRecipes() {
     recipesLoadedFromSheets = true;
     window.recipesLoadedFromSheets = true;
   } catch (err) {
-    console.warn("Recettes: Sheets API unavailable, falling back to localStorage", err.message);
-    loadRecipesFromLocalStorage();
+    console.error("Recettes: failed to load from Sheets:", err.message);
+    throw err;
   }
 }
 
@@ -96,7 +96,7 @@ function loadRecipesFromLocalStorage() {
  * @returns {void}
  */
 function saveRecipesToLocalStorage() {
-  localStorage.setItem("mealflow_recipes", JSON.stringify(recipesData));
+  // no-op: Sheets is the source of truth
 }
 window.saveRecipesToLocalStorage = saveRecipesToLocalStorage;
 

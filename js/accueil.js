@@ -313,60 +313,13 @@ function renderWheel() {
  * Includes quantity and unit for snacks (grignottage items).
  */
 function saveMealsState() {
-  try {
-    const user = getCurrentUser();
-    const today = getTodayISO();
-    const stateToSave = todaysMeals.map(m => {
-      const saved = {
-        mealType: m.mealType,
-        eaten: m.eaten,
-        actualKcal: m.actualKcal,
-      };
-      // Include quantity and unit for snacks
-      if (m.mealType === "grignottage" && m.quantity !== undefined && m.unit) {
-        saved.quantity = m.quantity;
-        saved.unit = m.unit;
-      }
-      return saved;
-    });
-    localStorage.setItem(`mealflow:meals:${user}:${today}`, JSON.stringify(stateToSave));
-    localStorage.setItem(`mealflow:consumed:${user}:${today}`, String(caloriesConsumed));
-  } catch (err) {
-    console.warn("Could not save meals state to localStorage:", err);
-  }
+  // no-op: eaten state derived from History sheet
 }
 
-/**
- * Loads meals state (eaten status) from localStorage, separated by user and date.
- * Restores quantity and unit for snacks (grignottage items).
- */
-function loadMealsState() {
-  const user = getCurrentUser();
-  const today = getTodayISO();
-  const savedState = localStorage.getItem(`mealflow:meals:${user}:${today}`);
-  const savedConsumed = localStorage.getItem(`mealflow:consumed:${user}:${today}`);
-
-  if (savedState) {
-    try {
-      const stateArray = JSON.parse(savedState);
-      stateArray.forEach(saved => {
-        const meal = todaysMeals.find(m => m.mealType === saved.mealType);
-        if (meal) {
-          meal.eaten = saved.eaten;
-          meal.actualKcal = saved.actualKcal || meal.estimatedKcal;
-          // Restore quantity and unit for snacks
-          if (meal.mealType === "grignottage" && saved.quantity !== undefined && saved.unit) {
-            meal.quantity = saved.quantity;
-            meal.unit = saved.unit;
-          }
-        }
-      });
-    } catch (err) {
-      console.warn("Could not parse saved meals state:", err);
-    }
-  }
-
-  // caloriesConsumed is computed from Sheets in loadTodaysConsumptions() — don't overwrite with localStorage
+function deriveEatenStateFromHistory() {
+  todaysMeals.forEach(meal => {
+    meal.eaten = todaysConsumptions.some(c => c.Nom === meal.name);
+  });
 }
 
 /* ============================================================================
@@ -550,24 +503,8 @@ async function loadTodaysConsumptions() {
 
     renderWheel();
   } catch (err) {
-    console.warn(`Accueil: Could not load History tab for ${user}:`, err.message);
-
-    // Fallback to localStorage
-    try {
-      const today = getTodayISO();
-      const saved = localStorage.getItem(`mealflow:consumptions:${user}:${today}`);
-      if (saved) {
-        todaysConsumptions = JSON.parse(saved);
-        caloriesConsumed = todaysConsumptions.reduce((sum, c) => sum + (c.Kcal_total || 0), 0);
-        renderWheel();
-        return;
-      }
-    } catch (localErr) {
-      console.warn(`Accueil: Could not load from localStorage:`, localErr.message);
-    }
-
-    todaysConsumptions = [];
-    caloriesConsumed = 0;
+    console.error(`Accueil: Could not load History tab:`, err.message);
+    throw err;
   }
 }
 
@@ -624,6 +561,15 @@ async function ensureHistorySheetExists(user, token) {
   }
 }
 
+function showSheetsError(err) {
+  document.body.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;font-family:sans-serif;padding:24px;text-align:center;">
+      <p style="font-size:1.2em;color:#c62828;">⚠️ Connexion au sheet impossible</p>
+      <p style="color:#666;font-size:0.9em;">${(err && err.message) || 'Vérifiez votre connexion et réessayez.'}</p>
+      <button onclick="location.reload()" style="padding:10px 24px;background:#2E7D32;color:white;border:none;border-radius:8px;cursor:pointer;font-size:1em;">Réessayer</button>
+    </div>`;
+}
+
 async function initAccueil() {
   lastDateChecked = getTodayISO();
   currentUser = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
@@ -648,16 +594,21 @@ async function initAccueil() {
     setupModalHandlers();
   }
 
-  // Load data in parallel
-  await Promise.all([
-    loadDailyGoal(),
-    loadTodaysMeals(),
-    loadTodaysConsumptions(),
-    loadConversionFactors ? loadConversionFactors() : Promise.resolve(),
-  ]);
+  // Load data in parallel — errors propagate and trigger Sheets guard
+  try {
+    await Promise.all([
+      loadDailyGoal(),
+      loadTodaysMeals(),
+      loadTodaysConsumptions(),
+      loadConversionFactors ? loadConversionFactors() : Promise.resolve(),
+    ]);
+  } catch (err) {
+    showSheetsError(err);
+    return;
+  }
 
-  // Load saved meals state (eaten/calories) from localStorage
-  loadMealsState();
+  // Derive eaten state from History sheet
+  deriveEatenStateFromHistory();
 
   // Re-render with real data
   renderGreeting();

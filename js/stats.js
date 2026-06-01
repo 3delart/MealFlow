@@ -145,13 +145,6 @@ function generateDemoData() {
     };
   }
 
-  // Persist demo data so refreshes stay consistent
-  try {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-  } catch (e) {
-    console.warn("Stats: could not save demo data to localStorage", e);
-  }
-
   return history;
 }
 
