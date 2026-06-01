@@ -40,6 +40,13 @@ function onConsommerProductInput(e) {
         _consommerSelectedProductId = item.id;
         document.getElementById('consommer-product-search').value = item.name;
         dropdown.style.display = 'none';
+        // Update label and step for product unit
+        const invItem = (window.inventoryData || []).find(i => i.id === item.id);
+        const unit = invItem?.Unité || item.unit || 'g';
+        const label = document.getElementById('consommer-qty-label');
+        if (label) label.textContent = `Quantité (${unit}) :`;
+        const qtyInput = document.getElementById('consommer-qty');
+        if (qtyInput) qtyInput.step = (unit === 'pièce' || unit === 'piece') ? '1' : '0.1';
         updateConsommerPreview();
       });
       dropdown.appendChild(div);
@@ -725,6 +732,14 @@ function submitConsommerScan() {
   _enregistrerConsommation(data.name, qty, data.unit, data.kcalPer100, totalKcal, 'scan');
 }
 
+function _inventoryQtyToGrams(qty, unit, conversionFactor) {
+  if (unit === 'pièce' || unit === 'piece') {
+    return qty * (parseFloat(conversionFactor) || 1);
+  }
+  if (unit === 'litre') return qty * 1000;
+  return qty; // g or ml
+}
+
 function updateConsommerPreview() {
   const qtyInput = document.getElementById('consommer-qty');
   const previewBox = document.getElementById('consommer-preview');
@@ -734,18 +749,19 @@ function updateConsommerPreview() {
     return;
   }
 
-  const items = InventoryAPI.getActiveItems();
-  const product = items.find(i => i.id === _consommerSelectedProductId);
-  if (!product) return;
+  const invItem = (window.inventoryData || []).find(i => i.id === _consommerSelectedProductId);
+  if (!invItem) return;
 
   const qty = parseFloat(qtyInput.value);
-  const kcalPer100 = product.calories_per_100 || 0;
-  const totalKcal = Math.round(qty * kcalPer100 / 100);
+  const unit = invItem.Unité || 'g';
+  const qtyGrams = _inventoryQtyToGrams(qty, unit, invItem.Conversion_factor);
+  const kcalPer100 = invItem.calories_per_100 || 0;
+  const totalKcal = Math.round(qtyGrams * kcalPer100 / 100);
 
   previewBox.innerHTML = `
     <div style="padding: 12px; background-color: var(--color-bg); border-radius: 6px;">
-      <p style="margin: 0; font-size: 0.9em;"><strong>${product.name}</strong></p>
-      <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${qty}${product.unit} · ${totalKcal} kcal</p>
+      <p style="margin: 0; font-size: 0.9em;"><strong>${invItem.Produit}</strong></p>
+      <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${qty} ${unit} · ${totalKcal} kcal</p>
     </div>
   `;
 }
@@ -772,9 +788,12 @@ async function submitConsommerInventaire() {
     await applyInventoryDeduction(invItem, qty, token);
   }
 
+  const unit = product.unit || invItem?.Unité || 'g';
+  const convFactor = invItem?.Conversion_factor;
+  const qtyGrams = _inventoryQtyToGrams(qty, unit, convFactor);
   const kcalPer100 = product.calories_per_100 || 0;
-  const totalKcal = Math.round(qty * kcalPer100 / 100);
-  _enregistrerConsommation(product.name, qty, product.unit, kcalPer100, totalKcal, 'inventaire');
+  const totalKcal = Math.round(qtyGrams * kcalPer100 / 100);
+  _enregistrerConsommation(product.name, qty, unit, kcalPer100, totalKcal, 'inventaire');
 }
 
 function updateConsommerRecettePreview() {
