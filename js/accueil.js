@@ -687,6 +687,8 @@ async function initAccueil() {
    AUTOMATIC INVENTORY DEDUCTION
    ============================================================================ */
 
+let _deductionDone = false;
+
 function parseRecipeValueLocal(value) {
   if (!value || value === "None") return [];
   try {
@@ -726,6 +728,8 @@ async function writeParametre(key, value, token) {
 }
 
 async function deductPastMeals() {
+  if (_deductionDone) return;
+  _deductionDone = true;
   const token = getAccessToken?.();
   if (!token || !window.SheetsAPI) return;
 
@@ -767,6 +771,9 @@ async function deductPastMeals() {
 
   const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 
+  // Collect all quantity changes in memory first
+  const inventoryChanges = {}; // key: sheetRowNumber → newQty (string)
+
   for (const dateISO of toDeductDates) {
     const dayPlan = planByDate[dateISO];
     if (!dayPlan) continue;
@@ -778,7 +785,7 @@ async function deductPastMeals() {
 
       for (const ing of recipe.ingredients) {
         const item = (window.inventoryData || []).find(i => norm(i.Produit) === norm(ing.name));
-        if (!item) continue;
+        if (!item || !item.sheetRowNumber) continue;
 
         const recipeUnit = ing.unit || 'g';
         const invUnit = item.Unité || 'g';
@@ -788,19 +795,33 @@ async function deductPastMeals() {
         if (!unitOk) continue;
 
         const qtyToDeduct = (parseFloat(ing.quantity) || 0) * (portions || 1);
-        const newQty = Math.max(0, (parseFloat(item.Qty) || 0) - qtyToDeduct);
+        // Read current qty from item (may have been updated by previous iteration)
+        const current = parseFloat(item.Qty) || 0;
+        const newQty = Math.max(0, current - qtyToDeduct);
         item.Qty = newQty.toString();
-
-        if (item.sheetRowNumber) {
-          try {
-            await window.SheetsAPI.updateSheetCell(`Inventory!D${item.sheetRowNumber}`, newQty.toString(), token);
-          } catch (e) { console.warn('deductPastMeals: failed to update inventory', e); }
-        }
+        inventoryChanges[item.sheetRowNumber] = newQty.toString();
       }
     }
   }
 
-  // Update last deduction date to yesterday
+  // Single batch call for all inventory updates
+  const updates = Object.entries(inventoryChanges).map(([row, val]) => ({
+    range: `Inventory!D${row}`,
+    value: val
+  }));
+
+  if (updates.length > 0) {
+    try {
+      await window.SheetsAPI.batchUpdateCells(updates, token);
+      console.log(`Déduction: ${updates.length} cellules inventaire mises à jour`);
+    } catch (e) {
+      console.warn('deductPastMeals: batch update failed', e);
+      // Don't update derniere_deduction if writes failed
+      return;
+    }
+  }
+
+  // Update last deduction date to yesterday (single write)
   await writeParametre('derniere_deduction', yesterdayISO, token);
   if (typeof saveInventory === 'function') saveInventory();
   console.log(`Déduction inventaire effectuée jusqu'au ${yesterdayISO}`);

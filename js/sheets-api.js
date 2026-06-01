@@ -304,6 +304,32 @@ async function batchUpdateRange(range, values, accessToken) {
 }
 
 /**
+ * Batch update multiple non-contiguous cells in one API call.
+ * @param {Array<{range:string, value:string}>} updates - e.g. [{range:'Inventory!D2', value:'0'}]
+ * @param {string} accessToken
+ */
+async function batchUpdateCells(updates, accessToken) {
+  const spreadsheetId = getSheetId();
+  const token = accessToken || (typeof getAccessToken === 'function' ? getAccessToken() : null);
+  if (!token) throw new Error("No access token for batchUpdateCells");
+  if (!updates || updates.length === 0) return;
+
+  const data = updates.map(u => ({ range: u.range, values: [[u.value]] }));
+  const response = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchUpdate`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valueInputOption: 'RAW', data })
+    }
+  );
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(`batchUpdateCells failed: ${err.error?.message || response.statusText}`);
+  }
+}
+
+/**
  * Delete a single row from a sheet tab by 1-based row number.
  * Safer than clear+rewrite for single-row deletions.
  * @param {string} tabName - Sheet tab name (e.g. "History_florian")
@@ -357,6 +383,7 @@ if (typeof window !== 'undefined') {
     updateSheetCell,
     clearSheetRange,
     batchUpdateRange,
+    batchUpdateCells,
     deleteSheetRow
   };
 }
