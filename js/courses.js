@@ -166,7 +166,7 @@ function populateIngredientMap(objects) {
     const isChecked = !!achetéVal;
 
     if (isCustom) {
-      const customKey = `${row.Produit}__perso`;
+      const customKey = `${row.Produit}__perso_${idx + 2}`;
       ingredientMap[customKey] = {
         name: row.Produit,
         mapKey: customKey,
@@ -269,7 +269,7 @@ function renderCoursesList() {
 
   // Separate into "to buy" and "in stock"
   const toBuy = Object.values(ingredientMap).filter(ing => ing.needed > 0);
-  const inStock = Object.values(ingredientMap).filter(ing => ing.needed <= 0 && ing.price > 0);
+  const inStock = Object.values(ingredientMap).filter(ing => ing.needed <= 0);
 
   // Calculate total price
   const totalPrice = toBuy.reduce((sum, ing) => sum + (ing.price || 0), 0);
