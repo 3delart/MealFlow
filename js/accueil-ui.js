@@ -750,7 +750,7 @@ function updateConsommerPreview() {
   `;
 }
 
-function submitConsommerInventaire() {
+async function submitConsommerInventaire() {
   const qtyInput = document.getElementById('consommer-qty');
   const qty = parseFloat(qtyInput.value);
 
@@ -766,9 +766,14 @@ function submitConsommerInventaire() {
     return;
   }
 
+  const invItem = (window.inventoryData || []).find(i => i.id === _consommerSelectedProductId);
+  if (invItem && typeof applyInventoryDeduction === 'function') {
+    const token = getAccessToken?.();
+    await applyInventoryDeduction(invItem, qty, token);
+  }
+
   const kcalPer100 = product.calories_per_100 || 0;
   const totalKcal = Math.round(qty * kcalPer100 / 100);
-
   _enregistrerConsommation(product.name, qty, product.unit, kcalPer100, totalKcal, 'inventaire');
 }
 

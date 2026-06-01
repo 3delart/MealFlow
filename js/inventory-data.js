@@ -5,6 +5,19 @@
 let inventoryData = [];
 let scannedProductData = null;
 
+async function applyInventoryDeduction(item, qtyToDeduct, token) {
+  if (!item.sheetRowNumber || !window.SheetsAPI || !token) return;
+  const newQty = Math.max(0, (parseFloat(item.Qty) || 0) - qtyToDeduct);
+  const updates = [{ range: `Inventory!D${item.sheetRowNumber}`, value: newQty.toString() }];
+  if (newQty === 0) {
+    updates.push({ range: `Inventory!G${item.sheetRowNumber}`, value: '' });
+    updates.push({ range: `Inventory!H${item.sheetRowNumber}`, value: '' });
+  }
+  await window.SheetsAPI.batchUpdateCells(updates, token);
+  item.Qty = newQty.toString();
+  if (newQty === 0) { item.Date_ajout = ''; item.Péremption = ''; }
+}
+
 async function sortSheetByCategory(accessToken) {
   if (!window.SheetsAPI || !accessToken) return;
 

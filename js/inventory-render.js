@@ -22,19 +22,11 @@ async function reduceQuantity(itemId, currentQty, productName) {
   const item = inventoryData.find(i => i.id === itemId);
   if (!item) return;
 
-  const newQty = Math.max(0, currentNum - reduceAmount);
-  item.Qty = newQty.toString();
-
-  saveInventory();
-
-  if (item.sheetRowNumber && window.SheetsAPI) {
-    try {
-      const token = typeof getAccessToken === 'function' ? getAccessToken() : null;
-      const range = `Inventory!D${item.sheetRowNumber}`;
-      await window.SheetsAPI.updateSheetCell(range, newQty.toString(), token);
-    } catch (err) {
-      console.warn(`Failed to update Sheets for item ${itemId}:`, err);
-    }
+  const token = typeof getAccessToken === 'function' ? getAccessToken() : null;
+  try {
+    await applyInventoryDeduction(item, reduceAmount, token);
+  } catch (err) {
+    console.warn(`Failed to update Sheets for item ${itemId}:`, err);
   }
 
   renderInventory();

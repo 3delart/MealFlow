@@ -53,9 +53,10 @@ async function saveEditedItem(e) {
     cooking_factor: parseFloat(document.getElementById("edit-cooking-factor").value) || 1.0
   };
 
-  // Clear expiry date if quantity is 0 (explicitly set to empty)
+  // Clear dates if quantity reaches 0
   if (parseFloat(updatedData.Qty) === 0) {
     updatedData.Péremption = "";
+    updatedData.Date_ajout = "";
   }
 
   Object.assign(item, updatedData);
