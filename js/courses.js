@@ -134,13 +134,8 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
       .filter(({ r }) => !r.Ajout || r.Ajout === 'planning')
       .map(({ rowNum }) => rowNum);
 
-    for (const rowNum of planningRowNums.sort((a, b) => b - a)) {
-      try {
-        await window.SheetsAPI.deleteSheetRow('Courses', rowNum, token);
-      } catch (deleteErr) {
-        console.error(`Courses sync: deleteSheetRow failed at row ${rowNum}, aborting to prevent duplicates`, deleteErr);
-        return; // abort — don't append new rows if deletion failed
-      }
+    if (planningRowNums.length > 0) {
+      await window.SheetsAPI.deleteSheetRows('Courses', planningRowNums, token);
     }
 
     for (const row of rows) {

@@ -469,10 +469,6 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
   if (!window.SheetsAPI || !token) return;
 
   try {
-    // Ensure col H header "Ajout" exists so custom items are preserved
-    await window.SheetsAPI.batchUpdateRange('Courses!A1:H1',
-      [['Produit','Catégorie','Qty','Unité','Prix','Date_utilisation','Acheté','Ajout']], token);
-
     const invRows = await window.SheetsAPI.readSheetTab('Inventory');
     const inventory = window.SheetsAPI.rowsToObjects(invRows);
 
@@ -495,13 +491,8 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
       .filter(({ r }) => !r.Ajout || r.Ajout === 'planning')
       .map(({ rowNum }) => rowNum);
 
-    for (const rowNum of planningRowNums.sort((a, b) => b - a)) {
-      try {
-        await window.SheetsAPI.deleteSheetRow('Courses', rowNum, token);
-      } catch (deleteErr) {
-        console.error(`Courses sync: deleteSheetRow failed at row ${rowNum}, aborting`, deleteErr);
-        return;
-      }
+    if (planningRowNums.length > 0) {
+      await window.SheetsAPI.deleteSheetRows('Courses', planningRowNums, token);
     }
     for (const row of taggedRows) {
       await window.SheetsAPI.appendRowWithToken('Courses', row, token);

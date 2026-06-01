@@ -375,6 +375,56 @@ async function deleteSheetRow(tabName, rowNumber, accessToken) {
   }
 }
 
+/**
+ * Delete multiple rows in a single batchUpdate (much cheaper than N × deleteSheetRow).
+ * @param {string} tabName - Sheet tab name
+ * @param {number[]} rowNumbers - Array of 1-based row numbers, sorted DESCENDING
+ * @param {string} accessToken
+ */
+async function deleteSheetRows(tabName, rowNumbers, accessToken) {
+  if (!rowNumbers || rowNumbers.length === 0) return;
+  if (rowNumbers.length === 1) return deleteSheetRow(tabName, rowNumbers[0], accessToken);
+
+  const spreadsheetId = getSheetId();
+  const token = accessToken || (typeof getAccessToken === 'function' ? getAccessToken() : null);
+  if (!token) throw new Error("No access token for deleteSheetRows");
+
+  const metaResp = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!metaResp.ok) {
+    if (metaResp.status === 401 && typeof handleAuthError === 'function') { handleAuthError("Token expired - please re-login"); return; }
+    throw new Error("deleteSheetRows: failed to get sheet metadata");
+  }
+  const meta = await metaResp.json();
+  const tab = (meta.sheets || []).find(s => s.properties.title === tabName);
+  if (!tab) throw new Error(`deleteSheetRows: tab "${tabName}" not found`);
+  const tabSheetId = tab.properties.sheetId;
+
+  // Sort descending to avoid index shift issues
+  const sorted = [...rowNumbers].sort((a, b) => b - a);
+  const requests = sorted.map(rowNumber => ({
+    deleteDimension: {
+      range: { sheetId: tabSheetId, dimension: 'ROWS', startIndex: rowNumber - 1, endIndex: rowNumber }
+    }
+  }));
+
+  const delResp = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests })
+    }
+  );
+  if (!delResp.ok) {
+    if (delResp.status === 401 && typeof handleAuthError === 'function') { handleAuthError("Token expired - please re-login"); return; }
+    const err = await delResp.json();
+    throw new Error(`deleteSheetRows failed: ${err.error?.message || delResp.statusText}`);
+  }
+}
+
 // Export all functions to the window object so they can be used globally (in browser)
 if (typeof window !== 'undefined') {
   window.SheetsAPI = {
@@ -388,7 +438,8 @@ if (typeof window !== 'undefined') {
     clearSheetRange,
     batchUpdateRange,
     batchUpdateCells,
-    deleteSheetRow
+    deleteSheetRow,
+    deleteSheetRows
   };
 }
 
