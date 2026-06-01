@@ -83,9 +83,9 @@ async function loadMealPlan() {
           const oldCourses = await window.SheetsAPI.readSheetTab('Courses');
           const existingAcheté = {};
           window.SheetsAPI.rowsToObjects(oldCourses).forEach(row => {
-            if (row.Produit && row.Acheté === '1') {
+            if (row.Produit && row.Acheté && row.Acheté !== '') {
               const key = row.Produit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-              existingAcheté[key] = '1';
+              existingAcheté[key] = row.Acheté;
             }
           });
           await generateAndWriteCourses(token, existingAcheté);
@@ -461,11 +461,24 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
       return row;
     });
 
-    await window.SheetsAPI.clearSheetRange('Courses!A2:G1000', token);
-    if (rows.length > 0) {
-      await window.SheetsAPI.batchUpdateRange('Courses!A2:G1000', rows, token);
+    // Add "planning" marker to col H
+    const taggedRows = rows.map(r => [...r, 'planning']);
+
+    // Delete only planning rows (preserve customs)
+    const existingRaw = await window.SheetsAPI.readSheetTab('Courses', 'A:H');
+    const existingObjects = window.SheetsAPI.rowsToObjects(existingRaw);
+    const planningRowNums = existingObjects
+      .map((r, idx) => ({ r, rowNum: idx + 2 }))
+      .filter(({ r }) => !r.Ajout || r.Ajout === 'planning')
+      .map(({ rowNum }) => rowNum);
+
+    for (const rowNum of planningRowNums.sort((a, b) => b - a)) {
+      await window.SheetsAPI.deleteSheetRow('Courses', rowNum, token);
     }
-    console.log(`Courses synced: ${rows.length} rows`);
+    for (const row of taggedRows) {
+      await window.SheetsAPI.appendRowWithToken('Courses', row, token);
+    }
+    console.log(`Courses synced: ${taggedRows.length} planning rows`);
   } catch (err) {
     console.warn('Courses sync failed:', err);
   }

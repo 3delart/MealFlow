@@ -84,8 +84,8 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
  */
 async function ensureCoursesHeaders(token) {
   try {
-    const headerRow = ['Produit', 'Catégorie', 'Qty', 'Unité', 'Prix', 'Date_utilisation', 'Acheté'];
-    await window.SheetsAPI.batchUpdateRange('Courses!A1:G1', [headerRow], token);
+    const headerRow = ['Produit', 'Catégorie', 'Qty', 'Unité', 'Prix', 'Date_utilisation', 'Acheté', 'Ajout'];
+    await window.SheetsAPI.batchUpdateRange('Courses!A1:H1', [headerRow], token);
     console.log('Courses headers initialized');
   } catch (err) {
     console.warn('Could not ensure Courses headers:', err);
@@ -96,13 +96,11 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
   if (!window.SheetsAPI || !token) return;
 
   try {
-    // Ensure headers exist first
     await ensureCoursesHeaders(token);
 
     const invRows = await window.SheetsAPI.readSheetTab('Inventory');
     const inventory = window.SheetsAPI.rowsToObjects(invRows);
 
-    // Build a temporary mealPlan from Planning sheet for generation
     const planRows = await window.SheetsAPI.readSheetTab('Planning');
     const planObjects = window.SheetsAPI.rowsToObjects(planRows);
     const tempMealPlan = calculateWeekWindow().map(day => ({
@@ -112,19 +110,29 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
     }));
 
     let rows = buildCoursesRows(tempMealPlan, inventory);
-
     rows = rows.map(row => {
       const key = row[0].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
       row[6] = existingAcheté[key] || '';
+      row[7] = 'planning';
       return row;
     });
 
-    // Clear old rows first, then write new ones
-    await window.SheetsAPI.clearSheetRange('Courses!A2:G1000', token);
-    if (rows.length > 0) {
-      await window.SheetsAPI.batchUpdateRange('Courses!A2:G1000', rows, token);
+    // Read current sheet, delete only planning rows (preserve customs)
+    const existingRaw = await window.SheetsAPI.readSheetTab('Courses', 'A:H');
+    const existingObjects = window.SheetsAPI.rowsToObjects(existingRaw);
+    const planningRowNums = existingObjects
+      .map((r, idx) => ({ r, rowNum: idx + 2 }))
+      .filter(({ r }) => !r.Ajout || r.Ajout === 'planning')
+      .map(({ rowNum }) => rowNum);
+
+    for (const rowNum of planningRowNums.sort((a, b) => b - a)) {
+      await window.SheetsAPI.deleteSheetRow('Courses', rowNum, token);
     }
-    console.log(`Courses synced: ${rows.length} rows`);
+
+    for (const row of rows) {
+      await window.SheetsAPI.appendRowWithToken('Courses', row, token);
+    }
+    console.log(`Courses synced: ${rows.length} planning rows`);
   } catch (err) {
     console.warn('Courses sync failed:', err);
   }
@@ -145,9 +153,28 @@ function populateIngredientMap(objects) {
 
   objects.forEach((row, idx) => {
     if (!row.Produit) return;
-    const totalNeeded = parseFloat(row.Qty) || 0;
+    const isCustom = row.Ajout === 'custom';
+    const achetéVal = row.Acheté || '';
+    const isChecked = !!achetéVal;
 
-    // Look up current stock in live inventory
+    if (isCustom) {
+      ingredientMap[row.Produit] = {
+        name: row.Produit,
+        category: row.Catégorie || 'Autres',
+        totalNeeded: parseFloat(row.Qty) || 0,
+        needed: parseFloat(row.Qty) || 0,
+        stock: 0,
+        unit: row.Unité || 'g',
+        price: parseFloat(row.Prix) || 0,
+        days: [],
+        acheté: isChecked,
+        isCustom: true,
+        sheetRow: idx + 2
+      };
+      return;
+    }
+
+    const totalNeeded = parseFloat(row.Qty) || 0;
     const invItem = (window.inventoryData || []).find(item => {
       const k = norm(item.Produit);
       const n = norm(row.Produit);
@@ -170,7 +197,8 @@ function populateIngredientMap(objects) {
       unit,
       price: parseFloat(row.Prix) || 0,
       days: row['Date_utilisation'] ? row['Date_utilisation'].split(',').filter(Boolean) : [],
-      acheté: row.Acheté === '1' || row.Acheté === 1,
+      acheté: isChecked,
+      isCustom: false,
       sheetRow: idx + 2
     };
   });
@@ -296,12 +324,11 @@ function renderCoursesList() {
       checkbox.parentElement.classList.toggle('done', checkbox.checked);
       ing.acheté = checkbox.checked;
       const token = window.getAccessToken ? window.getAccessToken() : null;
-      if (token && window.SheetsAPI) {
+      if (token && window.SheetsAPI && ing.sheetRow) {
         try {
-          console.log(`Writing Acheté=${checkbox.checked ? '1' : ''} to Courses!G${ing.sheetRow}`);
-          await window.SheetsAPI.updateSheetCell(`Courses!G${ing.sheetRow}`, checkbox.checked ? '1' : '', token);
-          console.log(`✓ Updated Acheté`);
-        } catch (e) { console.error('❌ Failed to update Acheté:', e); }
+          const val = checkbox.checked ? Utils.getDateISO(0) : '';
+          await window.SheetsAPI.updateSheetCell(`Courses!G${ing.sheetRow}`, val, token);
+        } catch (e) { console.error('Failed to update Acheté:', e); }
       }
       updateProgress();
     });
@@ -361,16 +388,23 @@ function renderIngredientItem(ing, dimmed = false) {
     dayBadges += `<span style="background:${badgeColor};padding:1px 4px;margin-right:2px;border-radius:2px;">${dayAbbr} ${dayNum}</span>`;
   });
 
+  const customBadge = ing.isCustom
+    ? ' <small style="color:#E65100;font-size:0.75em;">(perso)</small>' : '';
+  const deleteBtn = ing.isCustom
+    ? `<button onclick="deleteCustomItem('${ing.name.replace(/'/g, "\\'")}',event)"
+         style="background:none;border:none;color:#bbb;cursor:pointer;font-size:18px;padding:0 4px;line-height:1;">×</button>`
+    : '';
+
   return `
     <label${dimmClass} style="position:relative;">
       <input type="checkbox" data-key="${ing.name.replace(/'/g, "\\'")}" />
       <span style="flex:1;">
-        ${ing.name}${qtyDisplay}
+        ${ing.name}${customBadge}${qtyDisplay}
         <div style="color:#2E7D32;font-size:0.75em;margin-top:2px;">${dayBadges}</div>
       </span>
       <div class="price-correction">
-        <span class="price-display">${priceText}</span>
-        <button class="price-edit-btn" onclick="openEditModal('${ing.name.replace(/'/g, "\\'")}')">Corriger</button>
+        ${ing.isCustom ? '' : `<span class="price-display">${priceText}</span>`}
+        ${ing.isCustom ? deleteBtn : `<button class="price-edit-btn" onclick="openEditModal('${ing.name.replace(/'/g, "\\'")}')">Corriger</button>`}
       </div>
     </label>
   `;
@@ -386,91 +420,97 @@ function updateProgress() {
   document.getElementById('progress').textContent = `${checked} / ${allBoxes.length} articles cochés (${percent}%)`;
 }
 
-// Custom items
-const customKey = `COURSES_${Utils.getDateISO(0)}_customs`;
-
-function loadCustomItems() {
-  try {
-    return JSON.parse(localStorage.getItem(customKey) || '[]');
-  } catch (e) {
-    return [];
+async function deleteCustomItem(name, e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  const ing = ingredientMap[name];
+  if (!ing || !ing.isCustom) return;
+  const token = window.getAccessToken ? window.getAccessToken() : null;
+  if (token && window.SheetsAPI && ing.sheetRow) {
+    try {
+      await window.SheetsAPI.deleteSheetRow('Courses', ing.sheetRow, token);
+      Object.values(ingredientMap).forEach(i => { if (i.sheetRow > ing.sheetRow) i.sheetRow--; });
+    } catch (e) { console.error('Failed to delete custom item:', e); }
   }
+  delete ingredientMap[name];
+  renderCoursesList();
 }
 
-function saveCustomItems(items) {
-  localStorage.setItem(customKey, JSON.stringify(items));
-}
+let _customDebounce = null;
 
-function renderCustomItems() {
-  const items = loadCustomItems();
-  const section = document.getElementById('custom-section');
-
-  if (items.length === 0) {
-    section.innerHTML = '';
-    return;
-  }
-
-  let html = '<div class="cat custom-cat">Ajouts perso</div>';
-  items.forEach((item, i) => {
-    const doneClass = item.checked ? ' done' : '';
-    const qty = item.qty ? ` <small style="color:#999;font-size:0.85em;">(${item.qty})</small>` : '';
-    html += `
-      <label class="custom-item${doneClass}">
-        <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleCustom(${i}, this)" />
-        <span>${item.name}${qty}</span>
-        <button class="del-btn" onclick="deleteCustom(event, ${i})">×</button>
-      </label>
-    `;
+function initCustomAutocomplete() {
+  const input = document.getElementById('item-name');
+  if (!input) return;
+  input.addEventListener('input', e => {
+    clearTimeout(_customDebounce);
+    _customDebounce = setTimeout(() => {
+      const q = e.target.value.trim();
+      const dd = document.getElementById('custom-item-dropdown');
+      if (q.length < 2) { dd.style.display = 'none'; return; }
+      const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+      const matches = (window.inventoryData || [])
+        .filter(i => norm(i.Produit).includes(norm(q))).slice(0, 5);
+      if (!matches.length) { dd.style.display = 'none'; return; }
+      dd.innerHTML = '';
+      matches.forEach(item => {
+        const div = document.createElement('div');
+        div.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:14px;';
+        div.textContent = item.Produit;
+        div.addEventListener('mouseover', () => div.style.background = '#f0f0f0');
+        div.addEventListener('mouseout', () => div.style.background = '');
+        div.addEventListener('click', () => {
+          input.value = item.Produit;
+          input.dataset.category = item.Catégorie || 'Autres';
+          document.getElementById('item-unit').value = item.Unité || 'g';
+          dd.style.display = 'none';
+        });
+        dd.appendChild(div);
+      });
+      dd.style.display = 'block';
+    }, 300);
   });
-
-  section.innerHTML = html;
-  updateProgress();
-}
-
-function toggleCustom(i, cb) {
-  const items = loadCustomItems();
-  items[i].checked = cb.checked;
-  saveCustomItems(items);
-  cb.parentElement.classList.toggle('done', cb.checked);
-  updateProgress();
-}
-
-function deleteCustom(e, i) {
-  e.preventDefault();
-  e.stopPropagation();
-  const items = loadCustomItems();
-  items.splice(i, 1);
-  saveCustomItems(items);
-  renderCustomItems();
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#modal-overlay')) {
+      const dd = document.getElementById('custom-item-dropdown');
+      if (dd) dd.style.display = 'none';
+    }
+  });
 }
 
 function showAddModal() {
   document.getElementById('modal-overlay').classList.add('active');
-  setTimeout(() => document.getElementById('item-name').focus(), 50);
+  document.getElementById('item-name').value = '';
+  document.getElementById('item-name').dataset.category = '';
+  document.getElementById('item-qty').value = '';
+  document.getElementById('item-unit').value = 'g';
+  setTimeout(() => { document.getElementById('item-name').focus(); initCustomAutocomplete(); }, 50);
 }
 
 function hideAddModal() {
   document.getElementById('modal-overlay').classList.remove('active');
-  document.getElementById('item-name').value = '';
-  document.getElementById('item-qty').value = '';
+  const dd = document.getElementById('custom-item-dropdown');
+  if (dd) dd.style.display = 'none';
 }
 
 function hideModal(e) {
   if (e.target === document.getElementById('modal-overlay')) hideAddModal();
 }
 
-function saveCustomItem() {
-  const name = document.getElementById('item-name').value.trim();
-  if (!name) {
-    document.getElementById('item-name').focus();
-    return;
+async function saveCustomItem() {
+  const nameEl = document.getElementById('item-name');
+  const name = nameEl.value.trim();
+  if (!name) { nameEl.focus(); return; }
+  const qty = document.getElementById('item-qty').value || '0';
+  const unit = document.getElementById('item-unit').value || 'g';
+  const category = nameEl.dataset.category || 'Autres';
+  const token = window.getAccessToken ? window.getAccessToken() : null;
+  if (token && window.SheetsAPI) {
+    try {
+      await window.SheetsAPI.appendRowWithToken('Courses',
+        [name, category, qty, unit, '0', Utils.getDateISO(0), '', 'custom'], token);
+      hideAddModal();
+      await initCourses();
+    } catch (e) { console.error('Failed to add custom item:', e); }
   }
-  const qty = document.getElementById('item-qty').value.trim();
-  const items = loadCustomItems();
-  items.unshift({ name, qty, checked: false });
-  saveCustomItems(items);
-  hideAddModal();
-  renderCustomItems();
 }
 
 document.addEventListener('keydown', (e) => {
@@ -553,16 +593,29 @@ async function initCourses() {
   document.getElementById('loading-state').textContent = 'Chargement...';
 
   try {
-    // Read Courses sheet avec range A:G pour inclure colonnes F/G vides
-    const rows = await SheetsAPI.readSheetTab('Courses', 'A:G');
-    const objects = SheetsAPI.rowsToObjects(rows);
+    const rows = await SheetsAPI.readSheetTab('Courses', 'A:H');
+    let objects = SheetsAPI.rowsToObjects(rows);
 
-    // Charger l'inventaire pour le calcul stock/totalNeeded
     if (typeof loadInventory === 'function') await loadInventory();
 
-    // Afficher les données du sheet — la régénération se fait depuis planning.html
-    populateIngredientMap(objects);
+    // Supprimer customs expirés (cochés avant aujourd'hui)
+    const token = window.getAccessToken ? window.getAccessToken() : null;
+    if (token && window.SheetsAPI) {
+      const todayISO = Utils.getDateISO(0);
+      const toDelete = objects
+        .map((r, idx) => ({ r, rowNum: idx + 2 }))
+        .filter(({ r }) => r.Ajout === 'custom' && r.Acheté && r.Acheté < todayISO);
+      for (const { rowNum } of toDelete.sort((a, b) => b.rowNum - a.rowNum)) {
+        await SheetsAPI.deleteSheetRow('Courses', rowNum, token);
+      }
+      if (toDelete.length > 0) {
+        // Re-lire après suppression pour avoir les bons sheetRow
+        const fresh = await SheetsAPI.readSheetTab('Courses', 'A:H');
+        objects = SheetsAPI.rowsToObjects(fresh);
+      }
+    }
 
+    populateIngredientMap(objects);
     renderCoursesList();
   } catch (error) {
     console.error('Error loading courses:', error);

@@ -90,7 +90,6 @@
       <p id="progress"></p>
       <div id="loading-state">Chargement...</div>
       <div id="courses-list"></div>
-      <div id="custom-section"></div>
       <button class="reset" onclick="location.reload()">Actualiser</button>
     </section>
   </main>
@@ -100,8 +99,21 @@
   <div class="modal-overlay" id="modal-overlay" onclick="hideModal(event)">
     <div class="modal">
       <h3>Ajouter un article</h3>
-      <input type="text" id="item-name" placeholder="Nom (ex: Huile d'olive)" />
-      <input type="text" id="item-qty" placeholder="Quantité (ex: 1 bouteille) — optionnel" />
+      <div style="position:relative;margin-bottom:8px;">
+        <input type="text" id="item-name" placeholder="Rechercher un produit..."
+          autocomplete="off" style="width:100%;padding:8px;box-sizing:border-box;border:1px solid #ddd;border-radius:4px;" />
+        <div id="custom-item-dropdown" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:4px;max-height:150px;overflow-y:auto;z-index:200;display:none;"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="number" id="item-qty" placeholder="Quantité" min="0" step="0.1"
+          style="flex:1;padding:8px;border:1px solid #ddd;border-radius:4px;" />
+        <select id="item-unit" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:4px;">
+          <option value="g">g</option>
+          <option value="ml">ml</option>
+          <option value="pièce">pièce</option>
+          <option value="litre">litre</option>
+        </select>
+      </div>
       <div class="modal-btns">
         <button class="btn-cancel" onclick="hideAddModal()">Annuler</button>
         <button class="btn-add" onclick="saveCustomItem()">Ajouter ✓</button>
