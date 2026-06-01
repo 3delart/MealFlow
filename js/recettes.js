@@ -44,7 +44,7 @@ async function loadRecipes() {
     recipesData = {};
 
     // rows[0] is header row — skip it
-    rows.slice(1).forEach(row => {
+    rows.slice(1).forEach((row, idx) => {
       const name = row[0] || "";
       if (!name) return;
 
