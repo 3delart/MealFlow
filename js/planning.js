@@ -469,6 +469,11 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
   if (!window.SheetsAPI || !token) return;
 
   try {
+    // Ensure col H header "Ajout" exists — without this rowsToObjects won't map col H
+    // and custom items (Ajout=custom) would be treated as planning rows and deleted
+    await window.SheetsAPI.batchUpdateRange('Courses!A1:H1',
+      [['Produit','Catégorie','Qty','Unité','Prix','Date_utilisation','Acheté','Ajout']], token);
+
     const invRows = await window.SheetsAPI.readSheetTab('Inventory');
     const inventory = window.SheetsAPI.rowsToObjects(invRows);
 
@@ -483,13 +488,14 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
     // Add "planning" marker to col H
     const taggedRows = rows.map(r => [...r, 'planning']);
 
-    // Delete only planning rows (preserve customs)
+    // Delete only planning rows — use raw column position (index 7 = col H)
+    // NEVER relies on header name so custom rows are always safe
     const existingRaw = await window.SheetsAPI.readSheetTab('Courses', 'A:H');
-    const existingObjects = window.SheetsAPI.rowsToObjects(existingRaw);
-    const planningRowNums = existingObjects
-      .map((r, idx) => ({ r, rowNum: idx + 2 }))
-      .filter(({ r }) => !r.Ajout || r.Ajout === 'planning')
-      .map(({ rowNum }) => rowNum);
+    const planningRowNums = [];
+    for (let i = 1; i < existingRaw.length; i++) { // i=0 is header
+      const ajout = (existingRaw[i][7] || '').toString().trim();
+      if (ajout !== 'custom') planningRowNums.push(i + 1); // 1-based row number
+    }
 
     if (planningRowNums.length > 0) {
       await window.SheetsAPI.deleteSheetRows('Courses', planningRowNums, token);

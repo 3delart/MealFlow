@@ -126,13 +126,13 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
       return row;
     });
 
-    // Read current sheet, delete only planning rows (preserve customs)
+    // Read current sheet, delete only planning rows — use raw col position (index 7 = col H)
     const existingRaw = await window.SheetsAPI.readSheetTab('Courses', 'A:H');
-    const existingObjects = window.SheetsAPI.rowsToObjects(existingRaw);
-    const planningRowNums = existingObjects
-      .map((r, idx) => ({ r, rowNum: idx + 2 }))
-      .filter(({ r }) => !r.Ajout || r.Ajout === 'planning')
-      .map(({ rowNum }) => rowNum);
+    const planningRowNums = [];
+    for (let i = 1; i < existingRaw.length; i++) { // i=0 is header
+      const ajout = (existingRaw[i][7] || '').toString().trim();
+      if (ajout !== 'custom') planningRowNums.push(i + 1);
+    }
 
     if (planningRowNums.length > 0) {
       await window.SheetsAPI.deleteSheetRows('Courses', planningRowNums, token);
