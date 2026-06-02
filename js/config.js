@@ -3,11 +3,12 @@
  */
 
 const CATEGORIES_CONFIG = [
-  { name: "Féculents", expiryDays: 730 },
-  { name: "Fromage", expiryDays: 60 },
+  { name: "Féculents", expiryDays: 365 },
+  { name: "Fromage", expiryDays: 10 },
   { name: "Produits laitiers", expiryDays: 180 },
   { name: "Œufs", expiryDays: 30 },
   { name: "Légumes", expiryDays: 7 },
+  { name: "Oignon & Ail", expiryDays: 45 },
   { name: "Fruits", expiryDays: 10 },
   { name: "Herbe aromatique", expiryDays: 5 },
   { name: "Viandes", expiryDays: 3 },
@@ -20,10 +21,10 @@ const CATEGORIES_CONFIG = [
   { name: "Boulangerie & Viennoiserie", expiryDays: 5 },
   { name: "Pâtisserie", expiryDays: 365 },
   { name: "Goûter", expiryDays: 30 },
-  { name: "Surgelés", expiryDays: 180 },
-  { name: "Apéro", expiryDays: 30 },
-  { name: "Vegan", expiryDays: 30 },
-  { name: "Bio", expiryDays: 30 },
+  { name: "Surgelés", expiryDays: 365 },
+  { name: "Apéro", expiryDays: 120 },
+  { name: "Vegan", expiryDays: 15 },
+  { name: "Bio", expiryDays: 90 },
   { name: "Cuisine du monde", expiryDays: 365 },
   { name: "Petit déjeuner", expiryDays: 365 },
   { name: "Autres", expiryDays: 30 }
