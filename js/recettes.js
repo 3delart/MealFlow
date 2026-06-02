@@ -15,122 +15,12 @@ window.recipesData = recipesData;  // Expose globally for forms
 /** @type {boolean} True only when recipesData was successfully loaded from Sheets */
 let recipesLoadedFromSheets = false;
 
-/** @type {string[]} Normalized allergies of the currently active profile */
-let activeAllergies = [];
-/** @type {string[]} Normalized aversions (disliked products) of the active profile */
-let activeAversions = [];
-/** @type {string} Normalized dietary regime of the active profile (e.g. "vegetarien") */
-let activeRegime = "";
-
-/**
- * Load the active profile's allergies and dietary regime from the Profils sheet.
- * Used to flag allergen / non-compliant ingredients in the recipe view.
- */
-async function loadActiveAllergies() {
-  activeAllergies = [];
-  activeAversions = [];
-  activeRegime = "";
-  try {
-    const user = window.UserContext ? UserContext.getCurrentUser() : 'florian';
-    const rows = await SheetsAPI.readSheetTab("Profils");
-    const profile = SheetsAPI.rowsToObjects(rows)
-      .find(p => (p.User || '').toLowerCase() === user);
-    if (profile) {
-      const allergies = safeParseJSON(profile.Allergies_JSON, []);
-      activeAllergies = (Array.isArray(allergies) ? allergies : [])
-        .map(Utils.normalizeString)
-        .filter(Boolean);
-      const aversions = safeParseJSON(profile.Aversions_JSON, []);
-      activeAversions = (Array.isArray(aversions) ? aversions : [])
-        .map(Utils.normalizeString)
-        .filter(Boolean);
-      activeRegime = Utils.normalizeString(profile.Régime || profile["Régime"] || "");
-    }
-  } catch (err) {
-    console.warn("Could not load profile diet info:", err);
-  }
-}
-
-/**
- * Return the active aversions an ingredient matches (by product name).
- * @param {Object} ing - Recipe ingredient
- * @returns {string[]} Matched aversion labels (normalized)
- */
-function ingredientAversionHits(ing) {
-  if (activeAversions.length === 0) return [];
-  const n = Utils.normalizeString(ing.name);
-  const concepts = classifyIngredient(ing);
-  const aliases = (window.FoodConfig && window.FoodConfig.ALLERGY_ALIASES) || {};
-  return activeAversions.filter(a =>
-    n === a || n.includes(a) || a.includes(n) ||
-    concepts.has(a) || concepts.has(aliases[a]));
-}
-
-/**
- * Classify an ingredient into food concepts (poisson, viande, porc, lait, ...).
- * Uses, in order: matching inventory item's category, its Open Food Facts allergens,
- * and a keyword dictionary on the ingredient name (covers manual entries).
- * @param {Object} ing - Recipe ingredient ({name, ...})
- * @returns {Set<string>} Set of concept tokens
- */
-function classifyIngredient(ing) {
-  const concepts = new Set();
-  const cfg = window.FoodConfig;
-  if (!cfg) return concepts;
-
-  const normName = Utils.normalizeString(ing.name);
-  const invItem = (window.inventoryData || [])
-    .find(i => Utils.normalizeString(i.Produit) === normName);
-
-  // 1. Explicit tags on the inventory product are authoritative (override auto-detection,
-  //    so a misleadingly-named vegan product can be corrected once).
-  if (invItem && Array.isArray(invItem.dietTags) && invItem.dietTags.length > 0) {
-    invItem.dietTags.forEach(c => concepts.add(c));
-    return concepts;
-  }
-
-  // 2. Otherwise auto-detect from category + OFF allergens + name keywords
-  cfg.suggestDietConcepts(
-    ing.name,
-    invItem ? invItem.allergens : '',
-    invItem ? invItem.Catégorie : ''
-  ).forEach(c => concepts.add(c));
-
-  return concepts;
-}
-
-/**
- * Return the active allergies an ingredient triggers (empty if none).
- * Matches via food concepts (so "poisson" catches "cabillaud") and raw text.
- * @param {Object} ing - Recipe ingredient
- * @returns {string[]} Matched allergy labels (normalized)
- */
-function ingredientAllergyHits(ing) {
-  if (activeAllergies.length === 0) return [];
-  const concepts = classifyIngredient(ing);
-  const aliases = (window.FoodConfig && window.FoodConfig.ALLERGY_ALIASES) || {};
-  const invItem = (window.inventoryData || [])
-    .find(i => Utils.normalizeString(i.Produit) === Utils.normalizeString(ing.name));
-  const haystack = Utils.normalizeString(
-    `${ing.name || ''} ${invItem ? (invItem.allergens || '') : ''}`
-  );
-  return activeAllergies.filter(a =>
-    concepts.has(a) || concepts.has(aliases[a]) || haystack.includes(a));
-}
-
-/**
- * Return the dietary-regime concepts an ingredient violates (empty if none/compliant).
- * @param {Object} ing - Recipe ingredient
- * @returns {string[]} Violated concepts (e.g. ["viande"])
- */
-function ingredientDietViolations(ing) {
-  const cfg = window.FoodConfig;
-  if (!cfg || !activeRegime) return [];
-  const forbidden = cfg.DIET_RULES[activeRegime];
-  if (!forbidden) return [];
-  const concepts = classifyIngredient(ing);
-  return forbidden.filter(c => concepts.has(c));
-}
+// Diet/allergy/aversion classification lives in the shared Diet module (js/diet.js).
+// Thin wrappers keep the call sites in this file readable.
+const loadActiveAllergies = () => Diet.loadProfile();
+const ingredientAllergyHits = (ing) => Diet.allergyHits(ing);
+const ingredientDietViolations = (ing) => Diet.dietViolations(ing);
+const ingredientAversionHits = (ing) => Diet.aversionHits(ing);
 
 // ============================================================================
 // STEP 1: DATA LOADING
@@ -439,10 +329,12 @@ function renderRecipeList() {
   const searchEl = document.getElementById("recipe-search");
   const normQuery = Utils.normalizeString(searchEl ? searchEl.value : "");
   const makeableOnly = document.getElementById("recipe-makeable-filter")?.checked;
+  const compatibleOnly = document.getElementById("recipe-compatible-filter")?.checked;
   const visible = entries.filter(([, recipe]) =>
     recipeMatchesSearch(recipe, normQuery) &&
     recipeMatchesTags(recipe) &&
-    (!makeableOnly || recipeIsMakeable(recipe)));
+    (!makeableOnly || recipeIsMakeable(recipe)) &&
+    (!compatibleOnly || !Diet.recipeRestrictions(recipe).incompatible));
 
   if (visible.length === 0) {
     const empty = document.createElement("p");
@@ -495,8 +387,10 @@ function openViewModal(recipeID, portions = 1) {
   const allergyLine = allHits.size > 0
     ? `<div>⚠️ <strong>Allergènes pour ce profil :</strong> ${Utils.escapeHTML([...allHits].join(', '))}</div>`
     : '';
+  const dietIcons = (window.FoodConfig && FoodConfig.conceptIcon)
+    ? [...dietHits].map(FoodConfig.conceptIcon).join('') : '⚠️';
   const dietLine = dietHits.size > 0
-    ? `<div>🥗 <strong>Incompatible ${Utils.escapeHTML(activeRegime)} :</strong> contient ${Utils.escapeHTML([...dietHits].join(', '))}</div>`
+    ? `<div>${dietIcons} <strong>Incompatible ${Utils.escapeHTML(Diet.getRegime())} :</strong> contient ${Utils.escapeHTML([...dietHits].join(', '))}</div>`
     : '';
   const dangerBanner = (allergyLine || dietLine)
     ? `<div style="background:#ffebee;border:1px solid #ef9a9a;color:#c62828;padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:0.9em;">
@@ -632,6 +526,10 @@ async function initializeRecipes() {
   const makeableEl = document.getElementById("recipe-makeable-filter");
   if (makeableEl) {
     makeableEl.addEventListener("change", renderRecipeList);
+  }
+  const compatibleEl = document.getElementById("recipe-compatible-filter");
+  if (compatibleEl) {
+    compatibleEl.addEventListener("change", renderRecipeList);
   }
 
   // Load and render

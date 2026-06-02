@@ -113,6 +113,24 @@ const ALLERGY_ALIASES = {
   "porc": "porc"
 };
 
+/** Emoji per food concept, for compact warnings */
+const CONCEPT_ICONS = {
+  viande: "🥩",
+  porc: "🐷",
+  poisson: "🐟",
+  fruit_de_mer: "🦐",
+  lait: "🥛",
+  oeuf: "🥚",
+  animal: "🍯",
+  alcool: "🍷",
+  gluten: "🌾"
+};
+
+/** Return the emoji for a concept, or a generic warning sign. */
+function conceptIcon(concept) {
+  return CONCEPT_ICONS[concept] || "⚠️";
+}
+
 /** Common allergens offered as multi-select on the profile form */
 const ALLERGEN_OPTIONS = [
   "Gluten", "Lactose", "Œuf", "Poisson", "Fruits de mer", "Arachide",
@@ -165,5 +183,5 @@ function suggestDietConcepts(name, allergens, category) {
 }
 
 if (typeof window !== 'undefined') {
-  window.FoodConfig = { CATEGORY_CONCEPTS, FOOD_KEYWORDS, DIET_RULES, DIET_CONCEPTS, ALLERGEN_OPTIONS, ALLERGY_ALIASES, suggestDietConcepts };
+  window.FoodConfig = { CATEGORY_CONCEPTS, FOOD_KEYWORDS, DIET_RULES, DIET_CONCEPTS, ALLERGEN_OPTIONS, ALLERGY_ALIASES, CONCEPT_ICONS, conceptIcon, suggestDietConcepts };
 }

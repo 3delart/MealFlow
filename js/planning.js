@@ -305,12 +305,22 @@ function renderRecipeOptions(recipes) {
     return;
   }
 
-  container.innerHTML = recipes.map(recipe => `
+  container.innerHTML = recipes.map(recipe => {
+    const r = (window.Diet && Diet.recipeRestrictions) ? Diet.recipeRestrictions(recipe) : null;
+    let flags = "";
+    if (r) {
+      const icon = (window.FoodConfig && FoodConfig.conceptIcon) ? FoodConfig.conceptIcon : (() => "⚠️");
+      if (r.allergy.size) flags += ` <span style="color:#c62828;" title="Allergènes : ${escapeHTML([...r.allergy].join(', '))}">⚠️</span>`;
+      if (r.diet.size) flags += ` <span title="Incompatible ${escapeHTML(r.regime)} : ${escapeHTML([...r.diet].join(', '))}">${[...r.diet].map(icon).join('')}</span>`;
+      if (r.aversion.size) flags += ` <span style="color:#e65100;" title="Aversion : ${escapeHTML([...r.aversion].join(', '))}">👎</span>`;
+    }
+    return `
     <div class="recipe-option" onclick="selectRecipe('${escapeHTML(recipe.name)}')">
-      <div class="recipe-option-name">${escapeHTML(recipe.name)}</div>
+      <div class="recipe-option-name">${escapeHTML(recipe.name)}${flags}</div>
       <div class="recipe-option-description">${escapeHTML(recipe.description || "")}</div>
     </div>
-  `).join("");
+  `;
+  }).join("");
 }
 
 /**
@@ -715,6 +725,10 @@ async function initializePlanning() {
   await loadRecipes();  // Load recipes for modal
   await loadMealPlan();
   if (window.loadConversionFactors) await window.loadConversionFactors();  // Load unit conversions
+  if (window.Diet) await Diet.loadProfile();  // Load allergies/regime/aversions for picker flags
+  if (typeof loadInventory === "function") {
+    try { await loadInventory(); } catch (_) { /* inventory optional for flags */ }
+  }
   syncCoursesFromMealPlan();
   updateWeekNavUI();
 
