@@ -221,13 +221,31 @@ function renderRecipeCard(recipeID, recipe) {
  * Populates #recipes-container with recipe cards or empty state message
  * @returns {void}
  */
+/**
+ * Return true if a recipe matches the current search term (name, tags, ingredients).
+ * @param {Object} recipe
+ * @param {string} normQuery - already-normalized search term
+ */
+function recipeMatchesSearch(recipe, normQuery) {
+  if (!normQuery) return true;
+  const haystack = [
+    recipe.name,
+    recipe.description,
+    (recipe.tags || []).join(" "),
+    (recipe.ingredients || []).map(i => i.name).join(" ")
+  ].map(Utils.normalizeString).join(" ");
+  return haystack.includes(normQuery);
+}
+
 function renderRecipeList() {
   const container = document.getElementById("recipes-container");
   if (!container) return;
 
   container.innerHTML = "";
 
-  if (Object.keys(recipesData).length === 0) {
+  const entries = Object.entries(recipesData);
+
+  if (entries.length === 0) {
     const empty = document.createElement("p");
     empty.style.textAlign = "center";
     empty.style.color = "#999";
@@ -236,7 +254,20 @@ function renderRecipeList() {
     return;
   }
 
-  Object.entries(recipesData).forEach(([id, recipe]) => {
+  const searchEl = document.getElementById("recipe-search");
+  const normQuery = Utils.normalizeString(searchEl ? searchEl.value : "");
+  const visible = entries.filter(([, recipe]) => recipeMatchesSearch(recipe, normQuery));
+
+  if (visible.length === 0) {
+    const empty = document.createElement("p");
+    empty.style.textAlign = "center";
+    empty.style.color = "#999";
+    empty.textContent = "Aucune recette ne correspond à la recherche.";
+    container.appendChild(empty);
+    return;
+  }
+
+  visible.forEach(([id, recipe]) => {
     const card = renderRecipeCard(id, recipe);
     container.appendChild(card);
   });
@@ -267,7 +298,7 @@ function openViewModal(recipeID, portions = 1) {
   const totalKcal = Math.round(cals.total_kcal * p);
 
   const html = `
-    <p style="color: #999; margin-bottom: 16px;">${recipe.description || ""}</p>
+    <p style="color: #999; margin-bottom: 16px;">${Utils.escapeHTML(recipe.description || "")}</p>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
       <div>⏱️ <strong>Préparation:</strong> ${recipe.prep_minutes || 0}m</div>
@@ -283,14 +314,14 @@ function openViewModal(recipeID, portions = 1) {
         .map(ing => {
           const qty = ((parseFloat(ing.quantity) || 0) * p);
           const ingCals = Math.round((parseFloat(ing.calories_per_100) || 0) * qty / 100);
-          return `<li>${ing.name}: ${qty % 1 === 0 ? qty : qty.toFixed(1)} ${ing.unit} (${ingCals} kcal)</li>`;
+          return `<li>${Utils.escapeHTML(ing.name)}: ${qty % 1 === 0 ? qty : qty.toFixed(1)} ${Utils.escapeHTML(ing.unit)} (${ingCals} kcal)</li>`;
         })
         .join("")}
     </ul>
 
     <h3 style="margin-top: 16px; color: var(--color-primary, #2e7d32);">ÉTAPES</h3>
     <ol style="margin-left: 16px; line-height: 1.8;">
-      ${(recipe.steps || []).map(step => `<li>${step}</li>`).join("")}
+      ${(recipe.steps || []).map(step => `<li>${Utils.escapeHTML(step)}</li>`).join("")}
     </ol>
   `;
 
@@ -369,6 +400,12 @@ async function initializeRecipes() {
   const addBtn = document.getElementById("btn-add-recipe");
   if (addBtn) {
     addBtn.addEventListener("click", openCreateModal);
+  }
+
+  // Live recipe search (debounced)
+  const searchEl = document.getElementById("recipe-search");
+  if (searchEl) {
+    searchEl.addEventListener("input", Utils.debounce(renderRecipeList, 150));
   }
 
   // Load and render

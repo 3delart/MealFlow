@@ -54,7 +54,7 @@ async function loadConversionFactors() {
     productConversionFactorMap = {};
     objects.forEach(row => {
       if (row.Produit && row.Conversion_factor) {
-        const key = (row.Produit || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+        const key = Utils.normalizeString(row.Produit);
         productConversionFactorMap[key] = parseFloat(row.Conversion_factor);
       }
     });
@@ -70,7 +70,7 @@ async function loadConversionFactors() {
  */
 function getProductConversionFactor(productName) {
   if (!productName) return null;
-  const key = productName.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+  const key = Utils.normalizeString(productName);
   return productConversionFactorMap[key] || null;
 }
 
@@ -136,10 +136,10 @@ function searchInventoryProducts(query) {
   if (!query || query.length < 2) return [];
   if (!window.inventoryData) return [];
 
-  const q = query.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const q = Utils.normalizeString(query);
   return window.inventoryData
     .filter(item => {
-      const prodName = (item.Produit || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      const prodName = Utils.normalizeString(item.Produit);
       return prodName.includes(q);
     })
     .map(item => ({

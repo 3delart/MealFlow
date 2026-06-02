@@ -3,7 +3,7 @@ let googleAccessToken = null;
 let tokenClient = null;
 
 function handleCredentialResponse(response) {
-  localStorage.setItem("googleIdToken", response.credential);
+  sessionStorage.setItem("googleIdToken", response.credential);
 
   requestAccessToken();
 }
@@ -23,7 +23,7 @@ function requestAccessToken() {
 function handleTokenResponse(response) {
   if (response.access_token) {
     googleAccessToken = response.access_token;
-    localStorage.setItem("googleAccessToken", googleAccessToken);
+    sessionStorage.setItem("googleAccessToken", googleAccessToken);
 
     updateUI();
   } else {
@@ -35,7 +35,7 @@ function updateUI() {
   const loginDiv = document.getElementById("google-login-btn");
   const logoutBtn = document.getElementById("google-logout-btn");
 
-  if (googleAccessToken || localStorage.getItem("googleAccessToken")) {
+  if (googleAccessToken || sessionStorage.getItem("googleAccessToken")) {
     if (loginDiv) loginDiv.style.display = "none";
     if (logoutBtn) logoutBtn.style.display = "block";
   } else {
@@ -56,7 +56,7 @@ function initGoogleAuth() {
   });
 
   const loginDiv = document.getElementById("google-login-btn");
-  if (loginDiv && !localStorage.getItem("googleAccessToken")) {
+  if (loginDiv && !sessionStorage.getItem("googleAccessToken")) {
     google.accounts.id.renderButton(loginDiv, {
       theme: "outline",
       size: "large",
@@ -69,7 +69,7 @@ function initGoogleAuth() {
 }
 
 function restoreToken() {
-  const token = localStorage.getItem("googleAccessToken");
+  const token = sessionStorage.getItem("googleAccessToken");
   if (token) {
     googleAccessToken = token;
   }
@@ -77,8 +77,8 @@ function restoreToken() {
 
 function logoutGoogle() {
   googleAccessToken = null;
-  localStorage.removeItem("googleAccessToken");
-  localStorage.removeItem("googleIdToken");
+  sessionStorage.removeItem("googleAccessToken");
+  sessionStorage.removeItem("googleIdToken");
 
   if (typeof google !== "undefined") {
     google.accounts.id.disableAutoSelect();
@@ -89,7 +89,7 @@ function logoutGoogle() {
 }
 
 function getAccessToken() {
-  return googleAccessToken || localStorage.getItem("googleAccessToken");
+  return googleAccessToken || sessionStorage.getItem("googleAccessToken");
 }
 
 function isAuthenticated() {
@@ -166,7 +166,7 @@ function showAuthErrorModal(reason = "Session expired") {
 
   content.innerHTML = `
     <h2 style="margin: 0 0 12px; color: #d32f2f; font-size: 18px;">Session Expired</h2>
-    <p style="margin: 0 0 20px; color: #666; font-size: 14px;">${reason}</p>
+    <p style="margin: 0 0 20px; color: #666; font-size: 14px;">${typeof Utils !== 'undefined' ? Utils.escapeHTML(reason) : reason}</p>
     <p style="margin: 0 0 20px; color: #999; font-size: 13px;">Please logout and re-login to continue.</p>
     <div style="display: flex; gap: 10px;">
       <button id="auth-logout-btn" style="flex: 1; padding: 10px; background: #d32f2f; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Logout</button>

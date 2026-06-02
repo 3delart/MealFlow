@@ -4,6 +4,7 @@
 
 let inventoryData = [];
 let scannedProductData = null;
+let _consolidatingDuplicates = false; // guard against re-entrant consolidation
 
 async function applyInventoryDeduction(item, qtyToDeduct, token) {
   if (!item.sheetRowNumber || !window.SheetsAPI || !token) return;
@@ -16,62 +17,6 @@ async function applyInventoryDeduction(item, qtyToDeduct, token) {
   await window.SheetsAPI.batchUpdateCells(updates, token);
   item.Qty = newQty.toString();
   if (newQty === 0) { item.Date_ajout = ''; item.Péremption = ''; }
-}
-
-async function sortSheetByCategory(accessToken) {
-  if (!window.SheetsAPI || !accessToken) return;
-
-  try {
-    const sheetId = window.SheetsAPI.getSheetId ? window.SheetsAPI.getSheetId() : null;
-    if (!sheetId) {
-      console.warn("Sheet ID not available for sorting");
-      return;
-    }
-
-    const rows = await window.SheetsAPI.readSheetTab("Inventory");
-    if (!rows || rows.length < 2) return;
-
-    const lastRow = rows.length;
-
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`;
-    const body = {
-      requests: [
-        {
-          sortRange: {
-            range: {
-              sheetId: 0,
-              startRowIndex: 1,
-              endRowIndex: lastRow,
-              startColumnIndex: 0,
-              endColumnIndex: 13
-            },
-            sortSpecs: [
-              {
-                dimensionIndex: 2,
-                sortOrder: "ASCENDING"
-              }
-            ]
-          }
-        }
-      ]
-    };
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (response.ok) {
-    } else {
-      console.warn("Failed to sort Inventory sheet:", response.statusText);
-    }
-  } catch (err) {
-    console.error("Error sorting sheet:", err);
-  }
 }
 
 async function loadInventory() {
@@ -99,8 +44,35 @@ async function loadInventory() {
         Conversion_factor: row["Conversion_factor"] || "",
         cooking_factor: parseFloat((row["Cooking_factor"] || "1").toString().replace(",", ".")) || 1.0
       }));
-      mergeDuplicatesByBarcode();
+      const { orphanRows, survivors } = mergeDuplicatesByBarcode();
       window.inventoryData = inventoryData;
+
+      // Consolidate duplicates physically in the sheet so the displayed (summed)
+      // quantity and the sheet stay in sync. Without this, the orphan rows keep
+      // their own quantity and later updates only touch the survivor row.
+      if (orphanRows.length > 0 && !_consolidatingDuplicates) {
+        const token = typeof getAccessToken === 'function' ? getAccessToken() : null;
+        if (token && window.SheetsAPI?.deleteSheetRows && window.SheetsAPI?.batchUpdateCells) {
+          _consolidatingDuplicates = true;
+          try {
+            // 1. Write summed quantities to surviving rows (uses current row numbers).
+            if (survivors.length > 0) {
+              await window.SheetsAPI.batchUpdateCells(
+                survivors.map(s => ({ range: `Inventory!D${s.sheetRowNumber}`, value: s.qty })),
+                token
+              );
+            }
+            // 2. Delete the orphan rows (deleteSheetRows sorts descending internally).
+            await window.SheetsAPI.deleteSheetRows("Inventory", orphanRows, token);
+            // 3. Reload to refresh sheetRowNumbers now that duplicates are gone.
+            await loadInventory();
+          } catch (err) {
+            console.error("Inventory: duplicate consolidation failed:", err);
+          } finally {
+            _consolidatingDuplicates = false;
+          }
+        }
+      }
       return;
     }
   } catch (err) {
@@ -109,9 +81,17 @@ async function loadInventory() {
   }
 }
 
+/**
+ * Merge in-memory inventory rows that share a barcode into the first occurrence,
+ * summing quantities. Returns the orphan sheet rows (to delete) and the surviving
+ * rows whose quantity changed (to rewrite) so the caller can sync the sheet.
+ * @returns {{orphanRows: number[], survivors: {sheetRowNumber: number, qty: string}[]}}
+ */
 function mergeDuplicatesByBarcode() {
   const seen = new Map();
   const toRemove = [];
+  const orphanRows = [];
+  const changedSurvivors = new Set();
 
   inventoryData.forEach((item, idx) => {
     if (!item.Barcode) return;
@@ -122,16 +102,24 @@ function mergeDuplicatesByBarcode() {
       const qty1 = parseFloat(first.Qty) || 0;
       const qty2 = parseFloat(item.Qty) || 0;
       first.Qty = (qty1 + qty2).toString();
+      if (item.sheetRowNumber) orphanRows.push(item.sheetRowNumber);
+      changedSurvivors.add(firstIdx);
       toRemove.push(idx);
     } else {
       seen.set(item.Barcode, idx);
     }
   });
 
+  const survivors = [...changedSurvivors].map(i => ({
+    sheetRowNumber: inventoryData[i].sheetRowNumber,
+    qty: inventoryData[i].Qty
+  }));
+
   toRemove.reverse().forEach(idx => {
     inventoryData.splice(idx, 1);
   });
 
+  return { orphanRows, survivors };
 }
 
 function saveInventory() {
@@ -262,11 +250,14 @@ async function addItem(item) {
       newItem.cooking_factor || 1.0
     ];
 
+    // Append at the bottom (no sheet-side sort: rows stay stable so sheetRowNumbers
+    // remain valid; display sorting is handled by renderInventory). Reload to assign
+    // the new row's sheetRowNumber.
     SheetsAPI.appendRowWithToken("Inventory", row, token)
       .then(async () => {
-        await sortSheetByCategory(token);
-        // Reload inventory to refresh sheetRowNumbers (sort changes row positions)
         await loadInventory();
+        window.inventoryData = inventoryData;
+        renderInventory();
       })
       .catch(err => console.error("Failed to sync to Sheets:", err));
   }

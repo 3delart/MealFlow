@@ -54,7 +54,7 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
         const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
         if (!recipe?.ingredients) return;
         recipe.ingredients.forEach(ing => {
-          const key = ing.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+          const key = Utils.normalizeString(ing.name);
           if (!map[key]) map[key] = { name: ing.name, qty: 0, unit: ing.unit || 'g', days: [] };
           map[key].qty += (parseFloat(ing.quantity) || 0) * portions;
           if (!map[key].days.includes(day.dateISO)) map[key].days.push(day.dateISO);
@@ -65,9 +65,9 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
 
   // 2. Enrich from inventory + deduct stock
   Object.values(map).forEach(ing => {
-    const ingKey = ing.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+    const ingKey = Utils.normalizeString(ing.name);
     const match = inventoryObjects.find(item => {
-      const k = (item.Produit||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+      const k = Utils.normalizeString(item.Produit);
       return k === ingKey || k.includes(ingKey) || ingKey.includes(k);
     });
     if (match) {
@@ -120,7 +120,7 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
 
     let rows = buildCoursesRows(tempMealPlan, inventory);
     rows = rows.map(row => {
-      const key = row[0].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+      const key = Utils.normalizeString(row[0]);
       row[6] = existingAcheté[key] || '';
       row[7] = 'planning';
       return row;
@@ -157,7 +157,7 @@ function populateIngredientMap(objects) {
   document.getElementById('week-range-label').textContent = `${first.dateStr} – ${last.dateStr}`;
   document.getElementById('loading-state').textContent = '';
 
-  const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  const norm = s => Utils.normalizeString(s);
 
   objects.forEach((row, idx) => {
     if (!row.Produit) return;
@@ -167,6 +167,13 @@ function populateIngredientMap(objects) {
 
     if (isCustom) {
       const customKey = `${row.Produit}__perso_${idx + 2}`;
+      // Auto-derive price from inventory if this product exists there; otherwise no price.
+      const invMatch = (window.inventoryData || []).find(item => {
+        const k = norm(item.Produit);
+        const n = norm(row.Produit);
+        return k === n || k.includes(n) || n.includes(k);
+      });
+      const customPrice = invMatch ? (parseFloat(invMatch.Prix) || 0) : 0;
       ingredientMap[customKey] = {
         name: row.Produit,
         mapKey: customKey,
@@ -175,7 +182,7 @@ function populateIngredientMap(objects) {
         needed: parseFloat(row.Qty) || 0,
         stock: 0,
         unit: row.Unité || 'g',
-        price: parseFloat(row.Prix) || 0,
+        price: customPrice,
         days: [],
         acheté: isChecked,
         isCustom: true,
@@ -400,7 +407,9 @@ function renderIngredientItem(ing, dimmed = false) {
 
   const customBadge = ing.isCustom
     ? ' <small style="color:#E65100;font-size:0.75em;">(perso)</small>' : '';
-  const safeKey = (ing.mapKey || ing.name).replace(/'/g, "\\'");
+  const safeKey = Utils.escapeHTML(String(ing.mapKey || ing.name).replace(/'/g, "\\'"));
+  const safeName = Utils.escapeHTML(ing.name);
+  const safeNameAttr = Utils.escapeHTML(String(ing.name).replace(/'/g, "\\'"));
   const deleteBtn = ing.isCustom
     ? `<button onclick="deleteCustomItem('${safeKey}',event)"
          style="background:none;border:none;color:#bbb;cursor:pointer;font-size:18px;padding:0 4px;line-height:1;">×</button>`
@@ -410,12 +419,12 @@ function renderIngredientItem(ing, dimmed = false) {
     <label${dimmClass} style="position:relative;">
       <input type="checkbox" data-key="${safeKey}" />
       <span style="flex:1;">
-        ${ing.name}${customBadge}${qtyDisplay}
+        ${safeName}${customBadge}${qtyDisplay}
         <div style="color:#2E7D32;font-size:0.75em;margin-top:2px;">${dayBadges}</div>
       </span>
       <div class="price-correction">
-        ${ing.isCustom ? '' : `<span class="price-display">${priceText}</span>`}
-        ${ing.isCustom ? deleteBtn : `<button class="price-edit-btn" onclick="openEditModal('${ing.name.replace(/'/g, "\\'")}')">Corriger</button>`}
+        <span class="price-display">${priceText}</span>
+        ${ing.isCustom ? deleteBtn : `<button class="price-edit-btn" onclick="openEditModal('${safeNameAttr}')">Corriger</button>`}
       </div>
     </label>
   `;
@@ -457,7 +466,7 @@ function initCustomAutocomplete() {
       const q = e.target.value.trim();
       const dd = document.getElementById('custom-item-dropdown');
       if (q.length < 2) { dd.style.display = 'none'; return; }
-      const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+      const norm = s => Utils.normalizeString(s);
       const matches = (window.inventoryData || [])
         .filter(i => norm(i.Produit).includes(norm(q))).slice(0, 5);
       if (!matches.length) { dd.style.display = 'none'; return; }
@@ -520,6 +529,7 @@ async function saveCustomItem() {
   const qty = document.getElementById('item-qty').value || '0';
   const unit = document.getElementById('item-unit').value || 'g';
   const category = nameEl.dataset.category || 'Autres';
+  // Price is auto-derived from inventory at load time (see ingredientMap build), not entered here.
   const token = window.getAccessToken ? window.getAccessToken() : null;
   if (token && window.SheetsAPI) {
     try {

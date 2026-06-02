@@ -40,8 +40,17 @@ function renderInventory() {
   const filterValue = filterEl ? filterEl.value : "";
 
   let filtered;
+  let expiringSort = false;
   if (filterValue === "__IN_STOCK__") {
     filtered = inventoryData.filter(item => (parseFloat(item.Qty) || 0) > 0);
+  } else if (filterValue === "__EXPIRING__") {
+    // In-stock items already expired or expiring within 3 days, soonest first
+    expiringSort = true;
+    filtered = inventoryData.filter(item => {
+      if ((parseFloat(item.Qty) || 0) <= 0 || !item.Péremption) return false;
+      const d = Utils.daysUntilExpiration(item.Péremption);
+      return d < 3;
+    });
   } else if (filterValue) {
     filtered = inventoryData.filter(item => item.Catégorie === filterValue);
   } else {
@@ -51,7 +60,7 @@ function renderInventory() {
   const searchEl = document.getElementById('search-inventory');
   const searchTerm = searchEl ? searchEl.value.trim() : '';
   if (searchTerm.length >= 1) {
-    const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const norm = s => Utils.normalizeString(s);
     const q = norm(searchTerm);
     filtered = filtered.filter(item => norm(item.Produit).includes(q));
   }
@@ -61,18 +70,25 @@ function renderInventory() {
     return;
   }
 
-  filtered.sort((a, b) => {
-    if (a.Catégorie !== b.Catégorie) {
-      return a.Catégorie.localeCompare(b.Catégorie, 'fr');
-    }
-    return a.Produit.localeCompare(b.Produit, 'fr');
-  });
+  if (expiringSort) {
+    // Soonest-to-expire first (already-expired items sort to the very top)
+    filtered.sort((a, b) =>
+      Utils.daysUntilExpiration(a.Péremption) - Utils.daysUntilExpiration(b.Péremption));
+  } else {
+    filtered.sort((a, b) => {
+      if (a.Catégorie !== b.Catégorie) {
+        return a.Catégorie.localeCompare(b.Catégorie, 'fr');
+      }
+      return a.Produit.localeCompare(b.Produit, 'fr');
+    });
+  }
 
   container.innerHTML = "";
   let currentCategory = null;
 
   filtered.forEach(item => {
-    if (item.Catégorie !== currentCategory) {
+    // In the expiry view, list by urgency without category headers
+    if (!expiringSort && item.Catégorie !== currentCategory) {
       currentCategory = item.Catégorie;
       const catHeader = document.createElement("div");
       catHeader.className = "category-header";

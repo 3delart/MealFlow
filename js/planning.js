@@ -86,7 +86,7 @@ async function loadMealPlan() {
           const existingAcheté = {};
           window.SheetsAPI.rowsToObjects(oldCourses).forEach(row => {
             if (row.Produit && row.Acheté && row.Acheté !== '') {
-              const key = row.Produit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+              const key = Utils.normalizeString(row.Produit);
               existingAcheté[key] = row.Acheté;
             }
           });
@@ -158,9 +158,10 @@ function renderMealPlan() {
         const name = item.name || item;
         const portions = item.portions || 1;
         const label = portions > 1 ? `${name} ×${portions}` : name;
+        const safeNameAttr = escapeHTML(String(name).replace(/'/g, "\\'"));
         return `
-        <span class="recipe-chip" onclick="event.stopPropagation()">${label}
-          <button class="chip-delete" onclick="removeRecipe('${dateISO}', '${mealTime}', '${name.replace(/'/g, "\\'")}')">×</button>
+        <span class="recipe-chip" onclick="event.stopPropagation()">${escapeHTML(label)}
+          <button class="chip-delete" onclick="removeRecipe('${dateISO}', '${mealTime}', '${safeNameAttr}')">×</button>
         </span>
         `;
       }).join('');
@@ -318,14 +319,7 @@ function renderRecipeOptions(recipes) {
  * @returns {string} Escaped string
  */
 function escapeHTML(str) {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;'
-  };
-  return str.replace(/[&<>"']/g, m => map[m]);
+  return Utils.escapeHTML(str);
 }
 
 /**
@@ -431,7 +425,7 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
         const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
         if (!recipe?.ingredients) return;
         recipe.ingredients.forEach(ing => {
-          const key = ing.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+          const key = Utils.normalizeString(ing.name);
           if (!map[key]) map[key] = { name: ing.name, qty: 0, unit: ing.unit || 'g', days: [] };
           map[key].qty += (parseFloat(ing.quantity) || 0) * portions;
           if (!map[key].days.includes(day.dateISO)) map[key].days.push(day.dateISO);
@@ -442,9 +436,9 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
 
   // 2. Enrich from inventory + deduct stock
   Object.values(map).forEach(ing => {
-    const ingKey = ing.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+    const ingKey = Utils.normalizeString(ing.name);
     const match = inventoryObjects.find(item => {
-      const k = (item.Produit||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+      const k = Utils.normalizeString(item.Produit);
       return k === ingKey || k.includes(ingKey) || ingKey.includes(k);
     });
     if (match) {
@@ -483,7 +477,7 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
     let rows = buildCoursesRows(mealPlan, inventory);
 
     rows = rows.map(row => {
-      const key = row[0].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+      const key = Utils.normalizeString(row[0]);
       row[6] = existingAcheté[key] || '';
       return row;
     });
@@ -615,7 +609,7 @@ async function savePlanningToSheets() {
         const existingAcheté = {};
         window.SheetsAPI.rowsToObjects(oldCourses).forEach(row => {
           if (row.Produit && row.Acheté === '1') {
-            const key = row.Produit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+            const key = Utils.normalizeString(row.Produit);
             existingAcheté[key] = '1';
           }
         });
@@ -649,6 +643,49 @@ function navigateToNextWeek() {
     renderMealPlan();
     updateWeekNavUI();
   }
+}
+
+/**
+ * Copy the currently displayed week's meals to the following week (+7 days).
+ * Same weekday is preserved. Prompts before overwriting an existing target week.
+ */
+function copyWeekToNextWeek() {
+  if (weekOffset >= MAX_WEEK_OFFSET) {
+    alert("Limite de semaines atteinte — impossible de copier plus loin.");
+    return;
+  }
+
+  const toArr = v => (Array.isArray(v) ? v : parseRecipeValue(v))
+    .map(r => (typeof r === 'string' ? { name: r, portions: 1 } : { ...r }));
+
+  const srcDays = calculateRollingWindow(weekOffset);
+  const targets = srcDays.map(d => {
+    const t = Utils.parseISO(d.dateISO);
+    t.setDate(t.getDate() + 7);
+    const m = String(t.getMonth() + 1).padStart(2, '0');
+    const day = String(t.getDate()).padStart(2, '0');
+    return `${t.getFullYear()}-${m}-${day}`;
+  });
+
+  const hasMeals = p => p && ((toArr(p.Midi).length) || (toArr(p.Soir).length));
+
+  if (!srcDays.some(d => hasMeals(allPlanData[d.dateISO]))) {
+    alert("Cette semaine est vide, rien à copier.");
+    return;
+  }
+
+  if (targets.some(iso => hasMeals(allPlanData[iso])) &&
+      !confirm("La semaine suivante contient déjà des repas. Les écraser ?")) {
+    return;
+  }
+
+  srcDays.forEach((d, i) => {
+    const src = allPlanData[d.dateISO] || { Midi: [], Soir: [] };
+    allPlanData[targets[i]] = { Midi: toArr(src.Midi), Soir: toArr(src.Soir) };
+  });
+
+  savePlanningToSheets();
+  alert("Semaine copiée vers la semaine suivante ✓");
 }
 
 /**
@@ -689,7 +726,7 @@ async function initializePlanning() {
       const existingAcheté = {};
       window.SheetsAPI.rowsToObjects(oldCourses).forEach(row => {
         if (row.Produit && row.Acheté === '1') {
-          const key = row.Produit.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+          const key = Utils.normalizeString(row.Produit);
           existingAcheté[key] = '1';
         }
       });

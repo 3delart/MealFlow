@@ -565,7 +565,7 @@ function showSheetsError(err) {
   document.body.innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;font-family:sans-serif;padding:24px;text-align:center;">
       <p style="font-size:1.2em;color:#c62828;">⚠️ Connexion au sheet impossible</p>
-      <p style="color:#666;font-size:0.9em;">${(err && err.message) || 'Vérifiez votre connexion et réessayez.'}</p>
+      <p style="color:#666;font-size:0.9em;">${Utils.escapeHTML((err && err.message) || 'Vérifiez votre connexion et réessayez.')}</p>
       <button onclick="location.reload()" style="padding:10px 24px;background:#2E7D32;color:white;border:none;border-radius:8px;cursor:pointer;font-size:1em;">Réessayer</button>
     </div>`;
 }
@@ -717,7 +717,7 @@ async function deductPastMeals() {
     return;
   }
 
-  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const norm = s => Utils.normalizeString(s);
 
   // Collect all quantity changes in memory first
   const inventoryChanges = {}; // key: sheetRowNumber → newQty (string)

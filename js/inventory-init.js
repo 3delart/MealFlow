@@ -6,10 +6,10 @@ function searchProducts(query) {
   if (!query || query.length < 2) return [];
   if (!inventoryData) return [];
 
-  const q = query.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const q = Utils.normalizeString(query);
   return inventoryData
     .filter(item => {
-      const prodName = (item.Produit || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      const prodName = Utils.normalizeString(item.Produit);
       return prodName.includes(q);
     })
     .map(item => ({
@@ -113,6 +113,12 @@ function setupEventHandlers() {
     option = document.createElement("option");
     option.value = "__IN_STOCK__";
     option.textContent = "Articles en stock";
+    filterSelect.appendChild(option);
+
+    // "Périme bientôt"
+    option = document.createElement("option");
+    option.value = "__EXPIRING__";
+    option.textContent = "⚠️ Périme bientôt";
     filterSelect.appendChild(option);
 
     // Catégories triées

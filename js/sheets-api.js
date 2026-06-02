@@ -6,7 +6,7 @@
 // Configuration constants
 // User must replace these with their actual values from Google Cloud Console
 const SHEET_ID_DEFAULT = "1Dg9d-XIHzPqQIi4wZ2bTbnmHUKkn_V-IRzMOtRzQjOI";
-const SHEET_API_KEY_DEFAULT = "AIzaSyDZxRe3JtjbbqN9orW0xFCosxO4_3o6h74";
+const SHEET_API_KEY_DEFAULT = "AIzaSyB3JR0aVKH1qW0dY6L7YZvMZLrcZsvURZg";
 
 /**
  * Get Sheet ID from localStorage or fallback to default
@@ -192,8 +192,7 @@ async function updateSheetCell(range, value, accessToken) {
   }
 
   if (!token) {
-    console.warn("updateSheetCell: No access token available, skipping update");
-    return;
+    throw new Error("updateSheetCell: No access token available");
   }
 
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED`;
@@ -209,7 +208,7 @@ async function updateSheetCell(range, value, accessToken) {
   if (!response.ok) {
     if (response.status === 401 && typeof handleAuthError === 'function') {
       handleAuthError("Token expired - please re-login");
-      return;
+      throw new Error("AUTH_EXPIRED");
     }
     const error = await response.json();
     console.error(`Sheets API update error: ${error.error?.message || response.statusText}`);
@@ -233,8 +232,7 @@ async function clearSheetRange(range, accessToken) {
   }
 
   if (!token) {
-    console.warn("clearSheetRange: No access token available, skipping delete");
-    return;
+    throw new Error("clearSheetRange: No access token available");
   }
 
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}:clear`;
@@ -249,7 +247,7 @@ async function clearSheetRange(range, accessToken) {
   if (!response.ok) {
     if (response.status === 401 && typeof handleAuthError === 'function') {
       handleAuthError("Token expired - please re-login");
-      return;
+      throw new Error("AUTH_EXPIRED");
     }
     const error = await response.json();
     console.error(`Sheets API clear error: ${error.error?.message || response.statusText}`);
@@ -290,7 +288,7 @@ async function batchUpdateRange(range, values, accessToken) {
   if (!response.ok) {
     if (response.status === 401 && typeof handleAuthError === 'function') {
       handleAuthError("Token expired - please re-login");
-      return {};
+      throw new Error("AUTH_EXPIRED");
     }
     const error = await response.json();
     throw new Error(`Sheets API update error: ${error.error?.message || response.statusText}`);
@@ -322,7 +320,7 @@ async function batchUpdateCells(updates, accessToken) {
   if (!response.ok) {
     if (response.status === 401 && typeof handleAuthError === 'function') {
       handleAuthError("Token expired - please re-login");
-      return;
+      throw new Error("AUTH_EXPIRED");
     }
     const err = await response.json();
     throw new Error(`batchUpdateCells failed: ${err.error?.message || response.statusText}`);
@@ -346,7 +344,7 @@ async function deleteSheetRow(tabName, rowNumber, accessToken) {
     { headers: { Authorization: `Bearer ${token}` } }
   );
   if (!metaResp.ok) {
-    if (metaResp.status === 401 && typeof handleAuthError === 'function') { handleAuthError("Token expired - please re-login"); return; }
+    if (metaResp.status === 401 && typeof handleAuthError === 'function') { handleAuthError("Token expired - please re-login"); throw new Error("AUTH_EXPIRED"); }
     throw new Error("deleteSheetRow: failed to get sheet metadata");
   }
   const meta = await metaResp.json();
@@ -394,7 +392,7 @@ async function deleteSheetRows(tabName, rowNumbers, accessToken) {
     { headers: { Authorization: `Bearer ${token}` } }
   );
   if (!metaResp.ok) {
-    if (metaResp.status === 401 && typeof handleAuthError === 'function') { handleAuthError("Token expired - please re-login"); return; }
+    if (metaResp.status === 401 && typeof handleAuthError === 'function') { handleAuthError("Token expired - please re-login"); throw new Error("AUTH_EXPIRED"); }
     throw new Error("deleteSheetRows: failed to get sheet metadata");
   }
   const meta = await metaResp.json();

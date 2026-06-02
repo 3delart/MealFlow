@@ -82,10 +82,10 @@ function renderHistoryContent(history) {
       const entryDiv = document.createElement("div");
       entryDiv.className = "history-entry";
       entryDiv.innerHTML = `
-        <div style="font-weight:bold; width:50px;">${item.Heure}</div>
-        <div>${item.Nom}</div>
-        <div style="text-align:right; min-width:60px;">${item.Quantité}${item.Unité}</div>
-        <div style="text-align:right; min-width:60px; color:var(--color-primary); font-weight:bold;">${item.Kcal_total}kcal</div>
+        <div style="font-weight:bold; width:50px;">${Utils.escapeHTML(item.Heure)}</div>
+        <div>${Utils.escapeHTML(item.Nom)}</div>
+        <div style="text-align:right; min-width:60px;">${Utils.escapeHTML(item.Quantité)}${Utils.escapeHTML(item.Unité)}</div>
+        <div style="text-align:right; min-width:60px; color:var(--color-primary); font-weight:bold;">${Utils.escapeHTML(item.Kcal_total)}kcal</div>
       `;
       detailDiv.appendChild(entryDiv);
     });

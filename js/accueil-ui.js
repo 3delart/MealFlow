@@ -7,7 +7,7 @@ let _consommerProductDebounce = null;
 let _consommerRecetteDebounce = null;
 
 function _normStr(s) {
-  return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return Utils.normalizeString(s);
 }
 
 function onConsommerProductInput(e) {
@@ -291,10 +291,10 @@ function renderConsumptionLog() {
     const rawIndex = todaysConsumptions.indexOf(entry);
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${entry.Heure || ''}</td>
-      <td>${entry.Nom || ''}</td>
-      <td>${entry.Quantité} ${entry.Unité || ''}</td>
-      <td>${entry.Kcal_total || '0'}</td>
+      <td>${Utils.escapeHTML(entry.Heure || '')}</td>
+      <td>${Utils.escapeHTML(entry.Nom || '')}</td>
+      <td>${Utils.escapeHTML(entry.Quantité)} ${Utils.escapeHTML(entry.Unité || '')}</td>
+      <td>${Utils.escapeHTML(entry.Kcal_total || '0')}</td>
       <td><button class="btn btn-delete" onclick="deleteConsumption(${rawIndex})">✕</button></td>
     `;
     tbody.appendChild(row);
@@ -448,7 +448,7 @@ function updateMangerRecipePreview() {
 
   previewBox.innerHTML = `
     <div style="padding: 12px; background-color: var(--color-bg); border-radius: 6px;">
-      <p style="margin: 0; font-size: 0.9em;"><strong>${mealName}</strong></p>
+      <p style="margin: 0; font-size: 0.9em;"><strong>${Utils.escapeHTML(mealName)}</strong></p>
       <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${displayLabel} · ${totalKcal} kcal</p>
     </div>
   `;
@@ -473,7 +473,7 @@ function updateMangerCustomPreview() {
 
   previewBox.innerHTML = `
     <div style="padding: 12px; background-color: var(--color-bg); border-radius: 6px;">
-      <p style="margin: 0; font-size: 0.9em;"><strong>${mealName}</strong></p>
+      <p style="margin: 0; font-size: 0.9em;"><strong>${Utils.escapeHTML(mealName)}</strong></p>
       <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${qty}${unit} · ${totalKcal} kcal</p>
     </div>
   `;
@@ -823,7 +823,7 @@ function updateConsommerPreview() {
 
   previewBox.innerHTML = `
     <div style="padding: 12px; background-color: var(--color-bg); border-radius: 6px;">
-      <p style="margin: 0; font-size: 0.9em;"><strong>${invItem.Produit}</strong></p>
+      <p style="margin: 0; font-size: 0.9em;"><strong>${Utils.escapeHTML(invItem.Produit)}</strong></p>
       <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${qty} ${unit} · ${totalKcal} kcal</p>
     </div>
   `;
@@ -891,7 +891,7 @@ function updateConsommerRecettePreview() {
 
   previewBox.innerHTML = `
     <div style="padding: 12px; background-color: var(--color-bg); border-radius: 6px;">
-      <p style="margin: 0; font-size: 0.9em;"><strong>${recipe.name}</strong></p>
+      <p style="margin: 0; font-size: 0.9em;"><strong>${Utils.escapeHTML(recipe.name)}</strong></p>
       <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${displayLabel} · ${totalKcal} kcal</p>
     </div>
   `;

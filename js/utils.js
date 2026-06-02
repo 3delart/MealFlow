@@ -194,6 +194,51 @@ function clearElement(el) {
   }
 }
 
+/**
+ * Escape HTML special characters to prevent XSS when injecting via innerHTML.
+ * Use on any value coming from Google Sheets, Open Food Facts, or user input.
+ * @param {*} value - Value to escape (coerced to string)
+ * @returns {string} HTML-safe string
+ */
+function escapeHTML(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Normalize a string for accent-insensitive, case-insensitive comparison/search.
+ * Lowercases, strips diacritics (NFD), and trims.
+ * @param {*} value - Value to normalize
+ * @returns {string} Normalized string
+ */
+function normalizeString(value) {
+  return (value || '')
+    .toString()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim();
+}
+
+/**
+ * Create a debounced version of a function.
+ * @param {Function} fn - Function to debounce
+ * @param {number} ms - Delay in milliseconds
+ * @returns {Function} Debounced function
+ */
+function debounce(fn, ms = 250) {
+  let timer = null;
+  return function debounced(...args) {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), ms);
+  };
+}
+
 // Export all functions
 const Utils = {
   getTodayISO,
@@ -208,7 +253,10 @@ const Utils = {
   calculateTDEE,
   calculateObjectiveCalories,
   createElement,
-  clearElement
+  clearElement,
+  escapeHTML,
+  normalizeString,
+  debounce
 };
 
 // Export for both browser (window.Utils) and Node.js (module.exports)
