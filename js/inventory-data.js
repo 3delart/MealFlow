@@ -139,7 +139,10 @@ function saveInventory() {
 }
 
 function findItemByBarcode(barcode) {
-  return inventoryData.find(i => i.Barcode === barcode);
+  return inventoryData.find(i => {
+    const barcodes = (i.Barcode || "").split(";").map(b => b.trim());
+    return barcodes.includes(barcode);
+  });
 }
 
 async function addItem(item) {
