@@ -152,6 +152,24 @@ function scannerLog(msg) {
   }
 }
 
+function onMangerUnitChange() {
+  const unit = document.getElementById('manger-unit').value;
+  const label = document.getElementById('manger-qty-label');
+  const input = document.getElementById('manger-qty');
+  label.textContent = unit === 'portions' ? 'Nombre de portions :' : 'Quantité (g) :';
+  input.step = unit === 'portions' ? '0.5' : '1';
+  updateMangerPreview();
+}
+
+function onConsommerRecetteUnitChange() {
+  const unit = document.getElementById('consommer-recette-unit').value;
+  const label = document.getElementById('consommer-recette-qty-label');
+  const input = document.getElementById('consommer-recette-qty');
+  label.textContent = unit === 'portions' ? 'Nombre de portions :' : 'Quantité (g) :';
+  input.step = unit === 'portions' ? '0.5' : '1';
+  updateConsommerRecettePreview();
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   // Attach button listeners before auth check (no auth needed for DOM binding)
   document.getElementById('consommer-btn')?.addEventListener('click', openConsommerModal);
@@ -175,6 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Event listeners for Manger modal
   document.getElementById('manger-form')?.addEventListener('submit', submitManger);
   document.getElementById('manger-qty')?.addEventListener('input', updateMangerPreview);
+  document.getElementById('manger-unit')?.addEventListener('change', onMangerUnitChange);
   document.getElementById('close-manger-modal')?.addEventListener('click', closeMangerModal);
 
   // Consommer - Scanner tab
@@ -188,6 +207,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Consommer - Recette tab
   document.getElementById('consommer-recette-search')?.addEventListener('input', onConsommerRecetteInput);
   document.getElementById('consommer-recette-qty')?.addEventListener('input', updateConsommerRecettePreview);
+  document.getElementById('consommer-recette-unit')?.addEventListener('change', onConsommerRecetteUnitChange);
 
   document.addEventListener('click', e => {
     if (!e.target.closest('#tab-inventaire')) {
@@ -334,6 +354,15 @@ function openMangerModal(mealName) {
       option.textContent = `${m.name} (${m.kcal_per_100} kcal/100g)`;
       option.dataset.kcalPer100 = m.kcal_per_100;
       option.dataset.isCustom = m.isCustom || false;
+
+      // Get portion_g from recipesData
+      const recipeKey = Object.keys(window.recipesData || {}).find(key =>
+        window.recipesData[key].name === m.name
+      );
+      if (recipeKey) {
+        option.dataset.portionG = window.recipesData[recipeKey].portion_g || 0;
+      }
+
       select.appendChild(option);
     });
 
@@ -368,6 +397,10 @@ function closeMangerModal() {
   modal.classList.remove('open');
   document.getElementById('manger-form').reset();
   document.getElementById('manger-preview').innerHTML = '';
+  const mangerUnit = document.getElementById('manger-unit');
+  if (mangerUnit) mangerUnit.value = 'g';
+  const mangerQtyLabel = document.getElementById('manger-qty-label');
+  if (mangerQtyLabel) mangerQtyLabel.textContent = 'Quantité (g) :';
   const mealGroup = document.getElementById('manger-meal-group');
   if (mealGroup) mealGroup.style.display = 'block'; // Restore dropdown visibility
 }
@@ -398,12 +431,29 @@ function updateMangerRecipePreview() {
   const qty = parseFloat(qtyInput.value);
   const selectedOption = mealSelect.options[mealSelect.selectedIndex];
   const kcalPer100g = parseFloat(selectedOption.dataset.kcalPer100) || 0;
-  const totalKcal = Math.round(qty * (kcalPer100g / 100));
+
+  const unit = document.getElementById('manger-unit')?.value || 'g';
+  let qtyGrams, displayLabel;
+
+  if (unit === 'portions') {
+    const portionG = parseFloat(selectedOption.dataset.portionG) || 0;
+    if (!portionG) {
+      previewBox.innerHTML = '<p style="color:orange; padding:8px;">⚠️ Portion non définie pour cette recette</p>';
+      return;
+    }
+    qtyGrams = qty * portionG;
+    displayLabel = `${qty} portion${qty > 1 ? 's' : ''} (${Math.round(qtyGrams)}g)`;
+  } else {
+    qtyGrams = qty;
+    displayLabel = `${qty}g`;
+  }
+
+  const totalKcal = Math.round(qtyGrams * (kcalPer100g / 100));
 
   previewBox.innerHTML = `
     <div style="padding: 12px; background-color: var(--color-bg); border-radius: 6px;">
       <p style="margin: 0; font-size: 0.9em;"><strong>${mealName}</strong></p>
-      <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${qty}g · ${totalKcal} kcal</p>
+      <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${displayLabel} · ${totalKcal} kcal</p>
     </div>
   `;
 }
@@ -471,10 +521,21 @@ async function submitManger(e) {
 
     mealName = mealSelect.value;
     qty = parseFloat(qtyInput.value);
-    unit = 'g';
     const selectedOption = mealSelect.options[mealSelect.selectedIndex];
     kcalPer100g = parseFloat(selectedOption.dataset.kcalPer100) || 0;
-    totalKcal = Math.round(qty * (kcalPer100g / 100));
+
+    const unitSelect = document.getElementById('manger-unit')?.value || 'g';
+    let qtyGrams;
+    if (unitSelect === 'portions') {
+      const portionG = parseFloat(selectedOption.dataset.portionG) || 0;
+      qtyGrams = qty * portionG;
+      unit = 'portion';
+    } else {
+      qtyGrams = qty;
+      unit = 'g';
+    }
+
+    totalKcal = Math.round(qtyGrams * (kcalPer100g / 100));
   }
 
   const now = new Date();
@@ -540,6 +601,10 @@ function closeConsommerModal() {
   _consommerSelectedRecetteKey = null;
   document.getElementById('consommer-recette-qty').value = '';
   document.getElementById('consommer-recette-preview').innerHTML = '';
+  const recetteUnit = document.getElementById('consommer-recette-unit');
+  if (recetteUnit) recetteUnit.value = 'g';
+  const recetteQtyLabel = document.getElementById('consommer-recette-qty-label');
+  if (recetteQtyLabel) recetteQtyLabel.textContent = 'Quantité (g) :';
   document.getElementById('consommer-manuel-nom').value = '';
   document.getElementById('consommer-manuel-qty').value = '';
   document.getElementById('consommer-manuel-unit').value = '';
@@ -809,12 +874,27 @@ function updateConsommerRecettePreview() {
   if (!recipe) return;
 
   const qty = parseFloat(qtyInput.value);
-  const totalKcal = Math.round(qty * recipe.kcal_per_100 / 100);
+  const unit = document.getElementById('consommer-recette-unit')?.value || 'g';
+  let qtyGrams, displayLabel;
+
+  if (unit === 'portions') {
+    if (!recipe.portion_g) {
+      previewBox.innerHTML = '<p style="color:orange; padding:8px;">⚠️ Portion non définie pour cette recette</p>';
+      return;
+    }
+    qtyGrams = qty * recipe.portion_g;
+    displayLabel = `${qty} portion${qty > 1 ? 's' : ''} (${Math.round(qtyGrams)}g)`;
+  } else {
+    qtyGrams = qty;
+    displayLabel = `${qty}g`;
+  }
+
+  const totalKcal = Math.round(qtyGrams * recipe.kcal_per_100 / 100);
 
   previewBox.innerHTML = `
     <div style="padding: 12px; background-color: var(--color-bg); border-radius: 6px;">
       <p style="margin: 0; font-size: 0.9em;"><strong>${recipe.name}</strong></p>
-      <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${qty}g · ${totalKcal} kcal</p>
+      <p style="margin: 4px 0 0 0; font-size: 0.85em; color: var(--color-text-light);">${displayLabel} · ${totalKcal} kcal</p>
     </div>
   `;
 }
@@ -835,9 +915,20 @@ function submitConsommerRecette() {
   }
 
   const kcalPer100 = recipe.kcal_per_100 || 0;
-  const totalKcal = Math.round(qty * kcalPer100 / 100);
+  const unitSelect = document.getElementById('consommer-recette-unit')?.value || 'g';
+  let qtyGrams, submitUnit;
 
-  _enregistrerConsommation(recipe.name, qty, 'g', kcalPer100, totalKcal, 'recette');
+  if (unitSelect === 'portions') {
+    qtyGrams = qty * recipe.portion_g;
+    submitUnit = 'portion';
+  } else {
+    qtyGrams = qty;
+    submitUnit = 'g';
+  }
+
+  const totalKcal = Math.round(qtyGrams * kcalPer100 / 100);
+
+  _enregistrerConsommation(recipe.name, qty, submitUnit, kcalPer100, totalKcal, 'recette');
 }
 
 function submitConsommerManuel() {

@@ -100,8 +100,14 @@
             </select>
           </div>
 
-          <label for="manger-qty">Quantité (g):</label>
-          <input type="number" id="manger-qty" min="0" step="1">
+          <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
+            <label id="manger-qty-label" style="flex:1;">Quantité (g):</label>
+            <select id="manger-unit" style="width:130px; padding:6px; border:1px solid var(--color-border); border-radius:4px;">
+              <option value="g">Grammes (g)</option>
+              <option value="portions">Portions (x)</option>
+            </select>
+          </div>
+          <input type="number" id="manger-qty" min="0.1" step="0.5">
         </div>
 
         <!-- Custom Meal Mode -->
@@ -188,8 +194,14 @@
             style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; box-sizing:border-box;">
           <div id="consommer-recette-dropdown" style="position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ddd; border-radius:4px; max-height:150px; overflow-y:auto; z-index:200; display:none;"></div>
         </div>
-        <label>Quantité (g):</label>
-        <input type="number" id="consommer-recette-qty" min="1" step="1" style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; margin-bottom:12px;">
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
+          <label id="consommer-recette-qty-label" style="flex:1;">Quantité (g):</label>
+          <select id="consommer-recette-unit" style="width:130px; padding:6px; border:1px solid var(--color-border); border-radius:4px;">
+            <option value="g">Grammes (g)</option>
+            <option value="portions">Portions (x)</option>
+          </select>
+        </div>
+        <input type="number" id="consommer-recette-qty" min="0.1" step="0.5" style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; margin-bottom:12px;">
         <div id="consommer-recette-preview" class="preview-box"></div>
         <button class="btn btn-primary" style="width:100%;" onclick="submitConsommerRecette()">Soumettre</button>
       </div>
