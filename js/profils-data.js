@@ -137,6 +137,11 @@ async function syncProfileToSheets(userId, profile) {
         "G": profile.Activité,
         "H": profile.Objectif,
         "I": profile.Régime,
+        "J": profile.Allergies_JSON,
+        "K": profile.Aversions_JSON,
+        "L": profile.Cuisines_JSON,
+        "M": profile.Niveau_culinaire,
+        "N": profile.Durée_max_prep,
         "O": profile.Calories_cible
       };
 

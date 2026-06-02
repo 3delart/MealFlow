@@ -239,6 +239,56 @@ function debounce(fn, ms = 250) {
   };
 }
 
+/**
+ * Lightweight toast notifications. Self-injects its container and styles,
+ * so no per-page HTML is required. Call Toast.show / .success / .error.
+ */
+const Toast = (() => {
+  let container = null;
+
+  function ensureContainer() {
+    if (container) return container;
+    const style = document.createElement('style');
+    style.textContent = `
+      #mf-toast-container { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+        z-index: 10000; display: flex; flex-direction: column; gap: 8px; align-items: center;
+        pointer-events: none; width: max-content; max-width: 90vw; }
+      .mf-toast { padding: 10px 16px; border-radius: 8px; color: #fff; font-size: 14px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25); opacity: 0; transform: translateY(10px);
+        transition: opacity .2s, transform .2s; }
+      .mf-toast.show { opacity: 1; transform: translateY(0); }
+      .mf-toast-success { background: #2e7d32; }
+      .mf-toast-error { background: #c62828; }
+      .mf-toast-info { background: #455a64; }
+    `;
+    document.head.appendChild(style);
+    container = document.createElement('div');
+    container.id = 'mf-toast-container';
+    document.body.appendChild(container);
+    return container;
+  }
+
+  function show(message, type = 'info', duration = 3000) {
+    if (typeof document === 'undefined') return;
+    const el = document.createElement('div');
+    el.className = `mf-toast mf-toast-${type}`;
+    el.textContent = message;
+    ensureContainer().appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => {
+      el.classList.remove('show');
+      setTimeout(() => el.remove(), 200);
+    }, duration);
+  }
+
+  return {
+    show,
+    success: (m, d) => show(m, 'success', d),
+    error: (m, d) => show(m, 'error', d || 4000),
+    info: (m, d) => show(m, 'info', d)
+  };
+})();
+
 // Export all functions
 const Utils = {
   getTodayISO,
@@ -256,12 +306,14 @@ const Utils = {
   clearElement,
   escapeHTML,
   normalizeString,
-  debounce
+  debounce,
+  Toast
 };
 
 // Export for both browser (window.Utils) and Node.js (module.exports)
 if (typeof window !== 'undefined') {
   window.Utils = Utils;
+  window.Toast = Toast;
 }
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = Utils;

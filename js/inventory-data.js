@@ -258,8 +258,12 @@ async function addItem(item) {
         await loadInventory();
         window.inventoryData = inventoryData;
         renderInventory();
+        if (window.Toast) Toast.success(`${newItem.Produit} ajouté ✓`);
       })
-      .catch(err => console.error("Failed to sync to Sheets:", err));
+      .catch(err => {
+        console.error("Failed to sync to Sheets:", err);
+        if (window.Toast) Toast.error("Échec de l'ajout sur Google Sheets.");
+      });
   }
 
   scannedProductData = null;

@@ -559,9 +559,10 @@ async function submitManger(e) {
     updateProgressDisplay();
     renderWheel();
     closeMangerModal();
+    if (window.Toast) Toast.success('Repas enregistré ✓');
   } catch (err) {
     console.error('Error submitting manger:', err);
-    alert('Erreur sauvegarde');
+    if (window.Toast) Toast.error('Échec de la sauvegarde du repas.');
   }
 }
 
@@ -1025,10 +1026,12 @@ async function _enregistrerConsommation(nom, qty, unit, kcalPer100, totalKcal, t
   caloriesConsumed = (caloriesConsumed || 0) + totalKcal;
 
   // Sheets
+  let consoError = false;
   if (token && window.SheetsAPI) {
     try {
       await window.SheetsAPI.appendRowWithToken(tabName, row, token);
     } catch (err) {
+      consoError = true;
       console.error('Error saving to Sheets:', err);
     }
   }
@@ -1037,6 +1040,10 @@ async function _enregistrerConsommation(nom, qty, unit, kcalPer100, totalKcal, t
   renderConsumptionLog();
   updateProgressDisplay();
   renderWheel();
+  if (window.Toast) {
+    if (consoError) Toast.error('Échec de la sauvegarde de la consommation.');
+    else Toast.success('Consommation enregistrée ✓');
+  }
 }
 
 // TASK 6: Delete Consumption Function

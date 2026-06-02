@@ -509,6 +509,7 @@ async function handleRecipeFormSubmit(e) {
   };
 
   // Targeted Sheets write (row update or append — no full clear)
+  let saveError = false;
   try {
     const token = window.getAccessToken ? window.getAccessToken() : null;
     if (token && window.SheetsAPI && window.recipesLoadedFromSheets) {
@@ -537,13 +538,15 @@ async function handleRecipeFormSubmit(e) {
       window.saveRecipesToLocalStorage();
     }
   } catch (err) {
-    alert("Erreur: la recette n'a pas pu être sauvegardée sur Google Sheets. Elle est enregistrée localement.");
+    saveError = true;
+    if (window.Toast) Toast.error("La recette n'a pas pu être sauvegardée sur Google Sheets.");
     console.error("Sheets sync error:", err);
   }
 
   document.getElementById("modal-recipe-form").classList.remove("open");
   window.renderRecipeList();
 
+  if (!saveError && window.Toast) Toast.success("Recette enregistrée ✓");
 }
 
 // ============================================================================
