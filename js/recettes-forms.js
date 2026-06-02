@@ -123,6 +123,28 @@ function debounceIngredientAutocomplete(e) {
 }
 
 /**
+ * Set the unit select of a row to the given value.
+ * Adds an option if the inventory unit isn't among the defaults.
+ * @param {HTMLTableRowElement} row - Ingredient row
+ * @param {string} unit - Unit from inventory
+ * @returns {void}
+ */
+function setRowUnit(row, unit) {
+  if (!unit) return;
+  const unitSelect = row.querySelector("td:nth-child(3) select");
+  if (!unitSelect) return;
+
+  const exists = Array.from(unitSelect.options).some(o => o.value === unit);
+  if (!exists) {
+    const opt = document.createElement("option");
+    opt.value = unit;
+    opt.textContent = unit;
+    unitSelect.appendChild(opt);
+  }
+  unitSelect.value = unit;
+}
+
+/**
  * Update ingredient calories on product selection
  * @param {HTMLInputElement} input - Product input element
  * @returns {void}
@@ -159,6 +181,7 @@ function updateIngredientCalories(input) {
         calSpan.textContent = match.calories_per_100;
         calSpan.dataset.caloriesPer100 = match.calories_per_100;
         calSpan.dataset.cookingFactor = match.cooking_factor || 1.0;
+        setRowUnit(row, match.unit);
         dropdownEl.style.display = "none";
         updateCalories();
       });
@@ -173,6 +196,7 @@ function updateIngredientCalories(input) {
       calSpan.textContent = match.calories_per_100;
       calSpan.dataset.caloriesPer100 = match.calories_per_100;
       calSpan.dataset.cookingFactor = match.cooking_factor || 1.0;
+      setRowUnit(row, match.unit);
     }
   } else {
     // No match found, show placeholder
