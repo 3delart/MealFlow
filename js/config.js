@@ -185,3 +185,11 @@ function suggestDietConcepts(name, allergens, category) {
 if (typeof window !== 'undefined') {
   window.FoodConfig = { CATEGORY_CONCEPTS, FOOD_KEYWORDS, DIET_RULES, DIET_CONCEPTS, ALLERGEN_OPTIONS, ALLERGY_ALIASES, CONCEPT_ICONS, conceptIcon, suggestDietConcepts };
 }
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    CATEGORIES_CONFIG, getCategoryExpiryDays, getAllCategoryNames,
+    CATEGORY_CONCEPTS, FOOD_KEYWORDS, DIET_RULES, DIET_CONCEPTS,
+    ALLERGEN_OPTIONS, ALLERGY_ALIASES, CONCEPT_ICONS, conceptIcon, suggestDietConcepts
+  };
+}

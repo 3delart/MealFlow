@@ -4,6 +4,12 @@
   "description": "Multi-user meal planning app",
   "main": "index.html",
   "scripts": {
-    "dev": "python -m http.server 8000"
+    "dev": "python -m http.server 8000",
+    "lint": "eslint js",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "eslint": "^9.13.0",
+    "vitest": "^2.1.3"
   }
 }

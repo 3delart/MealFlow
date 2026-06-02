@@ -199,7 +199,8 @@ function setupEventHandlers() {
         price: document.getElementById("field-price").value || "",
         calories_per_100: document.getElementById("field-calories").value || null,
         cooking_factor: parseFloat(document.getElementById("field-cooking-factor").value) || 1.0,
-        diet_tags: getCheckedDietTags("diet-tags-add")
+        diet_tags: getCheckedDietTags("diet-tags-add"),
+        min_qty: parseFloat(document.getElementById("field-min-qty").value) || 0
       };
 
       if (!formData.product_name || formData.quantity === "" || !formData.unit || !formData.category) {

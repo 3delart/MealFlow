@@ -43,7 +43,8 @@ async function loadInventory() {
         allergens: row["Allergens"] || "",
         Conversion_factor: row["Conversion_factor"] || "",
         cooking_factor: parseFloat((row["Cooking_factor"] || "1").toString().replace(",", ".")) || 1.0,
-        dietTags: (row["Diet_tags"] || "").split(",").map(s => s.trim()).filter(Boolean)
+        dietTags: (row["Diet_tags"] || "").split(",").map(s => s.trim()).filter(Boolean),
+        minQty: parseFloat((row["Min_qty"] || "0").toString().replace(",", ".")) || 0
       }));
       const { orphanRows, survivors } = mergeDuplicatesByBarcode();
       window.inventoryData = inventoryData;
@@ -226,7 +227,8 @@ async function addItem(item) {
     fats: scannedProductData?.fats || null,
     carbs: scannedProductData?.carbs || null,
     allergens: scannedProductData?.allergens || "—",
-    dietTags: Array.isArray(item.diet_tags) ? item.diet_tags : []
+    dietTags: Array.isArray(item.diet_tags) ? item.diet_tags : [],
+    minQty: parseFloat(item.min_qty) || 0
   };
 
   inventoryData.push(newItem);
@@ -250,7 +252,8 @@ async function addItem(item) {
       newItem.carbs,
       newItem.allergens,
       newItem.cooking_factor || 1.0,
-      (newItem.dietTags || []).join(",")
+      (newItem.dietTags || []).join(","),
+      newItem.minQty || 0
     ];
 
     // Append at the bottom (no sheet-side sort: rows stay stable so sheetRowNumbers

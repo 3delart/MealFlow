@@ -220,6 +220,38 @@ function populateIngredientMap(objects) {
       sheetRow: idx + 2
     };
   });
+
+  // Inject low-stock products: inventory items below their reorder threshold (Min_qty)
+  // that aren't already covered by the meal-plan list. Self-maintaining: they disappear
+  // once the stock is replenished above the threshold.
+  (window.inventoryData || []).forEach(item => {
+    const minQty = parseFloat(item.minQty) || 0;
+    if (minQty <= 0) return;
+    const qty = parseFloat(item.Qty) || 0;
+    if (qty >= minQty) return;
+    const key = norm(item.Produit);
+    const existing = Object.values(ingredientMap).find(ing => norm(ing.name) === key);
+    if (existing) {
+      existing.isLowStock = true;
+      return;
+    }
+    const shortfall = minQty - qty;
+    ingredientMap[`${item.Produit}__lowstock`] = {
+      name: item.Produit,
+      mapKey: `${item.Produit}__lowstock`,
+      category: item.Catégorie || 'Autres',
+      totalNeeded: minQty,
+      needed: shortfall,
+      stock: qty,
+      unit: item.Unité || 'g',
+      price: parseFloat(item.Prix) || 0,
+      days: [],
+      acheté: false,
+      isCustom: false,
+      isLowStock: true,
+      sheetRow: null
+    };
+  });
 }
 
 /**
@@ -407,6 +439,8 @@ function renderIngredientItem(ing, dimmed = false) {
 
   const customBadge = ing.isCustom
     ? ' <small style="color:#E65100;font-size:0.75em;">(perso)</small>' : '';
+  const lowStockBadge = ing.isLowStock
+    ? ' <small style="color:#c62828;font-size:0.75em;" title="Stock sous le seuil de réappro">📉 stock bas</small>' : '';
   const safeKey = Utils.escapeHTML(String(ing.mapKey || ing.name).replace(/'/g, "\\'"));
   const safeName = Utils.escapeHTML(ing.name);
   const safeNameAttr = Utils.escapeHTML(String(ing.name).replace(/'/g, "\\'"));
@@ -419,7 +453,7 @@ function renderIngredientItem(ing, dimmed = false) {
     <label${dimmClass} style="position:relative;">
       <input type="checkbox" data-key="${safeKey}" />
       <span style="flex:1;">
-        ${safeName}${customBadge}${qtyDisplay}
+        ${safeName}${customBadge}${lowStockBadge}${qtyDisplay}
         <div style="color:#2E7D32;font-size:0.75em;margin-top:2px;">${dayBadges}</div>
       </span>
       <div class="price-correction">

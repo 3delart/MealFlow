@@ -102,6 +102,11 @@
         </div>
 
         <div class="form-group">
+          <label for="field-min-qty">Seuil de réappro <span style="color:#999;font-weight:normal;">(alerte si stock en dessous)</span></label>
+          <input type="number" id="field-min-qty" min="0" step="0.1" placeholder="ex. 1000 (g/ml)">
+        </div>
+
+        <div class="form-group">
           <label>Tags régime <span style="color:#999;font-weight:normal;">(pré-cochés auto, ajuste si besoin)</span></label>
           <div id="diet-tags-add" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
         </div>
@@ -227,6 +232,11 @@
         <div class="form-group">
           <label for="edit-conversion">Conversion (1 pièce = ? g)</label>
           <input type="number" id="edit-conversion" step="0.1" min="0" placeholder="ex. 200">
+        </div>
+
+        <div class="form-group">
+          <label for="edit-min-qty">Seuil de réappro <span style="color:#999;font-weight:normal;">(alerte si stock en dessous)</span></label>
+          <input type="number" id="edit-min-qty" step="0.1" min="0" placeholder="ex. 1000">
         </div>
 
         <div class="form-group">

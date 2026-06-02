@@ -14,6 +14,8 @@ function openEditModal(item) {
   document.getElementById("edit-calories").value = item.calories_per_100 || item.Calories_per_100 || "";
   document.getElementById("edit-conversion").value = item.Conversion_factor || item.conversion_factor || "";
   document.getElementById("edit-cooking-factor").value = item.cooking_factor || 1.0;
+  const minQtyEl = document.getElementById("edit-min-qty");
+  if (minQtyEl) minQtyEl.value = item.minQty || "";
   if (typeof renderDietCheckboxes === "function") {
     renderDietCheckboxes("diet-tags-edit");
     setCheckedDietTags("diet-tags-edit", item.dietTags || []);
@@ -55,7 +57,8 @@ async function saveEditedItem(e) {
     Calories_per_100: caloriesValue ? parseFloat(caloriesValue) : item.Calories_per_100,
     Conversion_factor: conversionValue || item.Conversion_factor || "",
     cooking_factor: parseFloat(document.getElementById("edit-cooking-factor").value) || 1.0,
-    dietTags: typeof getCheckedDietTags === "function" ? getCheckedDietTags("diet-tags-edit") : (item.dietTags || [])
+    dietTags: typeof getCheckedDietTags === "function" ? getCheckedDietTags("diet-tags-edit") : (item.dietTags || []),
+    minQty: parseFloat(document.getElementById("edit-min-qty")?.value) || 0
   };
 
   // Clear dates if quantity reaches 0
@@ -83,6 +86,7 @@ async function saveEditedItem(e) {
       await SheetsAPI.updateSheetCell(`Inventory!J${item.sheetRowNumber}`, item.Calories_per_100 || "", token);
       await SheetsAPI.updateSheetCell(`Inventory!O${item.sheetRowNumber}`, item.cooking_factor || 1.0, token);
       await SheetsAPI.updateSheetCell(`Inventory!P${item.sheetRowNumber}`, (item.dietTags || []).join(","), token);
+      await SheetsAPI.updateSheetCell(`Inventory!Q${item.sheetRowNumber}`, item.minQty || 0, token);
     } catch (err) {
       console.error("Failed to update Sheets:", err);
     }
