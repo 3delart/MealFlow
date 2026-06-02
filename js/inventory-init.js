@@ -16,7 +16,7 @@ function searchProducts(query) {
       name: item.Produit,
       unit: item.Unité,
       category: item.Catégorie,
-      calories: item.Calories_per_100,
+      calories: item.calories_per_100,
       price: item.Prix,
       conversionFactor: item.Conversion_factor
     }))
