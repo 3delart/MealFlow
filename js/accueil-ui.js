@@ -602,7 +602,7 @@ function closeConsommerModal() {
   const recetteQtyLabel = document.getElementById('consommer-recette-qty-label');
   if (recetteQtyLabel) recetteQtyLabel.textContent = 'Quantité (g) :';
   const deductCheckbox = document.getElementById('consommer-recette-deduct');
-  if (deductCheckbox) deductCheckbox.checked = true;
+  if (deductCheckbox) deductCheckbox.checked = false;
   document.getElementById('consommer-manuel-nom').value = '';
   document.getElementById('consommer-manuel-qty').value = '';
   document.getElementById('consommer-manuel-unit').value = '';
