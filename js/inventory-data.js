@@ -155,7 +155,7 @@ async function addItem(item) {
   }
 
   if (barcode) {
-    const existing = inventoryData.find(i => i.Barcode === barcode);
+    const existing = inventoryData.find(i => (i.Barcode || "").split(";").map(b => b.trim()).includes(barcode));
     if (existing) {
       const existingQty = parseFloat(existing.Qty) || 0;
       existing.Qty = (existingQty + quantity).toString();
@@ -171,6 +171,41 @@ async function addItem(item) {
           const token = getAccessToken();
           const range = `Inventory!D${existing.sheetRowNumber}`;
           window.SheetsAPI.updateSheetCell(range, existing.Qty, token)
+            .catch(err => console.error("Failed to update Sheets:", err));
+        } catch (err) {
+          console.error("Error updating Sheets:", err);
+        }
+      }
+
+      scannedProductData = null;
+      document.getElementById("add-item-form").reset();
+      document.getElementById("product-info").style.display = "none";
+      renderInventory();
+      return;
+    }
+  }
+
+  if (item.product_name) {
+    const existingByName = inventoryData.find(i => i.Produit?.toLowerCase() === item.product_name.toLowerCase());
+    if (existingByName) {
+      const existingQty = parseFloat(existingByName.Qty) || 0;
+      existingByName.Qty = (existingQty + quantity).toString();
+
+      if (item.price) {
+        existingByName.Prix = item.price;
+      }
+
+      if (barcode && !existingByName.Barcode.includes(barcode)) {
+        existingByName.Barcode = existingByName.Barcode ? `${existingByName.Barcode};${barcode}` : barcode;
+      }
+
+      saveInventory();
+
+      if (typeof isAuthenticated === "function" && isAuthenticated() && window.SheetsAPI) {
+        try {
+          const token = getAccessToken();
+          const range = `Inventory!D${existingByName.sheetRowNumber}`;
+          window.SheetsAPI.updateSheetCell(range, existingByName.Qty, token)
             .catch(err => console.error("Failed to update Sheets:", err));
         } catch (err) {
           console.error("Error updating Sheets:", err);
