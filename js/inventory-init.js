@@ -16,7 +16,8 @@ function searchProducts(query) {
       name: item.Produit,
       unit: item.Unité,
       category: item.Catégorie,
-      calories: item.Calories_per_100,
+      calories: item.calories_per_100,
+      price: item.Prix,
       conversionFactor: item.Conversion_factor
     }))
     .slice(0, 10);
@@ -51,6 +52,7 @@ function setupProductAutocomplete() {
             if (match.unit) document.getElementById("field-unit").value = match.unit;
             if (match.category) document.getElementById("field-category").value = match.category;
             if (match.calories) document.getElementById("field-calories").value = match.calories;
+            if (match.price) document.getElementById("field-price").value = match.price;
             if (match.conversionFactor) document.getElementById("field-conversion").value = match.conversionFactor;
             suggestionsDiv.style.display = "none";
           });
