@@ -601,6 +601,8 @@ function closeConsommerModal() {
   if (recetteUnit) recetteUnit.value = 'g';
   const recetteQtyLabel = document.getElementById('consommer-recette-qty-label');
   if (recetteQtyLabel) recetteQtyLabel.textContent = 'Quantité (g) :';
+  const deductCheckbox = document.getElementById('consommer-recette-deduct');
+  if (deductCheckbox) deductCheckbox.checked = true;
   document.getElementById('consommer-manuel-nom').value = '';
   document.getElementById('consommer-manuel-qty').value = '';
   document.getElementById('consommer-manuel-unit').value = '';
@@ -895,7 +897,62 @@ function updateConsommerRecettePreview() {
   `;
 }
 
-function submitConsommerRecette() {
+async function deductRecipeIngredients(recipe, recipeTotalGrams, token) {
+  if (!recipe.ingredients || !Array.isArray(recipe.ingredients)) return;
+
+  // Calculate recipe total weight from ingredients
+  let recipeTotalWeight = 0;
+  for (const ing of recipe.ingredients) {
+    const qty = parseFloat(ing.quantity) || 0;
+    const unit = (ing.unit || 'g').toLowerCase();
+    let qtyGrams = qty;
+    if (unit === 'pièce' || unit === 'piece') qtyGrams = qty * 100; // Rough estimate
+    else if (unit === 'litre') qtyGrams = qty * 1000;
+    recipeTotalWeight += qtyGrams;
+  }
+
+  if (recipeTotalWeight === 0) return;
+  const ratio = recipeTotalGrams / recipeTotalWeight;
+
+  for (const ingredient of recipe.ingredients) {
+    const ingredientName = (ingredient.name || '').toLowerCase().trim();
+    if (!ingredientName) continue;
+
+    // Find matching inventory item by name (fuzzy match)
+    const invItem = window.inventoryData?.find(i =>
+      (i.Produit || '').toLowerCase().trim() === ingredientName
+    );
+
+    if (!invItem) {
+      console.warn(`Ingredient not found in inventory: ${ingredient.name}`);
+      continue;
+    }
+
+    // Calculate quantity to deduct (in grams, then convert to item's unit if needed)
+    let qtyInItemUnit;
+    const ingredientQtyGrams = (parseFloat(ingredient.quantity) || 0) * ratio;
+    const ingredientUnit = (ingredient.unit || 'g').toLowerCase();
+    const itemUnit = (invItem.Unité || 'g').toLowerCase();
+
+    if (ingredientUnit === itemUnit || ingredientUnit === 'g' || itemUnit === 'g') {
+      qtyInItemUnit = ingredientQtyGrams;
+    } else if (itemUnit === 'pièce' || itemUnit === 'piece') {
+      qtyInItemUnit = ingredientQtyGrams / (parseFloat(invItem.Conversion_factor) || 1);
+    } else if (itemUnit === 'litre') {
+      qtyInItemUnit = ingredientQtyGrams / 1000;
+    } else {
+      qtyInItemUnit = ingredientQtyGrams;
+    }
+
+    try {
+      await applyInventoryDeduction(invItem, qtyInItemUnit, token);
+    } catch (err) {
+      console.error(`Failed to deduct ingredient ${ingredient.name}:`, err);
+    }
+  }
+}
+
+async function submitConsommerRecette() {
   const qtyInput = document.getElementById('consommer-recette-qty');
   const qty = parseFloat(qtyInput.value);
 
@@ -923,6 +980,15 @@ function submitConsommerRecette() {
   }
 
   const totalKcal = Math.round(qtyGrams * kcalPer100 / 100);
+
+  // Deduct ingredients if checkbox is checked
+  const deductCheckbox = document.getElementById('consommer-recette-deduct');
+  if (deductCheckbox?.checked && recipe.ingredients && recipe.ingredients.length > 0) {
+    const token = getAccessToken?.();
+    if (token) {
+      await deductRecipeIngredients(recipe, qtyGrams, token);
+    }
+  }
 
   _enregistrerConsommation(recipe.name, qty, submitUnit, kcalPer100, totalKcal, 'recette');
 }
