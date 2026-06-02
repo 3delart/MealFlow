@@ -343,3 +343,33 @@ Les fonctionnalités qui justifient le mieux l'abonnement (à mettre en avant) :
 5. Suivi nutritionnel complet de toute la famille
 
 > Note : ne pas tout construire d'un coup. Sortir un **MVP premium** centré sur **1–2 différenciateurs forts** (génération auto du planning + anti-gaspillage), puis enrichir selon les retours utilisateurs.
+
+## B.11 Faisabilité de deux features ambitieuses
+
+### Scan du ticket de caisse → inventaire + prix ⭐
+
+**Possible, oui** — mais c'est l'une des features les plus complexes. Réaliste avec les outils actuels.
+
+**Pipeline :** Photo → Extraction → Matching aux produits → **Validation par l'utilisateur** → mise à jour stock/prix.
+
+Deux approches pour l'extraction :
+
+| Option | Détail |
+|---|---|
+| **API ticket dédiée** (Veryfi, Mindee, Taggun, Klippa) | Spécialisées tickets de caisse, renvoient directement marchand + articles + prix + total. Précision ~85–95 %. Payant au scan. |
+| **IA vision (LLM)** (GPT-4o, Claude vision…) | Envoyer la photo → JSON d'articles + prix, et **normalise les noms** (« PARMA REGG » → « Parmesan »). Très performant aujourd'hui, flexible. Coût API par scan. |
+
+**Le vrai défi = le matching des noms.** Les tickets abrègent (« EMMENTAL RAP 200G » → produit « Emmental »). Solutions : `normalizeString` + correspondance partielle (déjà codé), normalisation par l'IA, et surtout un **écran de revue** où l'app propose et l'utilisateur confirme/corrige avant d'ajouter.
+
+**Verdict :** faisable, jamais 100 % automatique → toujours une étape de validation. Excellent argument premium.
+
+### Comparateur de courses par magasin
+
+⚠️ Nuance importante : il n'existe **pas** de base de prix publique en temps réel des supermarchés français (les enseignes ne l'exposent pas). Un comparateur universel type « le lait le moins cher partout » n'est **pas réaliste** (pas d'accès aux données ; scraping fragile et juridiquement limite).
+
+**Le réaliste = comparateur basé sur les données du foyer :**
+- L'utilisateur enregistre les prix par magasin (via tickets scannés ou saisie).
+- L'app calcule : « ce panier ≈ 42 € chez Carrefour vs 38 € chez Lidl » **selon l'historique de prix de l'utilisateur**.
+- Personnalisé, honnête, faisable. Se combine naturellement avec le scan de ticket (qui alimente l'historique de prix par magasin).
+
+**Verdict :** oui, mais en version **personnalisée** (historique propre au foyer), pas en comparateur universel.
