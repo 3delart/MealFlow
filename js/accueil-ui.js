@@ -155,18 +155,14 @@ function scannerLog(msg) {
 function onMangerUnitChange() {
   const unit = document.getElementById('manger-unit').value;
   const label = document.getElementById('manger-qty-label');
-  const input = document.getElementById('manger-qty');
   label.textContent = unit === 'portions' ? 'Nombre de portions :' : 'Quantité (g) :';
-  input.step = unit === 'portions' ? '0.5' : '1';
   updateMangerPreview();
 }
 
 function onConsommerRecetteUnitChange() {
   const unit = document.getElementById('consommer-recette-unit').value;
   const label = document.getElementById('consommer-recette-qty-label');
-  const input = document.getElementById('consommer-recette-qty');
   label.textContent = unit === 'portions' ? 'Nombre de portions :' : 'Quantité (g) :';
-  input.step = unit === 'portions' ? '0.5' : '1';
   updateConsommerRecettePreview();
 }
 

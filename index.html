@@ -107,7 +107,7 @@
               <option value="portions">Portions (x)</option>
             </select>
           </div>
-          <input type="number" id="manger-qty" min="0.1" step="0.5">
+          <input type="number" id="manger-qty" min="0" step="any">
         </div>
 
         <!-- Custom Meal Mode -->
@@ -201,7 +201,7 @@
             <option value="portions">Portions (x)</option>
           </select>
         </div>
-        <input type="number" id="consommer-recette-qty" min="0.1" step="0.5" style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; margin-bottom:12px;">
+        <input type="number" id="consommer-recette-qty" min="0" step="any" style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; margin-bottom:12px;">
         <div id="consommer-recette-preview" class="preview-box"></div>
         <button class="btn btn-primary" style="width:100%;" onclick="submitConsommerRecette()">Soumettre</button>
       </div>
