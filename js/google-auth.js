@@ -24,8 +24,8 @@ function handleTokenResponse(response) {
   if (response.access_token) {
     googleAccessToken = response.access_token;
     sessionStorage.setItem("googleAccessToken", googleAccessToken);
-
-    updateUI();
+    // Reload so the page loads data for the freshly-connected account
+    location.reload();
   } else {
     tokenClient.requestAccessToken({ prompt: "consent" });
   }
@@ -37,11 +37,67 @@ function updateUI() {
 
   if (googleAccessToken || sessionStorage.getItem("googleAccessToken")) {
     if (loginDiv) loginDiv.style.display = "none";
-    if (logoutBtn) logoutBtn.style.display = "block";
+    if (logoutBtn) {
+      logoutBtn.style.display = "inline-flex";
+      logoutBtn.className = "";
+      logoutBtn.title = "Se déconnecter";
+      logoutBtn.innerHTML = "🚪 Déconnexion";
+      logoutBtn.style.cssText =
+        "display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;" +
+        "background:rgba(255,255,255,0.9);color:#c62828;border:1px solid #ef9a9a;" +
+        "font-size:13px;font-weight:600;cursor:pointer;line-height:1;";
+    }
   } else {
     if (loginDiv) loginDiv.style.display = "block";
     if (logoutBtn) logoutBtn.style.display = "none";
   }
+
+  applyAuthGate();
+}
+
+/**
+ * Hide all page content and show a "Connectez-vous" panel when not authenticated.
+ * Runs on every page (google-auth.js is loaded everywhere).
+ */
+function applyAuthGate() {
+  const authed = isAuthenticated();
+  const main = document.querySelector("main");
+  const nav = document.querySelector(".nav-bottom");
+  let gate = document.getElementById("auth-gate");
+
+  if (authed) {
+    if (main) main.style.display = "";
+    if (nav) nav.style.display = "";
+    if (gate) gate.style.display = "none";
+    return;
+  }
+
+  if (main) main.style.display = "none";
+  if (nav) nav.style.display = "none";
+  if (!gate) {
+    gate = document.createElement("div");
+    gate.id = "auth-gate";
+    gate.style.cssText =
+      "position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;" +
+      "padding:24px;background:linear-gradient(160deg,#e8f5e9 0%,#f1f8f4 100%);";
+    gate.innerHTML =
+      '<div style="background:#fff;border-radius:18px;box-shadow:0 10px 40px rgba(0,0,0,0.12);' +
+      'padding:36px 28px;max-width:360px;width:100%;text-align:center;">' +
+      '<div style="font-size:3.4em;line-height:1;">🍽️</div>' +
+      '<h1 style="margin:12px 0 4px;color:#2E7D32;font-size:1.6em;">MealFlow</h1>' +
+      '<p style="color:#666;margin:0 0 24px;font-size:0.95em;">Connectez-vous pour accéder à vos repas, recettes et courses.</p>' +
+      '<div id="auth-gate-btn-host" style="display:flex;justify-content:center;"></div>' +
+      "</div>";
+    document.body.appendChild(gate);
+  }
+  // Relocate the Google sign-in button into the gate card
+  const host = document.getElementById("auth-gate-btn-host");
+  const loginBtn = document.getElementById("google-login-btn");
+  if (host && loginBtn && loginBtn.parentElement !== host) {
+    loginBtn.style.display = "block";
+    host.appendChild(loginBtn);
+  }
+  gate.style.display = "flex";
 }
 
 function initGoogleAuth() {
@@ -94,6 +150,22 @@ function getAccessToken() {
 
 function isAuthenticated() {
   return !!getAccessToken();
+}
+
+/**
+ * Decode the connected Google account's email from the stored ID token (JWT).
+ * @returns {string|null} Lowercased email, or null if unavailable.
+ */
+function getConnectedEmail() {
+  const idToken = sessionStorage.getItem("googleIdToken");
+  if (!idToken) return null;
+  try {
+    const payload = idToken.split(".")[1];
+    const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+    return json.email ? json.email.toLowerCase() : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

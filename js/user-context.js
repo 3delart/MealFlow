@@ -15,10 +15,8 @@ const STORAGE_KEY = "mealflow_user";
  */
 function getCurrentUser() {
   const user = localStorage.getItem(STORAGE_KEY);
-  if (user && USERS.includes(user)) {
-    return user;
-  }
-  return DEFAULT_USER;
+  // Any non-empty stored user is valid (profiles are no longer limited to florian/naomi)
+  return user && user.trim() ? user : DEFAULT_USER;
 }
 
 /**
@@ -29,8 +27,8 @@ function getCurrentUser() {
  * @throws {Error} If user is not in USERS array
  */
 function setCurrentUser(user) {
-  if (!USERS.includes(user)) {
-    throw new Error(`Invalid user: ${user}. Must be one of: ${USERS.join(", ")}`);
+  if (!user || !user.toString().trim()) {
+    throw new Error("Invalid user: must be a non-empty id");
   }
   localStorage.setItem(STORAGE_KEY, user);
 
@@ -52,50 +50,11 @@ function toggleUser() {
 }
 
 /**
- * Initialize user toggle button in header
- * Creates a button that allows switching between users
- * Listens to userChanged events and updates button text
+ * Deprecated: profiles are account-driven now, so there is no manual user switcher.
+ * Kept as a no-op so existing callers don't break.
  */
 function initializeUserToggle() {
-  const header = document.querySelector("header");
-  if (!header) {
-    console.warn("UserContext: <header> element not found");
-    return;
-  }
-
-  // Create user toggle button
-  const button = document.createElement("button");
-  button.id = "user-toggle";
-  button.className = "user-toggle";
-
-  // Set initial button text
-  const currentUser = getCurrentUser();
-  const displayName = currentUser.charAt(0).toUpperCase() + currentUser.slice(1);
-  button.textContent = `👤 ${displayName}`;
-
-  // Add click handler to toggle user and reload page
-  button.addEventListener("click", function() {
-    toggleUser();
-    // Reload page to apply user-specific styles and data
-    location.reload();
-  });
-
-  // Append button to header
-  header.appendChild(button);
-
-  // Listen for userChanged events and update button text
-  document.addEventListener("userChanged", function(event) {
-    const user = event.detail.user;
-    const displayName = user.charAt(0).toUpperCase() + user.slice(1);
-    button.textContent = `👤 ${displayName}`;
-
-    // Update page background color based on user
-    if (user === "florian") {
-      document.body.style.backgroundColor = "var(--color-florian)";
-    } else if (user === "naomi") {
-      document.body.style.backgroundColor = "var(--color-naomi)";
-    }
-  });
+  /* no-op */
 }
 
 /**
@@ -111,11 +70,44 @@ function applyUserStyling() {
   }
 }
 
+/**
+ * Set the current user WITHOUT dispatching userChanged (no side effects/reload).
+ * Used during page init where a full render happens anyway.
+ */
+function setCurrentUserSilent(user) {
+  if (user && user.toString().trim()) {
+    localStorage.setItem(STORAGE_KEY, user);
+  }
+}
+
+/**
+ * Auto-select the current user by matching the connected Google account email
+ * against each profile's Email column. Persists silently (no reload/event).
+ * @param {Object.<string,Object>} profilesData - profiles keyed by user id
+ * @returns {boolean} true if the current user was changed
+ */
+function autoSelectProfileByEmail(profilesData) {
+  if (typeof getConnectedEmail !== "function" || !profilesData) return false;
+  const email = getConnectedEmail();
+  if (!email) return false;
+  const match = Object.keys(profilesData).find(u => {
+    const e = (profilesData[u].Email || "").toString().toLowerCase().trim();
+    return e && e === email;
+  });
+  if (match && getCurrentUser() !== match) {
+    localStorage.setItem(STORAGE_KEY, match);
+    return true;
+  }
+  return false;
+}
+
 // Export to window for use in other scripts
 window.UserContext = {
   getCurrentUser,
   setCurrentUser,
   toggleUser,
   initializeUserToggle,
-  applyUserStyling
+  applyUserStyling,
+  autoSelectProfileByEmail,
+  setCurrentUserSilent
 };

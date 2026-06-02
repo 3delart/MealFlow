@@ -246,14 +246,17 @@ async function initAccueilUI() {
 
 function renderGreeting() {
   const user = getCurrentUser();
-  if (user) {
-    document.getElementById('greeting').textContent = `Bonjour ${user}`;
+  const greetingEl = document.getElementById('greeting');
+  if (greetingEl && user) {
+    greetingEl.textContent = `Bonjour ${user}`;
   }
-  document.getElementById('date-today').textContent = Utils.formatDate(getTodayISO());
+  const dateEl = document.getElementById('date-today');
+  if (dateEl) dateEl.textContent = Utils.formatDate(getTodayISO());
 
   // Fill daily goal
-  if (window.dailyGoal) {
-    document.getElementById('calorie-objective').textContent = `Objectif: ${window.dailyGoal} kcal`;
+  const objEl = document.getElementById('calorie-objective');
+  if (objEl && window.dailyGoal) {
+    objEl.textContent = `Objectif: ${window.dailyGoal} kcal`;
   }
 }
 

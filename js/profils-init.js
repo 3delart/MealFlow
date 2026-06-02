@@ -84,6 +84,14 @@ function setupModalHandlers() {
 
     saveProfileData(userId, formData);
 
+    // Creating a profile makes it the current account's profile right away
+    if (mode === "new") {
+      window._ownProfileId = userId;
+      if (window.UserContext) {
+        try { window.UserContext.setCurrentUser(userId); } catch (_) { /* ignore */ }
+      }
+    }
+
     closeEditModal();
 
     const container = document.getElementById("profiles-container");
@@ -123,6 +131,18 @@ async function initializeProfiles() {
   } catch (err) {
     console.error("Profils: unexpected error during load:", err);
     useFallbackProfiles();
+  }
+
+  // Resolve which profile belongs to the connected account (by email) — drives edit rights.
+  window._ownProfileId = null;
+  const _email = (typeof getConnectedEmail === "function") ? getConnectedEmail() : null;
+  if (_email) {
+    const _match = Object.values(profilesData)
+      .find(p => (p.Email || "").toString().toLowerCase().trim() === _email);
+    if (_match) {
+      window._ownProfileId = (_match.User || "").toLowerCase().trim();
+      if (window.UserContext) window.UserContext.setCurrentUser(window._ownProfileId);
+    }
   }
 
   loadProfileOverrides();

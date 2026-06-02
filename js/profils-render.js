@@ -188,12 +188,16 @@ function renderProfileCard(userId) {
   const footer = document.createElement("div");
   footer.className = "profile-footer";
 
-  const editBtn = document.createElement("button");
-  editBtn.className = "btn-edit-profile";
-  editBtn.textContent = "✏️ Modifier";
-  editBtn.addEventListener("click", function() {
-    openEditModal(userId);
-  });
+  // Only the connected account's own profile (matched by email) is editable
+  if (userId === window._ownProfileId) {
+    const editBtn = document.createElement("button");
+    editBtn.className = "btn-edit-profile";
+    editBtn.textContent = "✏️ Modifier";
+    editBtn.addEventListener("click", function() {
+      openEditModal(userId);
+    });
+    footer.appendChild(editBtn);
+  }
 
   const histBtn = document.createElement("button");
   histBtn.className = "btn-profile-action";
@@ -205,7 +209,6 @@ function renderProfileCard(userId) {
   statsBtn.textContent = "📊 Stats";
   statsBtn.addEventListener("click", () => openStatsModal(userId));
 
-  footer.appendChild(editBtn);
   footer.appendChild(histBtn);
   footer.appendChild(statsBtn);
   card.appendChild(footer);

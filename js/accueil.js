@@ -338,6 +338,38 @@ function getCurrentUser() {
 /**
  * Loads the daily calorie goal from Profils tab for current user.
  */
+/** Cache of Profils sheet objects to avoid re-reading within one init. */
+let _profilsObjects = null;
+/** True when the connected account has no matching profile (don't show someone else's). */
+let _accountProfileMissing = false;
+
+/**
+ * Pick the active user from the connected Google account's email (Profils.Email column),
+ * before any rendering. If the account matches no profile, flag it so we don't show
+ * another user's data.
+ */
+async function autoDetectUserFromAccount() {
+  if (!window.SheetsAPI) return;
+  _accountProfileMissing = false;
+  try {
+    const rows = await window.SheetsAPI.readSheetTab("Profils");
+    _profilsObjects = window.SheetsAPI.rowsToObjects(rows);
+    const email = (typeof getConnectedEmail === "function") ? getConnectedEmail() : null;
+    if (!email) return; // no email → keep stored user
+    const match = _profilsObjects.find(
+      o => (o.Email || "").toString().toLowerCase().trim() === email
+    );
+    if (match) {
+      const u = (match.User || "").toLowerCase().trim();
+      if (u && window.UserContext) window.UserContext.setCurrentUserSilent(u);
+    } else {
+      _accountProfileMissing = true;
+    }
+  } catch (err) {
+    console.warn("Accueil: auto-detect user from account failed:", err);
+  }
+}
+
 async function loadDailyGoal() {
   if (!window.SheetsAPI) {
     console.warn("Accueil: SheetsAPI not available");
@@ -345,8 +377,8 @@ async function loadDailyGoal() {
   }
 
   try {
-    const rows = await window.SheetsAPI.readSheetTab("Profils");
-    const objects = window.SheetsAPI.rowsToObjects(rows);
+    const objects = _profilsObjects
+      || window.SheetsAPI.rowsToObjects(await window.SheetsAPI.readSheetTab("Profils"));
 
     const user = getCurrentUser();
 
@@ -503,8 +535,10 @@ async function loadTodaysConsumptions() {
 
     renderWheel();
   } catch (err) {
-    console.error(`Accueil: Could not load History tab:`, err.message);
-    throw err;
+    // A missing/unreadable History sheet (e.g. brand-new user) is not fatal — treat as empty.
+    console.warn(`Accueil: History tab unavailable, treating as empty:`, err.message);
+    todaysConsumptions = [];
+    caloriesConsumed = 0;
   }
 }
 
@@ -548,12 +582,11 @@ async function ensureHistorySheetExists(user, token) {
     // Attempt to read the sheet to check if it exists
     await readSheetTab(sheetName);
   } catch (error) {
-    // Sheet doesn't exist, create it with header row
-
+    // Sheet doesn't exist → create the tab (addSheet) with a header row
     const headerRow = ["Date", "Heure", "Nom", "Quantité", "Unité", "Kcal_total", "Type"];
 
     try {
-      await appendRowWithToken(sheetName, headerRow, token);
+      await window.SheetsAPI.createSheetTab(sheetName, headerRow, token);
     } catch (appendError) {
       console.error(`Accueil: Failed to create history sheet "${sheetName}":`, appendError);
       // Don't throw - user can still use app, just won't sync to Sheets
@@ -562,8 +595,10 @@ async function ensureHistorySheetExists(user, token) {
 }
 
 function showSheetsError(err) {
-  document.body.innerHTML = `
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;font-family:sans-serif;padding:24px;text-align:center;">
+  // Replace only the main content (keep the header + login button so the user isn't locked out)
+  const target = document.querySelector("main") || document.body;
+  target.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px;font-family:sans-serif;padding:24px;text-align:center;">
       <p style="font-size:1.2em;color:#c62828;">⚠️ Connexion au sheet impossible</p>
       <p style="color:#666;font-size:0.9em;">${Utils.escapeHTML((err && err.message) || 'Vérifiez votre connexion et réessayez.')}</p>
       <button onclick="location.reload()" style="padding:10px 24px;background:#2E7D32;color:white;border:none;border-radius:8px;cursor:pointer;font-size:1em;">Réessayer</button>
@@ -572,6 +607,13 @@ function showSheetsError(err) {
 
 async function initAccueil() {
   lastDateChecked = getTodayISO();
+  // Not logged in → the auth gate (google-auth.js) shows the login screen; don't load data.
+  if (typeof isAuthenticated === "function" && !isAuthenticated()) return;
+  await autoDetectUserFromAccount();  // match connected Google account → profile
+  if (_accountProfileMissing) {
+    window.location.replace("profils.html");
+    return;
+  }
   currentUser = window.UserContext ? window.UserContext.getCurrentUser() : "florian";
 
   // Apply user-specific styling
@@ -777,23 +819,8 @@ async function deductPastMeals() {
    EVENT LISTENERS
    ============================================================================ */
 
-document.addEventListener("userChanged", function () {
-  // Reset meals state and reload for new user
-  caloriesConsumed = 0;
-  todaysMeals.forEach(m => {
-    m.eaten = false;
-    m.actualKcal = null;
-  });
-
-  // Load the new user's meals state
-  loadMealsState();
-
-  // Update UI
-  renderGreeting();
-  renderMeals();
-  updateProgressDisplay();
-  renderWheel();
-});
+// User switch reloads the page (see UserContext.initializeUserToggle), so a full
+// re-init handles the new user — no in-place userChanged handler needed here.
 
 // Check for midnight rollover every minute
 setInterval(checkDateChange, 60 * 1000);

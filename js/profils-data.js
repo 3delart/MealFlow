@@ -98,7 +98,10 @@ function saveProfileData(userId, formData) {
     Cuisines_JSON: JSON.stringify(cuisines),
     Allergies_JSON: JSON.stringify(allergies),
     Aversions_JSON: JSON.stringify(aversions),
-    Calories_cible: formData["Calories_cible"]
+    Calories_cible: formData["Calories_cible"],
+    // The person saving is the connected account → capture/refresh their email
+    Email: (typeof getConnectedEmail === "function" ? getConnectedEmail() : null)
+      || (profilesData[userId] && profilesData[userId].Email) || ""
   };
 
   profilesData[userId] = updatedProfile;
@@ -107,6 +110,18 @@ function saveProfileData(userId, formData) {
   if (typeof isAuthenticated === "function" && isAuthenticated()) {
     syncProfileToSheets(userId, updatedProfile);
   }
+}
+
+/** Convert a 0-based column index to its A1 letter (0→A, 25→Z, 26→AA). */
+function _colLetter(index) {
+  let s = "";
+  let i = index + 1;
+  while (i > 0) {
+    const m = (i - 1) % 26;
+    s = String.fromCharCode(65 + m) + s;
+    i = Math.floor((i - 1) / 26);
+  }
+  return s;
 }
 
 async function syncProfileToSheets(userId, profile) {
@@ -169,6 +184,30 @@ async function syncProfileToSheets(userId, profile) {
       ];
 
       await window.SheetsAPI.appendRowWithToken("Profils", row, token);
+    }
+
+    // Ensure the consumption-history tab exists for this user (new or existing).
+    // createSheetTab is a no-op if the tab already exists.
+    if (window.SheetsAPI.createSheetTab) {
+      try {
+        await window.SheetsAPI.createSheetTab(
+          `History_${userId}`,
+          ["Date", "Heure", "Nom", "Quantité", "Unité", "Kcal_total", "Type"],
+          token
+        );
+      } catch (e) {
+        console.warn("Profils: could not create history tab:", e);
+      }
+    }
+
+    // Write the email to its column (located by header name, robust to column position)
+    if (profile.Email) {
+      const header = existingRows[0] || [];
+      const emailIdx = header.findIndex(h => (h || "").toString().trim().toLowerCase() === "email");
+      if (emailIdx >= 0) {
+        const rowNum = existingProfile ? (objects.indexOf(existingProfile) + 2) : (objects.length + 2);
+        await window.SheetsAPI.updateSheetCell(`Profils!${_colLetter(emailIdx)}${rowNum}`, profile.Email, token);
+      }
     }
   } catch (err) {
     console.error("Profils: Failed to sync to Sheets:", err);

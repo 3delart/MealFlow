@@ -423,6 +423,43 @@ async function deleteSheetRows(tabName, rowNumbers, accessToken) {
   }
 }
 
+/**
+ * Create a new tab (sheet) in the spreadsheet and optionally write a header row.
+ * No-op if the tab already exists. (values:append cannot create a tab — addSheet can.)
+ * @param {string} tabName
+ * @param {Array} [headerRow] - optional header values written after creation
+ * @param {string} accessToken
+ */
+async function createSheetTab(tabName, headerRow, accessToken) {
+  const spreadsheetId = getSheetId();
+  const token = accessToken || (typeof getAccessToken === 'function' ? getAccessToken() : null);
+  if (!token) throw new Error("No access token for createSheetTab");
+
+  const resp = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: [{ addSheet: { properties: { title: tabName } } }] })
+    }
+  );
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    const msg = (err.error && err.error.message) || resp.statusText;
+    if (/already exists/i.test(msg)) return; // tab present already — nothing to do
+    if (resp.status === 401 && typeof handleAuthError === 'function') {
+      handleAuthError("Token expired - please re-login");
+      throw new Error("AUTH_EXPIRED");
+    }
+    throw new Error(`createSheetTab failed: ${msg}`);
+  }
+
+  if (headerRow && headerRow.length) {
+    await appendRowWithToken(tabName, headerRow, token);
+  }
+}
+
 // Export all functions to the window object so they can be used globally (in browser)
 if (typeof window !== 'undefined') {
   window.SheetsAPI = {
@@ -437,7 +474,8 @@ if (typeof window !== 'undefined') {
     batchUpdateRange,
     batchUpdateCells,
     deleteSheetRow,
-    deleteSheetRows
+    deleteSheetRows,
+    createSheetTab
   };
 }
 
