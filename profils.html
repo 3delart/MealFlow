@@ -175,12 +175,17 @@
         <fieldset>
           <legend>Restrictions alimentaires</legend>
           <div class="form-group">
-            <label for="field-allergies">Allergies (virgule-séparées)</label>
-            <input type="text" id="field-allergies" name="Allergies_JSON" placeholder="ex. Saumon, Kiwi">
+            <label>Allergies</label>
+            <div id="allergies-checkboxes" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
           </div>
           <div class="form-group">
-            <label for="field-aversions">Aversions (virgule-séparées)</label>
-            <input type="text" id="field-aversions" name="Aversions_JSON" placeholder="ex. Olives, Champignons">
+            <label for="aversion-search">Aversions <span style="color:#999;font-weight:normal;">(produits de l'inventaire)</span></label>
+            <div style="position:relative;">
+              <input type="text" id="aversion-search" autocomplete="off" placeholder="Rechercher un produit…"
+                style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:4px;box-sizing:border-box;">
+              <div id="aversion-dropdown" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:4px;max-height:160px;overflow-y:auto;z-index:300;display:none;margin-top:2px;"></div>
+            </div>
+            <div id="aversion-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
           </div>
         </fieldset>
 
@@ -223,6 +228,8 @@
   <script src="js/google-auth.js"></script>
   <script src="js/sheets-api.js"></script>
   <script src="js/utils.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/inventory-data.js"></script>
   <script src="js/profils-data.js"></script>
   <script src="js/profils-calc.js"></script>
   <script src="js/profils-render.js"></script>

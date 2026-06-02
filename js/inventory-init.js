@@ -23,6 +23,43 @@ function searchProducts(query) {
     .slice(0, 10);
 }
 
+// ============================================================================
+// Diet tag checkboxes (per-product classification)
+// ============================================================================
+
+/** Render diet concept checkboxes from config into a container. */
+function renderDietCheckboxes(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container || !window.FoodConfig) return;
+  container.innerHTML = "";
+  window.FoodConfig.DIET_CONCEPTS.forEach(({ key, label }) => {
+    const id = `${containerId}-${key}`;
+    const wrap = document.createElement("label");
+    wrap.style.cssText = "display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;font-weight:normal;";
+    wrap.innerHTML = `<input type="checkbox" value="${key}" id="${id}"> ${label}`;
+    container.appendChild(wrap);
+  });
+}
+
+/** Read the checked diet concepts from a container. */
+function getCheckedDietTags(containerId) {
+  return Array.from(document.querySelectorAll(`#${containerId} input[type="checkbox"]:checked`))
+    .map(cb => cb.value);
+}
+
+/** Set the checked diet concepts in a container. */
+function setCheckedDietTags(containerId, concepts) {
+  const set = new Set(concepts || []);
+  document.querySelectorAll(`#${containerId} input[type="checkbox"]`)
+    .forEach(cb => { cb.checked = set.has(cb.value); });
+}
+
+/** Auto-prefill diet checkboxes from product name/allergens/category. */
+function prefillDietTags(containerId, name, allergens, category) {
+  if (!window.FoodConfig) return;
+  setCheckedDietTags(containerId, window.FoodConfig.suggestDietConcepts(name, allergens, category));
+}
+
 function setupProductAutocomplete() {
   const productInput = document.getElementById("field-product-name");
   const suggestionsDiv = document.getElementById("product-suggestions");
@@ -161,7 +198,8 @@ function setupEventHandlers() {
         expiry_date: document.getElementById("field-expiry").value,
         price: document.getElementById("field-price").value || "",
         calories_per_100: document.getElementById("field-calories").value || null,
-        cooking_factor: parseFloat(document.getElementById("field-cooking-factor").value) || 1.0
+        cooking_factor: parseFloat(document.getElementById("field-cooking-factor").value) || 1.0,
+        diet_tags: getCheckedDietTags("diet-tags-add")
       };
 
       if (!formData.product_name || formData.quantity === "" || !formData.unit || !formData.category) {
@@ -200,12 +238,30 @@ function setupEventHandlers() {
     });
   }
 
+  // Diet-tag checkboxes (add form): render + auto-prefill from name/category
+  renderDietCheckboxes("diet-tags-add");
+  const fieldProductName = document.getElementById("field-product-name");
+  const refillAddDietTags = () => prefillDietTags(
+    "diet-tags-add",
+    fieldProductName ? fieldProductName.value : "",
+    "",
+    document.getElementById("field-category")?.value || ""
+  );
+  if (fieldProductName) {
+    let _dietDebounce = null;
+    fieldProductName.addEventListener("input", () => {
+      clearTimeout(_dietDebounce);
+      _dietDebounce = setTimeout(refillAddDietTags, 400);
+    });
+  }
+
   // Update expiry date when category or date-added changes (add form)
   const fieldCategory = document.getElementById("field-category");
   const fieldDateAdded = document.getElementById("field-date-added");
   if (fieldCategory) {
     fieldCategory.addEventListener("change", () => {
       updateExpiryDateFromCategory("field-date-added", "field-category", "field-expiry");
+      refillAddDietTags();
     });
   }
   if (fieldDateAdded) {

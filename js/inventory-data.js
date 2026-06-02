@@ -42,7 +42,8 @@ async function loadInventory() {
         carbs: parseFloat(row["Carbs"]) || 0,
         allergens: row["Allergens"] || "",
         Conversion_factor: row["Conversion_factor"] || "",
-        cooking_factor: parseFloat((row["Cooking_factor"] || "1").toString().replace(",", ".")) || 1.0
+        cooking_factor: parseFloat((row["Cooking_factor"] || "1").toString().replace(",", ".")) || 1.0,
+        dietTags: (row["Diet_tags"] || "").split(",").map(s => s.trim()).filter(Boolean)
       }));
       const { orphanRows, survivors } = mergeDuplicatesByBarcode();
       window.inventoryData = inventoryData;
@@ -224,7 +225,8 @@ async function addItem(item) {
     proteins: scannedProductData?.proteins || null,
     fats: scannedProductData?.fats || null,
     carbs: scannedProductData?.carbs || null,
-    allergens: scannedProductData?.allergens || "—"
+    allergens: scannedProductData?.allergens || "—",
+    dietTags: Array.isArray(item.diet_tags) ? item.diet_tags : []
   };
 
   inventoryData.push(newItem);
@@ -247,7 +249,8 @@ async function addItem(item) {
       newItem.fats,
       newItem.carbs,
       newItem.allergens,
-      newItem.cooking_factor || 1.0
+      newItem.cooking_factor || 1.0,
+      (newItem.dietTags || []).join(",")
     ];
 
     // Append at the bottom (no sheet-side sort: rows stay stable so sheetRowNumbers

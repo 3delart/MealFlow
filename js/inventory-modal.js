@@ -14,6 +14,10 @@ function openEditModal(item) {
   document.getElementById("edit-calories").value = item.calories_per_100 || item.Calories_per_100 || "";
   document.getElementById("edit-conversion").value = item.Conversion_factor || item.conversion_factor || "";
   document.getElementById("edit-cooking-factor").value = item.cooking_factor || 1.0;
+  if (typeof renderDietCheckboxes === "function") {
+    renderDietCheckboxes("diet-tags-edit");
+    setCheckedDietTags("diet-tags-edit", item.dietTags || []);
+  }
   modal.setAttribute("aria-hidden", "false");
   modal.classList.remove("hidden");
   modal.setAttribute("data-item-id", item.id);
@@ -50,7 +54,8 @@ async function saveEditedItem(e) {
     Prix: priceValue.toString().replace(".", ","),
     Calories_per_100: caloriesValue ? parseFloat(caloriesValue) : item.Calories_per_100,
     Conversion_factor: conversionValue || item.Conversion_factor || "",
-    cooking_factor: parseFloat(document.getElementById("edit-cooking-factor").value) || 1.0
+    cooking_factor: parseFloat(document.getElementById("edit-cooking-factor").value) || 1.0,
+    dietTags: typeof getCheckedDietTags === "function" ? getCheckedDietTags("diet-tags-edit") : (item.dietTags || [])
   };
 
   // Clear dates if quantity reaches 0
@@ -77,6 +82,7 @@ async function saveEditedItem(e) {
       await SheetsAPI.updateSheetCell(`Inventory!I${item.sheetRowNumber}`, item.Prix, token);
       await SheetsAPI.updateSheetCell(`Inventory!J${item.sheetRowNumber}`, item.Calories_per_100 || "", token);
       await SheetsAPI.updateSheetCell(`Inventory!O${item.sheetRowNumber}`, item.cooking_factor || 1.0, token);
+      await SheetsAPI.updateSheetCell(`Inventory!P${item.sheetRowNumber}`, (item.dietTags || []).join(","), token);
     } catch (err) {
       console.error("Failed to update Sheets:", err);
     }

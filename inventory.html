@@ -101,6 +101,11 @@
           <input type="number" id="field-conversion" name="conversion_factor" min="0" step="0.1" placeholder="ex. 200">
         </div>
 
+        <div class="form-group">
+          <label>Tags régime <span style="color:#999;font-weight:normal;">(pré-cochés auto, ajuste si besoin)</span></label>
+          <div id="diet-tags-add" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+        </div>
+
         <div id="product-info" class="product-info" style="display:none;">
           <div class="info-item">
             <span class="info-label">Calories (100g)</span>
@@ -222,6 +227,11 @@
         <div class="form-group">
           <label for="edit-conversion">Conversion (1 pièce = ? g)</label>
           <input type="number" id="edit-conversion" step="0.1" min="0" placeholder="ex. 200">
+        </div>
+
+        <div class="form-group">
+          <label>Tags régime</label>
+          <div id="diet-tags-edit" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
         </div>
 
         <div class="modal-actions">

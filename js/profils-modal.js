@@ -6,6 +6,8 @@ function openNewProfileModal() {
   form.dataset.mode = "new";
 
   document.querySelectorAll('input[name="cuisine-checkbox"]').forEach(cb => cb.checked = false);
+  if (typeof renderAllergyCheckboxes === "function") renderAllergyCheckboxes([]);
+  if (typeof setAversions === "function") setAversions([]);
 
   const premomGroup = document.getElementById("field-prenom-group");
   if (premomGroup) premomGroup.style.display = "block";
@@ -54,10 +56,10 @@ function openEditModal(userId) {
   });
 
   const allergies = parseArrayField(profile["Allergies_JSON"]);
-  document.getElementById("field-allergies").value = allergies.join(", ");
+  if (typeof renderAllergyCheckboxes === "function") renderAllergyCheckboxes(allergies);
 
   const aversions = parseArrayField(profile["Aversions_JSON"]);
-  document.getElementById("field-aversions").value = aversions.join(", ");
+  if (typeof setAversions === "function") setAversions(aversions);
 
   form.dataset.userId = userId;
   form.dataset.mode = "edit";
