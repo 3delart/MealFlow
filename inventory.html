@@ -70,28 +70,6 @@
           <label for="field-category">Catégorie</label>
           <select id="field-category" name="category" required>
             <option value="">— Sélectionner —</option>
-            <option value="Fruits">Fruits</option>
-            <option value="Légumes">Légumes</option>
-            <option value="Produits laitiers">Produits laitiers</option>
-            <option value="Viandes">Viandes</option>
-            <option value="Poissons">Poissons</option>
-            <option value="Œufs">Œufs</option>
-            <option value="Féculents">Féculents</option>
-            <option value="Fromage">Fromage</option>
-            <option value="Conserves">Conserves</option>
-            <option value="Épices & Condiments">Épices & Condiments</option>
-            <option value="Sauces">Sauces</option>
-            <option value="Boissons">Boissons</option>
-            <option value="Alcool">Alcool</option>
-            <option value="Boulangerie & Viennoiserie">Boulangerie & Viennoiserie</option>
-            <option value="Pâtisserie">Pâtisserie</option>
-            <option value="Goûter">Goûter</option>
-            <option value="Surgelés">Surgelés</option>
-            <option value="Apéro">Apéro</option>
-            <option value="Vegan">Vegan</option>
-            <option value="Bio">Bio</option>
-            <option value="Salle de bain">Salle de bain</option>
-            <option value="Autres">Autres</option>
           </select>
         </div>
 
@@ -194,28 +172,6 @@
           <label for="edit-category">Catégorie</label>
           <select id="edit-category" required>
             <option value="">— Sélectionner —</option>
-            <option value="Fruits">Fruits</option>
-            <option value="Légumes">Légumes</option>
-            <option value="Produits laitiers">Produits laitiers</option>
-            <option value="Viandes">Viandes</option>
-            <option value="Poissons">Poissons</option>
-            <option value="Œufs">Œufs</option>
-            <option value="Féculents">Féculents</option>
-            <option value="Fromage">Fromage</option>
-            <option value="Conserves">Conserves</option>
-            <option value="Épices & Condiments">Épices & Condiments</option>
-            <option value="Sauces">Sauces</option>
-            <option value="Boissons">Boissons</option>
-            <option value="Alcool">Alcool</option>
-            <option value="Boulangerie & Viennoiserie">Boulangerie & Viennoiserie</option>
-            <option value="Pâtisserie">Pâtisserie</option>
-            <option value="Goûter">Goûter</option>
-            <option value="Surgelés">Surgelés</option>
-            <option value="Apéro">Apéro</option>
-            <option value="Vegan">Vegan</option>
-            <option value="Bio">Bio</option>
-            <option value="Salle de bain">Salle de bain</option>
-            <option value="Autres">Autres</option>
           </select>
         </div>
 
@@ -306,6 +262,7 @@
   <script src="js/user-context.js"></script>
   <script src="js/google-auth.js"></script>
   <script src="js/sheets-api.js"></script>
+  <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/inventory-api.js"></script>
   <script src="js/inventory-data.js"></script>
@@ -313,5 +270,24 @@
   <script src="js/inventory-render.js"></script>
   <script src="js/inventory-modal.js"></script>
   <script src="js/inventory-init.js"></script>
+
+  <script>
+    // Populate category dropdowns from config
+    document.addEventListener("DOMContentLoaded", () => {
+      const categoryOptions = generateCategoryOptions();
+      const fieldCategorySelect = document.getElementById("field-category");
+      const editCategorySelect = document.getElementById("edit-category");
+
+      if (fieldCategorySelect) {
+        const existingOption = fieldCategorySelect.querySelector('option[value=""]');
+        fieldCategorySelect.innerHTML = '<option value="">— Sélectionner —</option>' + categoryOptions;
+      }
+
+      if (editCategorySelect) {
+        const existingOption = editCategorySelect.querySelector('option[value=""]');
+        editCategorySelect.innerHTML = '<option value="">— Sélectionner —</option>' + categoryOptions;
+      }
+    });
+  </script>
 </body>
 </html>

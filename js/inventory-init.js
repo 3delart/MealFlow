@@ -2,22 +2,6 @@
  * Inventory initialization and event handlers
  */
 
-const categoryExpiryDays = {
-  "Produits laitiers": 180,
-  "Lait": 180,
-  "Fromage": 30,
-  "Viandes": 3,
-  "Poissons": 2,
-  "Œufs": 21,
-  "Conserves": 365,
-  "Fruits": 14,
-  "Légumes": 21,
-  "Boissons": 365,
-  "Épices & Condiments": 365,
-  "Sauces": 365,
-  "Féculents": 180,
-  "Autres": 30
-};
 
 function updateExpiryDateFromCategory(dateAddedSelector, categorySelector, expirySelector) {
   const dateAddedEl = document.getElementById(dateAddedSelector);
@@ -30,7 +14,7 @@ function updateExpiryDateFromCategory(dateAddedSelector, categorySelector, expir
   if (isNaN(dateAdded.getTime())) return;
 
   const category = categoryEl.value || "Autres";
-  const days = categoryExpiryDays[category] || 30;
+  const days = getCategoryExpiryDays(category);
 
   const expiryDate = new Date(dateAdded);
   expiryDate.setDate(expiryDate.getDate() + days);
@@ -39,12 +23,8 @@ function updateExpiryDateFromCategory(dateAddedSelector, categorySelector, expir
 
 function setupEventHandlers() {
   const sheetCategories = [...new Set(inventoryData.map(i => i.Catégorie).filter(c => c))];
-  const autoCategories = [
-    "Féculents", "Fromage", "Produits laitiers", "Légumes", "Fruits",
-    "Viandes", "Poissons", "Œufs", "Conserves", "Épices & Condiments",
-    "Sauces", "Boissons"
-  ];
-  const categories = [...new Set([...sheetCategories, ...autoCategories])].sort();
+  const configCategories = getAllCategoryNames();
+  const categories = [...new Set([...sheetCategories, ...configCategories])].sort();
 
   const filterSelect = document.getElementById("filter-category");
   if (filterSelect) {
