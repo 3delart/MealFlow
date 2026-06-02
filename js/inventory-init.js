@@ -2,6 +2,77 @@
  * Inventory initialization and event handlers
  */
 
+function searchProducts(query) {
+  if (!query || query.length < 2) return [];
+  if (!inventoryData) return [];
+
+  const q = query.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return inventoryData
+    .filter(item => {
+      const prodName = (item.Produit || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      return prodName.includes(q);
+    })
+    .map(item => ({
+      name: item.Produit,
+      unit: item.Unité,
+      category: item.Catégorie,
+      calories: item.Calories_per_100,
+      conversionFactor: item.Conversion_factor
+    }))
+    .slice(0, 10);
+}
+
+function setupProductAutocomplete() {
+  const productInput = document.getElementById("field-product-name");
+  const suggestionsDiv = document.getElementById("product-suggestions");
+
+  if (!productInput || !suggestionsDiv) return;
+
+  let debounceTimer;
+  productInput.addEventListener("input", (e) => {
+    clearTimeout(debounceTimer);
+    const query = e.target.value;
+
+    debounceTimer = setTimeout(() => {
+      const matches = searchProducts(query);
+
+      if (matches.length > 0) {
+        suggestionsDiv.innerHTML = "";
+        matches.forEach(match => {
+          const item = document.createElement("div");
+          item.style.padding = "10px 12px";
+          item.style.cursor = "pointer";
+          item.style.borderBottom = "1px solid #eee";
+          item.style.fontSize = "14px";
+          item.textContent = match.name;
+
+          item.addEventListener("click", () => {
+            productInput.value = match.name;
+            if (match.unit) document.getElementById("field-unit").value = match.unit;
+            if (match.category) document.getElementById("field-category").value = match.category;
+            if (match.calories) document.getElementById("field-calories").value = match.calories;
+            if (match.conversionFactor) document.getElementById("field-conversion").value = match.conversionFactor;
+            suggestionsDiv.style.display = "none";
+          });
+
+          item.addEventListener("mouseover", () => item.style.backgroundColor = "#f5f5f5");
+          item.addEventListener("mouseout", () => item.style.backgroundColor = "transparent");
+
+          suggestionsDiv.appendChild(item);
+        });
+        suggestionsDiv.style.display = "block";
+      } else {
+        suggestionsDiv.style.display = "none";
+      }
+    }, 300);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".form-group")) {
+      suggestionsDiv.style.display = "none";
+    }
+  });
+}
 
 function updateExpiryDateFromCategory(dateAddedSelector, categorySelector, expirySelector) {
   const dateAddedEl = document.getElementById(dateAddedSelector);
@@ -158,6 +229,7 @@ async function initializeInventory() {
 
   await loadInventory();
   setupEventHandlers();
+  setupProductAutocomplete();
   renderInventory();
 }
 

@@ -44,9 +44,10 @@
     <section class="add-item-section" id="add-item-section" style="display:none;">
       <h2>Ajouter Article (Manuel)</h2>
       <form id="add-item-form" class="add-item-form">
-        <div class="form-group">
+        <div class="form-group" style="position: relative;">
           <label for="field-product-name">Produit</label>
-          <input type="text" id="field-product-name" name="product_name" required placeholder="ex. Tomates Cerises">
+          <input type="text" id="field-product-name" name="product_name" required placeholder="ex. Tomates Cerises" autocomplete="off">
+          <div id="product-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ddd; border-radius: 4px; max-height: 200px; overflow-y: auto; z-index: 10; display: none; margin-top: 2px;"></div>
         </div>
 
         <div class="form-row">
