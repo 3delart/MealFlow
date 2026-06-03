@@ -188,7 +188,7 @@ function renderProfileCard(userId) {
   const footer = document.createElement("div");
   footer.className = "profile-footer";
 
-  // Only the connected account's own profile (matched by email) is editable
+  // Only the connected account's own profile (matched by email) is editable / weighable
   if (userId === window._ownProfileId) {
     const editBtn = document.createElement("button");
     editBtn.className = "btn-edit-profile";
@@ -197,6 +197,12 @@ function renderProfileCard(userId) {
       openEditModal(userId);
     });
     footer.appendChild(editBtn);
+
+    const weighBtn = document.createElement("button");
+    weighBtn.className = "btn-profile-action";
+    weighBtn.textContent = "⚖️ Pesée";
+    weighBtn.addEventListener("click", () => openWeighModal(userId));
+    footer.appendChild(weighBtn);
   }
 
   const histBtn = document.createElement("button");
@@ -204,18 +210,12 @@ function renderProfileCard(userId) {
   histBtn.textContent = "📋 Historique";
   histBtn.addEventListener("click", () => openHistoryModal(userId));
 
-  const weighBtn = document.createElement("button");
-  weighBtn.className = "btn-profile-action";
-  weighBtn.textContent = "⚖️ Pesée";
-  weighBtn.addEventListener("click", () => openWeighModal(userId));
-
   const statsBtn = document.createElement("button");
   statsBtn.className = "btn-profile-action";
   statsBtn.textContent = "📊 Stats";
   statsBtn.addEventListener("click", () => openStatsModal(userId));
 
   footer.appendChild(histBtn);
-  footer.appendChild(weighBtn);
   footer.appendChild(statsBtn);
   card.appendChild(footer);
 

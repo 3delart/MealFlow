@@ -267,6 +267,21 @@ function renderCaloriesChart(userId, days) {
 const WEIGHT_ROW_TYPE = "poids";
 
 /**
+ * Normalize a sheet date string to ISO YYYY-MM-DD.
+ * Accepts ISO ("2026-05-24"...) and FR ("24/05/2026") formats.
+ * @param {string} s
+ * @returns {string}
+ */
+function normalizeDateISO(s) {
+  s = (s || "").trim();
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) return `${iso[1]}-${iso[2].padStart(2, "0")}-${iso[3].padStart(2, "0")}`;
+  const fr = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (fr) return `${fr[3]}-${fr[2].padStart(2, "0")}-${fr[1].padStart(2, "0")}`;
+  return s;
+}
+
+/**
  * Load the weight map {YYYY-MM-DD: kg} for a user from History_<user>.
  * @param {string} userId
  * @returns {Promise<Object>}
@@ -280,7 +295,7 @@ async function loadUserWeights(userId) {
     (rows || []).forEach(r => {
       if ((r[6] || "") === WEIGHT_ROW_TYPE && r[0]) {
         const kg = parseFloat(r[3]);
-        if (!isNaN(kg)) map[r[0]] = kg;
+        if (!isNaN(kg)) map[normalizeDateISO(r[0])] = kg;
       }
     });
     weightCache[userId] = map;
