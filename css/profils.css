@@ -634,3 +634,26 @@ main {
   color: white;
   border-color: var(--color-primary);
 }
+
+.stats-tabs {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.stats-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  background: var(--color-bg);
+  font-size: var(--font-size-small);
+  font-weight: 500;
+}
+
+.stats-tab.active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}

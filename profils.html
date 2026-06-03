@@ -48,11 +48,31 @@
     <div class="modal-dialog modal-wide">
       <button class="modal-close" onclick="closeStatsModal()">&times;</button>
       <h2 id="stats-modal-title">Statistiques</h2>
+      <div class="stats-tabs">
+        <button class="stats-tab active" data-tab="calories">🔥 Calories</button>
+        <button class="stats-tab" data-tab="poids">⚖️ Poids</button>
+      </div>
       <div class="chart-period-btns">
         <button class="period-btn active" data-days="7">7j</button>
         <button class="period-btn" data-days="30">30j</button>
+        <button class="period-btn" data-days="365">365j</button>
       </div>
       <canvas id="chart-calories" height="200"></canvas>
+      <canvas id="chart-poids" height="200" style="display:none;"></canvas>
+    </div>
+  </div>
+
+  <!-- Modal Pesée -->
+  <div id="modal-weigh" class="modal-overlay">
+    <div class="modal-dialog">
+      <button class="modal-close" onclick="closeWeighModal()">&times;</button>
+      <h2 id="weigh-modal-title">Pesée</h2>
+      <p style="color:var(--color-text-light);">Poids du matin à jeun.</p>
+      <div class="form-group">
+        <label for="field-weigh">Poids (kg)</label>
+        <input type="number" id="field-weigh" step="0.1" min="0">
+      </div>
+      <button id="btn-save-weigh" class="btn-primary">Valider</button>
     </div>
   </div>
 

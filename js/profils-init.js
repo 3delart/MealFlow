@@ -300,4 +300,7 @@ document.addEventListener("DOMContentLoaded", function() {
   renderAllergyCheckboxes([]);
   initAversionSearch();
   initializeProfiles();
+
+  const saveWeighBtn = document.getElementById("btn-save-weigh");
+  if (saveWeighBtn) saveWeighBtn.addEventListener("click", saveWeight);
 });

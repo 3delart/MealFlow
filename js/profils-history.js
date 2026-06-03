@@ -3,9 +3,13 @@
  */
 
 let historyCache = {};
+let weightCache = {};
 let activeCharts = {};
 let currentStatsUser = null;
 let currentStatsPeriod = 7;
+let currentStatsTab = "calories";
+let currentWeighUser = null;
+let statsHandlersBound = false;
 
 async function loadUserHistory(userId) {
   if (historyCache[userId]) return historyCache[userId];
@@ -101,25 +105,64 @@ function renderHistoryContent(history) {
   });
 }
 
+function bindStatsHandlers() {
+  if (statsHandlersBound) return;
+  statsHandlersBound = true;
+
+  document.querySelectorAll(".period-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const days = parseInt(btn.dataset.days);
+      document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentStatsPeriod = days;
+      renderActiveStatsChart();
+    });
+  });
+
+  document.querySelectorAll(".stats-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      const name = tab.dataset.tab;
+      document.querySelectorAll(".stats-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      currentStatsTab = name;
+
+      const calCanvas = document.getElementById("chart-calories");
+      const poidsCanvas = document.getElementById("chart-poids");
+      calCanvas.style.display = name === "calories" ? "" : "none";
+      poidsCanvas.style.display = name === "poids" ? "" : "none";
+
+      renderActiveStatsChart();
+    });
+  });
+}
+
+function renderActiveStatsChart() {
+  if (currentStatsTab === "poids") {
+    destroyChart("chart-poids");
+    renderWeightChart(currentStatsUser, currentStatsPeriod);
+  } else {
+    destroyChart("chart-calories");
+    renderCaloriesChart(currentStatsUser, currentStatsPeriod);
+  }
+}
+
 function openStatsModal(userId) {
   currentStatsUser = userId;
+  currentStatsTab = "calories";
+  currentStatsPeriod = 7;
   document.getElementById("modal-stats").classList.add("open");
   document.getElementById("stats-modal-title").textContent = `Statistiques — ${profilesData[userId]?.Prénom || userId}`;
 
-  loadUserHistory(userId).then(history => {
-    renderCaloriesChart(userId, 7);
+  // Reset tab + period button states
+  document.querySelectorAll(".stats-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === "calories"));
+  document.querySelectorAll(".period-btn").forEach(b => b.classList.toggle("active", b.dataset.days === "7"));
+  document.getElementById("chart-calories").style.display = "";
+  document.getElementById("chart-poids").style.display = "none";
 
-    document.querySelectorAll(".period-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const days = parseInt(btn.dataset.days);
-        document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
+  bindStatsHandlers();
 
-        currentStatsPeriod = days;
-        destroyChart("chart-calories");
-        renderCaloriesChart(currentStatsUser, days);
-      });
-    });
+  loadUserHistory(userId).then(() => {
+    renderCaloriesChart(userId, currentStatsPeriod);
   });
 }
 
@@ -208,6 +251,187 @@ function renderCaloriesChart(userId, days) {
         scales: {
           y: {
             beginAtZero: true
+          }
+        }
+      }
+    });
+  });
+}
+
+// ============================================================================
+// Pesée (weight tracking) — stored as a single JSON row in History_<user>
+// Row: ["", "", <JSON {date: poids}>, "", "kg", 0, "poids"]
+// Empty Date keeps it out of the calorie history/chart (loadUserHistory filter).
+// ============================================================================
+
+const WEIGHT_ROW_TYPE = "poids";
+
+/**
+ * Load the weight map {YYYY-MM-DD: kg} for a user from History_<user>.
+ * @param {string} userId
+ * @returns {Promise<Object>}
+ */
+async function loadUserWeights(userId) {
+  if (weightCache[userId]) return weightCache[userId];
+
+  try {
+    const rows = await SheetsAPI.readSheetTab(`History_${userId}`);
+    const row = (rows || []).find(r => (r[6] || "") === WEIGHT_ROW_TYPE);
+    let map = {};
+    if (row && row[2]) {
+      try { map = JSON.parse(row[2]) || {}; } catch (_) { map = {}; }
+    }
+    weightCache[userId] = map;
+    return map;
+  } catch (err) {
+    console.error(`Failed to load weights for ${userId}:`, err);
+    return {};
+  }
+}
+
+function openWeighModal(userId) {
+  currentWeighUser = userId;
+  document.getElementById("modal-weigh").classList.add("open");
+  document.getElementById("weigh-modal-title").textContent = `Pesée — ${profilesData[userId]?.Prénom || userId}`;
+
+  const input = document.getElementById("field-weigh");
+  input.value = "";
+
+  // Pre-fill with most recent known weight, else profile Poids_kg
+  loadUserWeights(userId).then(map => {
+    const dates = Object.keys(map).sort();
+    if (dates.length > 0) {
+      input.value = map[dates[dates.length - 1]];
+    } else if (profilesData[userId]?.Poids_kg) {
+      input.value = profilesData[userId].Poids_kg;
+    }
+    input.focus();
+    input.select();
+  });
+}
+
+function closeWeighModal() {
+  document.getElementById("modal-weigh").classList.remove("open");
+  currentWeighUser = null;
+}
+
+async function saveWeight() {
+  const userId = currentWeighUser;
+  if (!userId) return;
+
+  const input = document.getElementById("field-weigh");
+  const value = parseFloat(input.value);
+  if (!value || value <= 0) {
+    alert("Veuillez entrer un poids valide.");
+    return;
+  }
+
+  const token = window.getAccessToken ? window.getAccessToken() : null;
+  if (!token) {
+    alert("Connexion Google requise pour enregistrer la pesée.");
+    return;
+  }
+
+  const btn = document.getElementById("btn-save-weigh");
+  btn.disabled = true;
+
+  try {
+    const tabName = `History_${userId}`;
+
+    // Ensure the history sheet exists (create with header if missing)
+    let rows;
+    try {
+      rows = await SheetsAPI.readSheetTab(tabName);
+    } catch (_) {
+      await SheetsAPI.createSheetTab(tabName, ["Date", "Heure", "Nom", "Quantité", "Unité", "Kcal_total", "Type"], token);
+      rows = await SheetsAPI.readSheetTab(tabName);
+    }
+
+    // Locate the existing weight row (1-based index for the A1 range)
+    let weightRowNum = 0;
+    let map = {};
+    (rows || []).forEach((r, idx) => {
+      if ((r[6] || "") === WEIGHT_ROW_TYPE) {
+        weightRowNum = idx + 1;
+        if (r[2]) {
+          try { map = JSON.parse(r[2]) || {}; } catch (_) { map = {}; }
+        }
+      }
+    });
+
+    map[Utils.getDateISO(0)] = value;
+    const newRow = ["", "", JSON.stringify(map), "", "kg", 0, WEIGHT_ROW_TYPE];
+
+    if (weightRowNum > 0) {
+      await SheetsAPI.batchUpdateRange(`${tabName}!A${weightRowNum}:G${weightRowNum}`, [newRow], token);
+    } else {
+      await SheetsAPI.appendRowWithToken(tabName, newRow, token);
+    }
+
+    weightCache[userId] = map;
+    closeWeighModal();
+
+    // Refresh weight chart if Stats modal is open on the weight tab for this user
+    if (currentStatsUser === userId &&
+        document.getElementById("modal-stats").classList.contains("open") &&
+        currentStatsTab === "poids") {
+      destroyChart("chart-poids");
+      renderWeightChart(userId, currentStatsPeriod);
+    }
+
+    if (window.Toast) Toast.success("Pesée enregistrée ✓");
+  } catch (err) {
+    console.error("Failed to save weight:", err);
+    alert("La pesée n'a pas pu être enregistrée.");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderWeightChart(userId, days) {
+  loadUserWeights(userId).then(weights => {
+    const today = new Date();
+    const labels = [];
+    const data = [];
+
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      labels.push(new Date(dateStr + "T00:00:00").toLocaleDateString("fr-FR", { month: "short", day: "numeric" }));
+      data.push(weights.hasOwnProperty(dateStr) ? weights[dateStr] : null);
+    }
+
+    const ctx = document.getElementById("chart-poids").getContext("2d");
+    destroyChart("chart-poids");
+
+    activeCharts["chart-poids"] = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Poids (kg)",
+            data: data,
+            borderColor: "var(--color-primary)",
+            backgroundColor: "rgba(46, 125, 50, 0.1)",
+            tension: 0.4,
+            fill: true,
+            spanGaps: true,
+            pointRadius: 4,
+            pointBackgroundColor: "var(--color-primary)"
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: true, position: "top" }
+        },
+        scales: {
+          y: {
+            beginAtZero: false
           }
         }
       }

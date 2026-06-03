@@ -204,12 +204,18 @@ function renderProfileCard(userId) {
   histBtn.textContent = "📋 Historique";
   histBtn.addEventListener("click", () => openHistoryModal(userId));
 
+  const weighBtn = document.createElement("button");
+  weighBtn.className = "btn-profile-action";
+  weighBtn.textContent = "⚖️ Pesée";
+  weighBtn.addEventListener("click", () => openWeighModal(userId));
+
   const statsBtn = document.createElement("button");
   statsBtn.className = "btn-profile-action";
   statsBtn.textContent = "📊 Stats";
   statsBtn.addEventListener("click", () => openStatsModal(userId));
 
   footer.appendChild(histBtn);
+  footer.appendChild(weighBtn);
   footer.appendChild(statsBtn);
   card.appendChild(footer);
 
