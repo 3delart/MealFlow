@@ -259,9 +259,9 @@ function renderCaloriesChart(userId, days) {
 }
 
 // ============================================================================
-// Pesée (weight tracking) — stored as a single JSON row in History_<user>
-// Row: ["", "", <JSON {date: poids}>, "", "kg", 0, "poids"]
-// Empty Date keeps it out of the calorie history/chart (loadUserHistory filter).
+// Pesée (weight tracking) — one row per weigh-in in History_<user>
+// Row: [Date, Heure, "Pesée", poids, "kg", 0, "poids"]
+// Re-weighing the same day updates that day's row (no duplicate).
 // ============================================================================
 
 const WEIGHT_ROW_TYPE = "poids";
@@ -276,11 +276,13 @@ async function loadUserWeights(userId) {
 
   try {
     const rows = await SheetsAPI.readSheetTab(`History_${userId}`);
-    const row = (rows || []).find(r => (r[6] || "") === WEIGHT_ROW_TYPE);
-    let map = {};
-    if (row && row[2]) {
-      try { map = JSON.parse(row[2]) || {}; } catch (_) { map = {}; }
-    }
+    const map = {};
+    (rows || []).forEach(r => {
+      if ((r[6] || "") === WEIGHT_ROW_TYPE && r[0]) {
+        const kg = parseFloat(r[3]);
+        if (!isNaN(kg)) map[r[0]] = kg;
+      }
+    });
     weightCache[userId] = map;
     return map;
   } catch (err) {
@@ -347,20 +349,17 @@ async function saveWeight() {
       rows = await SheetsAPI.readSheetTab(tabName);
     }
 
-    // Locate the existing weight row (1-based index for the A1 range)
+    // Locate today's existing weight row (1-based index for the A1 range)
+    const today = Utils.getDateISO(0);
     let weightRowNum = 0;
-    let map = {};
     (rows || []).forEach((r, idx) => {
-      if ((r[6] || "") === WEIGHT_ROW_TYPE) {
+      if ((r[6] || "") === WEIGHT_ROW_TYPE && r[0] === today) {
         weightRowNum = idx + 1;
-        if (r[2]) {
-          try { map = JSON.parse(r[2]) || {}; } catch (_) { map = {}; }
-        }
       }
     });
 
-    map[Utils.getDateISO(0)] = value;
-    const newRow = ["", "", JSON.stringify(map), "", "kg", 0, WEIGHT_ROW_TYPE];
+    const time = new Date().toTimeString().slice(0, 5);
+    const newRow = [today, time, "Pesée", value, "kg", 0, WEIGHT_ROW_TYPE];
 
     if (weightRowNum > 0) {
       await SheetsAPI.batchUpdateRange(`${tabName}!A${weightRowNum}:G${weightRowNum}`, [newRow], token);
@@ -368,7 +367,7 @@ async function saveWeight() {
       await SheetsAPI.appendRowWithToken(tabName, newRow, token);
     }
 
-    weightCache[userId] = map;
+    weightCache[userId] = null;
     closeWeighModal();
 
     // Refresh weight chart if Stats modal is open on the weight tab for this user
