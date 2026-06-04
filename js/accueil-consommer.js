@@ -37,9 +37,9 @@ function closeConsommerModal() {
   document.getElementById('consommer-recette-qty').value = '';
   document.getElementById('consommer-recette-preview').innerHTML = '';
   const recetteUnit = document.getElementById('consommer-recette-unit');
-  if (recetteUnit) recetteUnit.value = 'g';
+  if (recetteUnit) recetteUnit.value = 'portions';
   const recetteQtyLabel = document.getElementById('consommer-recette-qty-label');
-  if (recetteQtyLabel) recetteQtyLabel.textContent = 'Quantité (g) :';
+  if (recetteQtyLabel) recetteQtyLabel.textContent = 'Quantité (portions) :';
   const deductCheckbox = document.getElementById('consommer-recette-deduct');
   if (deductCheckbox) deductCheckbox.checked = false;
   document.getElementById('consommer-manuel-nom').value = '';

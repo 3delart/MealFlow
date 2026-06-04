@@ -104,10 +104,10 @@
           </div>
 
           <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
-            <label id="manger-qty-label" style="flex:1;">Quantité (g):</label>
+            <label id="manger-qty-label" style="flex:1;">Quantité (portions):</label>
             <select id="manger-unit" style="width:130px; padding:6px; border:1px solid var(--color-border); border-radius:4px;">
+              <option value="portions" selected>Portions (x)</option>
               <option value="g">Grammes (g)</option>
-              <option value="portions">Portions (x)</option>
             </select>
           </div>
           <input type="number" id="manger-qty" min="0" step="any">
@@ -198,10 +198,10 @@
           <div id="consommer-recette-dropdown" style="position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ddd; border-radius:4px; max-height:150px; overflow-y:auto; z-index:200; display:none;"></div>
         </div>
         <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
-          <label id="consommer-recette-qty-label" style="flex:1;">Quantité (g):</label>
+          <label id="consommer-recette-qty-label" style="flex:1;">Quantité (portions):</label>
           <select id="consommer-recette-unit" style="width:130px; padding:6px; border:1px solid var(--color-border); border-radius:4px;">
+            <option value="portions" selected>Portions (x)</option>
             <option value="g">Grammes (g)</option>
-            <option value="portions">Portions (x)</option>
           </select>
         </div>
         <input type="number" id="consommer-recette-qty" min="0" step="any" style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; margin-bottom:12px;">

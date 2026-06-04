@@ -97,9 +97,9 @@ function closeMangerModal() {
   document.getElementById('manger-form').reset();
   document.getElementById('manger-preview').innerHTML = '';
   const mangerUnit = document.getElementById('manger-unit');
-  if (mangerUnit) mangerUnit.value = 'g';
+  if (mangerUnit) mangerUnit.value = 'portions';
   const mangerQtyLabel = document.getElementById('manger-qty-label');
-  if (mangerQtyLabel) mangerQtyLabel.textContent = 'Quantité (g) :';
+  if (mangerQtyLabel) mangerQtyLabel.textContent = 'Quantité (portions) :';
   const mealGroup = document.getElementById('manger-meal-group');
   if (mealGroup) mealGroup.style.display = 'block'; // Restore dropdown visibility
   currentResteContext = null;
