@@ -196,7 +196,7 @@ header a:hover {
 main {
   max-width: 1200px;
   margin: var(--spacing-md) auto;
-  padding: 0 var(--spacing-md);
+  padding: 0 var(--spacing-md) 96px;
   flex-grow: 1;
 }
 
@@ -792,7 +792,7 @@ tbody tr:hover {
   }
 
   main {
-    padding: 0 var(--spacing-sm);
+    padding: 0 var(--spacing-sm) 96px;
     margin: var(--spacing-sm) auto;
   }
 
@@ -875,7 +875,7 @@ tbody tr:hover {
   }
 
   main {
-    padding: 0 var(--spacing-xs);
+    padding: 0 var(--spacing-xs) 96px;
     margin: var(--spacing-xs) auto;
   }
 
