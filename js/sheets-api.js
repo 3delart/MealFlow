@@ -104,6 +104,44 @@ function rowsToObjects(rows) {
 }
 
 /**
+ * Authenticated fetch with silent token refresh + single retry on 401.
+ *
+ * Always reads the live token via getAccessToken() (so a refreshed token is
+ * picked up on retry). On 401 it attempts a silent refresh; if that yields a
+ * fresh token the request is replayed once, otherwise the auth-error UI is
+ * shown and an error is thrown. It NEVER swallows a failed write — callers can
+ * trust that a resolved response means the request actually reached Sheets.
+ *
+ * @param {string} url
+ * @param {RequestInit} [options]
+ * @param {boolean} [_retried] - internal, prevents infinite retry loops
+ * @returns {Promise<Response>}
+ */
+async function authedFetch(url, options = {}, _retried = false) {
+  const token = (typeof getAccessToken === 'function') ? getAccessToken() : null;
+  if (!token) throw new Error("No access token available");
+
+  const headers = Object.assign({}, options.headers, { Authorization: `Bearer ${token}` });
+  const response = await fetch(url, Object.assign({}, options, { headers }));
+
+  if (response.status === 401 && !_retried) {
+    let fresh = null;
+    if (typeof refreshAccessTokenSilent === 'function') {
+      try { fresh = await refreshAccessTokenSilent(); } catch { fresh = null; }
+    }
+    if (fresh) {
+      return authedFetch(url, options, true);
+    }
+    if (typeof handleAuthError === 'function') {
+      handleAuthError("Session expirée — reconnexion nécessaire");
+    }
+    throw new Error("AUTH_EXPIRED");
+  }
+
+  return response;
+}
+
+/**
  * Append row to Google Sheet tab with OAuth2 token
  * @param {string} tabName - The sheet tab name
  * @param {Array} row - Row data to append
@@ -111,7 +149,8 @@ function rowsToObjects(rows) {
  * @returns {Promise<Object>} API response
  */
 async function appendRowWithToken(tabName, row, accessToken) {
-  if (!accessToken) {
+  const token = accessToken || (typeof getAccessToken === 'function' ? getAccessToken() : null);
+  if (!token) {
     throw new Error("No access token provided. User must be authenticated.");
   }
 
@@ -120,31 +159,20 @@ async function appendRowWithToken(tabName, row, accessToken) {
 
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${tabName}:append?valueInputOption=USER_ENTERED`;
 
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ values })
-    });
+  const response = await authedFetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ values })
+  });
 
-    if (!response.ok) {
-      if (response.status === 401 && typeof handleAuthError === 'function') {
-        handleAuthError("Token expired - please re-login");
-        return {};
-      }
-      const error = await response.json();
-      console.error(`Sheets API error: ${error.error.message}`);
-      throw new Error(`Failed to append row: ${error.error.message}`);
-    }
-
-    return response.json();
-  } catch (error) {
-    console.error(`Error appending row to ${tabName}:`, error);
-    throw error;
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    const msg = error.error?.message || response.statusText;
+    console.error(`Sheets API error appending to ${tabName}: ${msg}`);
+    throw new Error(`Failed to append row: ${msg}`);
   }
+
+  return response.json();
 }
 
 /**
@@ -196,21 +224,14 @@ async function updateSheetCell(range, value, accessToken) {
   }
 
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED`;
-  const response = await fetch(url, {
+  const response = await authedFetch(url, {
     method: "PUT",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json"
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ values: [[value]] })
   });
 
   if (!response.ok) {
-    if (response.status === 401 && typeof handleAuthError === 'function') {
-      handleAuthError("Token expired - please re-login");
-      throw new Error("AUTH_EXPIRED");
-    }
-    const error = await response.json();
+    const error = await response.json().catch(() => ({}));
     console.error(`Sheets API update error: ${error.error?.message || response.statusText}`);
     throw new Error(`Failed to update cell: ${error.error?.message || response.statusText}`);
   }
@@ -236,20 +257,13 @@ async function clearSheetRange(range, accessToken) {
   }
 
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}:clear`;
-  const response = await fetch(url, {
+  const response = await authedFetch(url, {
     method: "POST",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json"
-    }
+    headers: { "Content-Type": "application/json" }
   });
 
   if (!response.ok) {
-    if (response.status === 401 && typeof handleAuthError === 'function') {
-      handleAuthError("Token expired - please re-login");
-      throw new Error("AUTH_EXPIRED");
-    }
-    const error = await response.json();
+    const error = await response.json().catch(() => ({}));
     console.error(`Sheets API clear error: ${error.error?.message || response.statusText}`);
     throw new Error(`Failed to clear range: ${error.error?.message || response.statusText}`);
   }
@@ -276,21 +290,14 @@ async function batchUpdateRange(range, values, accessToken) {
   }
 
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=RAW`;
-  const response = await fetch(url, {
+  const response = await authedFetch(url, {
     method: "PUT",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json"
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ values })
   });
 
   if (!response.ok) {
-    if (response.status === 401 && typeof handleAuthError === 'function') {
-      handleAuthError("Token expired - please re-login");
-      throw new Error("AUTH_EXPIRED");
-    }
-    const error = await response.json();
+    const error = await response.json().catch(() => ({}));
     throw new Error(`Sheets API update error: ${error.error?.message || response.statusText}`);
   }
 
@@ -309,20 +316,16 @@ async function batchUpdateCells(updates, accessToken) {
   if (!updates || updates.length === 0) return;
 
   const data = updates.map(u => ({ range: u.range, values: [[u.value]] }));
-  const response = await fetch(
+  const response = await authedFetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchUpdate`,
     {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ valueInputOption: 'RAW', data })
     }
   );
   if (!response.ok) {
-    if (response.status === 401 && typeof handleAuthError === 'function') {
-      handleAuthError("Token expired - please re-login");
-      throw new Error("AUTH_EXPIRED");
-    }
-    const err = await response.json();
+    const err = await response.json().catch(() => ({}));
     throw new Error(`batchUpdateCells failed: ${err.error?.message || response.statusText}`);
   }
 }
@@ -339,12 +342,10 @@ async function deleteSheetRow(tabName, rowNumber, accessToken) {
   const token = accessToken || (typeof getAccessToken === 'function' ? getAccessToken() : null);
   if (!token) throw new Error("No access token for deleteSheetRow");
 
-  const metaResp = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`,
-    { headers: { Authorization: `Bearer ${token}` } }
+  const metaResp = await authedFetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`
   );
   if (!metaResp.ok) {
-    if (metaResp.status === 401 && typeof handleAuthError === 'function') { handleAuthError("Token expired - please re-login"); throw new Error("AUTH_EXPIRED"); }
     throw new Error("deleteSheetRow: failed to get sheet metadata");
   }
   const meta = await metaResp.json();
@@ -352,11 +353,11 @@ async function deleteSheetRow(tabName, rowNumber, accessToken) {
   if (!tab) throw new Error(`deleteSheetRow: tab "${tabName}" not found`);
 
   const startIndex = rowNumber - 1; // convert to 0-based
-  const delResp = await fetch(
+  const delResp = await authedFetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
     {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         requests: [{
           deleteDimension: {
@@ -367,8 +368,7 @@ async function deleteSheetRow(tabName, rowNumber, accessToken) {
     }
   );
   if (!delResp.ok) {
-    if (delResp.status === 401 && typeof handleAuthError === 'function') { handleAuthError("Token expired - please re-login"); return; }
-    const err = await delResp.json();
+    const err = await delResp.json().catch(() => ({}));
     throw new Error(`deleteSheetRow failed: ${err.error?.message || delResp.statusText}`);
   }
 }
@@ -387,12 +387,10 @@ async function deleteSheetRows(tabName, rowNumbers, accessToken) {
   const token = accessToken || (typeof getAccessToken === 'function' ? getAccessToken() : null);
   if (!token) throw new Error("No access token for deleteSheetRows");
 
-  const metaResp = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`,
-    { headers: { Authorization: `Bearer ${token}` } }
+  const metaResp = await authedFetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`
   );
   if (!metaResp.ok) {
-    if (metaResp.status === 401 && typeof handleAuthError === 'function') { handleAuthError("Token expired - please re-login"); throw new Error("AUTH_EXPIRED"); }
     throw new Error("deleteSheetRows: failed to get sheet metadata");
   }
   const meta = await metaResp.json();
@@ -408,17 +406,16 @@ async function deleteSheetRows(tabName, rowNumbers, accessToken) {
     }
   }));
 
-  const delResp = await fetch(
+  const delResp = await authedFetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
     {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ requests })
     }
   );
   if (!delResp.ok) {
-    if (delResp.status === 401 && typeof handleAuthError === 'function') { handleAuthError("Token expired - please re-login"); return; }
-    const err = await delResp.json();
+    const err = await delResp.json().catch(() => ({}));
     throw new Error(`deleteSheetRows failed: ${err.error?.message || delResp.statusText}`);
   }
 }
@@ -435,11 +432,11 @@ async function createSheetTab(tabName, headerRow, accessToken) {
   const token = accessToken || (typeof getAccessToken === 'function' ? getAccessToken() : null);
   if (!token) throw new Error("No access token for createSheetTab");
 
-  const resp = await fetch(
+  const resp = await authedFetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
     {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ requests: [{ addSheet: { properties: { title: tabName } } }] })
     }
   );
@@ -448,10 +445,6 @@ async function createSheetTab(tabName, headerRow, accessToken) {
     const err = await resp.json().catch(() => ({}));
     const msg = (err.error && err.error.message) || resp.statusText;
     if (/already exists/i.test(msg)) return; // tab present already — nothing to do
-    if (resp.status === 401 && typeof handleAuthError === 'function') {
-      handleAuthError("Token expired - please re-login");
-      throw new Error("AUTH_EXPIRED");
-    }
     throw new Error(`createSheetTab failed: ${msg}`);
   }
 

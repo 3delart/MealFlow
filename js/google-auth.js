@@ -1,14 +1,55 @@
 const GOOGLE_CLIENT_ID = "864467783347-povu10fv1f30km3sfp8u14ppregeduro.apps.googleusercontent.com";
+
+// Persisted across tabs and browser restarts (localStorage, not sessionStorage).
+const LS_TOKEN = "googleAccessToken";
+const LS_ID = "googleIdToken";
+const LS_EXP = "googleTokenExpiresAt";
+
 let googleAccessToken = null;
 let tokenClient = null;
 
-function handleCredentialResponse(response) {
-  sessionStorage.setItem("googleIdToken", response.credential);
+// Silent-refresh coordination
+let _refreshPromise = null;
+let _refreshResolve = null;
+let _consentTried = false;
 
-  requestAccessToken();
+// ---------------------------------------------------------------------------
+// Token storage helpers
+// ---------------------------------------------------------------------------
+
+function _storeToken(response) {
+  googleAccessToken = response.access_token;
+  localStorage.setItem(LS_TOKEN, googleAccessToken);
+  const ttlMs = (parseInt(response.expires_in, 10) || 3600) * 1000;
+  localStorage.setItem(LS_EXP, String(Date.now() + ttlMs));
 }
 
-function requestAccessToken() {
+function _clearToken() {
+  googleAccessToken = null;
+  localStorage.removeItem(LS_TOKEN);
+  localStorage.removeItem(LS_EXP);
+}
+
+function _tokenExpiresAt() {
+  return parseInt(localStorage.getItem(LS_EXP), 10) || 0;
+}
+
+/**
+ * @param {number} [marginMs=0] - treat token as expired this many ms early
+ * @returns {boolean}
+ */
+function _tokenExpired(marginMs = 0) {
+  if (!getAccessToken()) return true;
+  const exp = _tokenExpiresAt();
+  if (!exp) return false; // unknown expiry → rely on 401 handling
+  return Date.now() >= exp - marginMs;
+}
+
+// ---------------------------------------------------------------------------
+// OAuth token client + flows
+// ---------------------------------------------------------------------------
+
+function ensureTokenClient() {
   if (!tokenClient) {
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: GOOGLE_CLIENT_ID,
@@ -16,26 +57,91 @@ function requestAccessToken() {
       callback: handleTokenResponse,
     });
   }
+  return tokenClient;
+}
 
-  tokenClient.requestAccessToken({ prompt: "" });
+function handleCredentialResponse(response) {
+  localStorage.setItem(LS_ID, response.credential);
+  requestAccessToken();
+}
+
+/**
+ * Interactive / initial access-token request. On success the page reloads to
+ * load data for the freshly-connected account.
+ */
+function requestAccessToken() {
+  ensureTokenClient().requestAccessToken({ prompt: "" });
+}
+
+/**
+ * Resolve the in-flight silent refresh (if any) and clear its state.
+ */
+function _resolveRefresh(value) {
+  const resolve = _refreshResolve;
+  _refreshResolve = null;
+  _refreshPromise = null;
+  if (resolve) resolve(value);
+}
+
+/**
+ * Silently obtain a fresh access token (no UI) if the Google session is alive.
+ * De-duplicates concurrent calls. Resolves to the new token, or null on failure.
+ * @returns {Promise<string|null>}
+ */
+function refreshAccessTokenSilent() {
+  if (_refreshPromise) return _refreshPromise;
+  if (typeof google === "undefined" || !google.accounts || !google.accounts.oauth2) {
+    return Promise.resolve(null);
+  }
+
+  _refreshPromise = new Promise((resolve) => { _refreshResolve = resolve; });
+  try {
+    ensureTokenClient().requestAccessToken({ prompt: "" });
+  } catch {
+    _resolveRefresh(null);
+  }
+  // Safety net: if GIS never calls back, don't hang forever.
+  setTimeout(() => { if (_refreshResolve) _resolveRefresh(null); }, 15000);
+  return _refreshPromise;
 }
 
 function handleTokenResponse(response) {
-  if (response.access_token) {
-    googleAccessToken = response.access_token;
-    sessionStorage.setItem("googleAccessToken", googleAccessToken);
-    // Reload so the page loads data for the freshly-connected account
-    location.reload();
+  const silent = !!_refreshResolve;
+
+  if (response && response.access_token) {
+    _storeToken(response);
+    _consentTried = false;
+    if (silent) {
+      _resolveRefresh(googleAccessToken);
+      updateUI();
+    } else {
+      // Initial/interactive connect → reload to load the account's data.
+      location.reload();
+    }
+    return;
+  }
+
+  // No token returned.
+  if (silent) {
+    _resolveRefresh(null);
+  } else if (!_consentTried) {
+    _consentTried = true;
+    ensureTokenClient().requestAccessToken({ prompt: "consent" });
   } else {
-    tokenClient.requestAccessToken({ prompt: "consent" });
+    _consentTried = false;
+    updateUI(); // give up → auth gate stays visible
   }
 }
+
+// ---------------------------------------------------------------------------
+// UI
+// ---------------------------------------------------------------------------
 
 function updateUI() {
   const loginDiv = document.getElementById("google-login-btn");
   const logoutBtn = document.getElementById("google-logout-btn");
 
-  if (googleAccessToken || sessionStorage.getItem("googleAccessToken")) {
+  if (isAuthenticated()) {
     if (loginDiv) loginDiv.style.display = "none";
     if (logoutBtn) {
       logoutBtn.style.display = "inline-flex";
@@ -100,6 +206,10 @@ function applyAuthGate() {
   gate.style.display = "flex";
 }
 
+// ---------------------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------------------
+
 function initGoogleAuth() {
   if (typeof google === "undefined") {
     setTimeout(initGoogleAuth, 200);
@@ -109,10 +219,11 @@ function initGoogleAuth() {
   google.accounts.id.initialize({
     client_id: GOOGLE_CLIENT_ID,
     callback: handleCredentialResponse,
+    auto_select: true,
   });
 
   const loginDiv = document.getElementById("google-login-btn");
-  if (loginDiv && !sessionStorage.getItem("googleAccessToken")) {
+  if (loginDiv && !localStorage.getItem(LS_TOKEN)) {
     google.accounts.id.renderButton(loginDiv, {
       theme: "outline",
       size: "large",
@@ -122,19 +233,30 @@ function initGoogleAuth() {
 
   restoreToken();
   updateUI();
+
+  // Refresh on demand when the tab becomes visible again with a stale token.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && _tokenExpired(60 * 1000)) {
+      refreshAccessTokenSilent();
+    }
+  });
 }
 
 function restoreToken() {
-  const token = sessionStorage.getItem("googleAccessToken");
-  if (token) {
-    googleAccessToken = token;
+  const token = localStorage.getItem(LS_TOKEN);
+  if (token) googleAccessToken = token;
+
+  // Proactively renew if the token is missing/stale but a Google session exists.
+  if (token && _tokenExpired(2 * 60 * 1000)) {
+    refreshAccessTokenSilent();
+  } else if (!token && localStorage.getItem(LS_ID)) {
+    refreshAccessTokenSilent();
   }
 }
 
 function logoutGoogle() {
-  googleAccessToken = null;
-  sessionStorage.removeItem("googleAccessToken");
-  sessionStorage.removeItem("googleIdToken");
+  _clearToken();
+  localStorage.removeItem(LS_ID);
 
   if (typeof google !== "undefined") {
     google.accounts.id.disableAutoSelect();
@@ -145,7 +267,18 @@ function logoutGoogle() {
 }
 
 function getAccessToken() {
-  return googleAccessToken || sessionStorage.getItem("googleAccessToken");
+  return googleAccessToken || localStorage.getItem(LS_TOKEN);
+}
+
+/**
+ * Async variant: returns a token guaranteed fresh, refreshing silently if the
+ * current one is missing/expired. Resolves null if no token can be obtained.
+ * @returns {Promise<string|null>}
+ */
+async function getValidAccessToken() {
+  if (!_tokenExpired(60 * 1000)) return getAccessToken();
+  const fresh = await refreshAccessTokenSilent();
+  return fresh || getAccessToken() || null;
 }
 
 function isAuthenticated() {
@@ -157,7 +290,7 @@ function isAuthenticated() {
  * @returns {string|null} Lowercased email, or null if unavailable.
  */
 function getConnectedEmail() {
-  const idToken = sessionStorage.getItem("googleIdToken");
+  const idToken = localStorage.getItem(LS_ID);
   if (!idToken) return null;
   try {
     const payload = idToken.split(".")[1];
@@ -201,67 +334,18 @@ async function validateToken() {
 }
 
 /**
- * Show auth error modal and prompt logout/re-login
+ * Called by sheets-api when an authenticated request can't be recovered.
+ * The silent refresh has already failed by this point, so drop the dead token
+ * and show the login gate instead of pretending to be connected.
  */
 function handleAuthError(reason = "Session expired or invalid") {
-  showAuthErrorModal(reason);
+  console.warn("Auth error:", reason);
+  _clearToken();
+  updateUI();
 }
 
 /**
- * Display modal: "Session expired, please logout and re-login"
- */
-function showAuthErrorModal(reason = "Session expired") {
-  const existingModal = document.getElementById("auth-error-modal");
-  if (existingModal) existingModal.remove();
-
-  const modal = document.createElement("div");
-  modal.id = "auth-error-modal";
-  modal.style.cssText = `
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-  `;
-
-  const content = document.createElement("div");
-  content.style.cssText = `
-    background: white;
-    border-radius: 12px;
-    padding: 24px;
-    max-width: 400px;
-    text-align: center;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  `;
-
-  content.innerHTML = `
-    <h2 style="margin: 0 0 12px; color: #d32f2f; font-size: 18px;">Session Expired</h2>
-    <p style="margin: 0 0 20px; color: #666; font-size: 14px;">${typeof Utils !== 'undefined' ? Utils.escapeHTML(reason) : reason}</p>
-    <p style="margin: 0 0 20px; color: #999; font-size: 13px;">Please logout and re-login to continue.</p>
-    <div style="display: flex; gap: 10px;">
-      <button id="auth-logout-btn" style="flex: 1; padding: 10px; background: #d32f2f; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Logout</button>
-      <button id="auth-relogin-btn" style="flex: 1; padding: 10px; background: #1976d2; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Re-login</button>
-    </div>
-  `;
-
-  modal.appendChild(content);
-  document.body.appendChild(modal);
-
-  document.getElementById("auth-logout-btn").onclick = () => {
-    modal.remove();
-    logoutGoogle();
-  };
-
-  document.getElementById("auth-relogin-btn").onclick = () => {
-    modal.remove();
-    logoutGoogle();
-  };
-}
-
-/**
- * Validate token on page load
+ * Validate token on page load; try a silent refresh before giving up.
  */
 async function initTokenValidation() {
   if (!isAuthenticated()) {
@@ -269,10 +353,18 @@ async function initTokenValidation() {
   }
 
   const validation = await validateToken();
-  if (!validation.valid) {
-    console.warn("Token invalid:", validation.reason);
-    handleAuthError(validation.reason);
+  if (validation.valid) return;
+
+  console.warn("Token invalid:", validation.reason, "— attempting silent refresh");
+  const fresh = await refreshAccessTokenSilent();
+  if (fresh) {
+    const revalidated = await validateToken();
+    if (revalidated.valid) return;
   }
+
+  // Could not recover → stop pretending connected, show login gate.
+  _clearToken();
+  updateUI();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
