@@ -123,12 +123,15 @@ function viewMealRecipe(mealName) {
     return;
   }
 
-  // Find portions from todaysMeals
+  // Planning number = servings wanted; the recipe is cooked whole and yields
+  // `portions_total` servings, so the view shows ceil(servings / yield) whole recipes.
   const meal = (window.todaysMeals || []).find(m => m.name === mealName);
   const portions = meal?.portions || 1;
+  const yieldPortions = window.recipesData[recipeID].portions_total || 1;
+  const recipeCount = Math.ceil(portions / yieldPortions);
 
   if (typeof openViewModal === "function") {
-    openViewModal(recipeID, portions);
+    openViewModal(recipeID, recipeCount);
   } else {
     alert("Modal recette non disponible");
   }
