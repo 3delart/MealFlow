@@ -151,11 +151,26 @@ function searchInventoryProducts(query) {
     .slice(0, 10); // Top 10 results
 }
 
+/**
+ * Single source of truth for recipe categories (the "enum").
+ * Drives both the form <select> and the grouped list order on recettes.html.
+ */
+const RECIPE_CATEGORIES = [
+  "Petit déjeuner",
+  "Repas",
+  "Dessert",
+  "Boisson",
+  "Apéritif",
+  "Encas",
+  "Autre"
+];
+
 // Export all functions
 const RecettesUtils = {
   generateRecipeID,
   calculateRecipeCalories,
-  searchInventoryProducts
+  searchInventoryProducts,
+  RECIPE_CATEGORIES
 };
 
 // Export for both browser (window.RecettesUtils) and Node.js (module.exports)

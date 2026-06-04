@@ -368,6 +368,7 @@ function collectRecipeFormData() {
 
   const portionVal = parseInt(document.getElementById("field-portion-g").value) || null;
   const portionsTotal = parseInt(document.getElementById("field-portions-total").value) || null;
+  const category = document.getElementById("field-category").value.trim();
 
   return {
     name,
@@ -378,7 +379,8 @@ function collectRecipeFormData() {
     ingredients,
     steps,
     portion_g: portionVal,
-    portions_total: portionsTotal
+    portions_total: portionsTotal,
+    category
   };
 }
 
@@ -483,6 +485,7 @@ function openEditModal(recipeID) {
 
   document.getElementById("field-portion-g").value = recipe.portion_g || "";
   document.getElementById("field-portions-total").value = recipe.portions_total || "";
+  document.getElementById("field-category").value = recipe.category || "";
 
   currentRecipeID = recipeID;
   updateCalories();
@@ -533,6 +536,7 @@ async function handleRecipeFormSubmit(e) {
     steps: data.steps,
     portion_g: data.portion_g || null,
     portions_total: data.portions_total || null,
+    category: data.category || "",
     sheetRowNumber: existingSheetRow || null
   };
 
@@ -553,11 +557,12 @@ async function handleRecipeFormSubmit(e) {
         JSON.stringify(data.steps || []),
         cals.kcal_per_100,
         data.portion_g || "",
-        data.portions_total || ""
+        data.portions_total || "",
+        data.category || ""
       ];
       if (recipe.sheetRowNumber) {
         // Edit existing row
-        await window.SheetsAPI.batchUpdateRange(`Recettes!A${recipe.sheetRowNumber}:J${recipe.sheetRowNumber}`, [row], token);
+        await window.SheetsAPI.batchUpdateRange(`Recettes!A${recipe.sheetRowNumber}:K${recipe.sheetRowNumber}`, [row], token);
       } else {
         // New recipe — append and assign row number
         await window.SheetsAPI.appendRowWithToken("Recettes", row, token);
@@ -588,6 +593,17 @@ async function handleRecipeFormSubmit(e) {
  * @returns {void}
  */
 function initializeRecipeFormEvents() {
+  // Populate the category <select> from the single source of truth.
+  const catSelect = document.getElementById("field-category");
+  if (catSelect && window.RecettesUtils && RecettesUtils.RECIPE_CATEGORIES) {
+    RecettesUtils.RECIPE_CATEGORIES.forEach(cat => {
+      const opt = document.createElement("option");
+      opt.value = cat;
+      opt.textContent = cat;
+      catSelect.appendChild(opt);
+    });
+  }
+
   const form = document.getElementById("recipe-form");
   const addIngBtn = document.getElementById("btn-add-ingredient");
   const addStepBtn = document.getElementById("btn-add-step");

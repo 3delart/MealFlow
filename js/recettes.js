@@ -67,6 +67,7 @@ async function loadRecipes() {
         kcal_per_100: parseFloat(row[7]) || 0,
         portion_g: parseFloat(row[8]) || null,
         portions_total: parseInt(row[9]) || null,
+        category: row[10] || "",
         sheetRowNumber: idx + 2
       };
     });
@@ -245,6 +246,9 @@ function recipeMatchesSearch(recipe, normQuery) {
   return haystack.includes(normQuery);
 }
 
+/** Display order for recipe category groups (unknown/empty go last). */
+const RECIPE_CATEGORY_ORDER = (window.RecettesUtils && RecettesUtils.RECIPE_CATEGORIES) || [];
+
 /** @type {Set<string>} Currently active tag filters (AND semantics) */
 const activeTags = new Set();
 
@@ -346,9 +350,32 @@ function renderRecipeList() {
     return;
   }
 
+  // Group by category, ordered by RECIPE_CATEGORY_ORDER (unknown/empty last).
+  const groups = {};
   visible.forEach(([id, recipe]) => {
-    const card = renderRecipeCard(id, recipe);
-    container.appendChild(card);
+    const cat = (recipe.category || "").trim() || "Sans catégorie";
+    (groups[cat] = groups[cat] || []).push([id, recipe]);
+  });
+
+  const orderIndex = cat => {
+    const i = RECIPE_CATEGORY_ORDER.indexOf(cat);
+    return i === -1 ? RECIPE_CATEGORY_ORDER.length : i;
+  };
+  const orderedCats = Object.keys(groups).sort((a, b) => {
+    const d = orderIndex(a) - orderIndex(b);
+    return d !== 0 ? d : a.localeCompare(b, 'fr');
+  });
+
+  orderedCats.forEach(cat => {
+    const header = document.createElement("h3");
+    header.className = "recipe-category-header";
+    header.textContent = cat;
+    header.style.cssText = "margin:18px 0 8px;color:var(--color-primary,#2e7d32);font-size:1.05em;border-bottom:1px solid var(--color-border);padding-bottom:4px;";
+    container.appendChild(header);
+
+    groups[cat]
+      .sort(([, a], [, b]) => a.name.localeCompare(b.name, 'fr'))
+      .forEach(([id, recipe]) => container.appendChild(renderRecipeCard(id, recipe)));
   });
 }
 
