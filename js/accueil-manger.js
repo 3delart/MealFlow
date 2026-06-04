@@ -102,6 +102,51 @@ function closeMangerModal() {
   if (mangerQtyLabel) mangerQtyLabel.textContent = 'Quantité (g) :';
   const mealGroup = document.getElementById('manger-meal-group');
   if (mealGroup) mealGroup.style.display = 'block'; // Restore dropdown visibility
+  currentResteContext = null;
+}
+
+/**
+ * Open the Manger modal to eat from a leftover batch.
+ * Seeds the recipe dropdown with the single leftover recipe, unit = portions.
+ * @param {{recipe:string,row:number,portionG:number,kcal100:number,remaining:number}} ctx
+ */
+function openResteMangerModal(ctx) {
+  currentResteContext = { recipeName: ctx.recipe, rowNumber: ctx.row, portionG: ctx.portionG, kcal100: ctx.kcal100 };
+
+  const modal = document.getElementById('manger-modal');
+  document.getElementById('manger-recipe-mode').style.display = 'block';
+  document.getElementById('manger-custom-mode').style.display = 'none';
+
+  const select = document.getElementById('manger-meal');
+  select.innerHTML = '';
+  const option = document.createElement('option');
+  option.value = ctx.recipe;
+  option.textContent = ctx.recipe;
+  option.dataset.kcalPer100 = ctx.kcal100;
+  option.dataset.portionG = ctx.portionG;
+  option.dataset.isCustom = false;
+  select.appendChild(option);
+  select.value = ctx.recipe;
+
+  const mealGroup = document.getElementById('manger-meal-group');
+  if (mealGroup) mealGroup.style.display = 'none';
+
+  const mangerUnit = document.getElementById('manger-unit');
+  if (mangerUnit) mangerUnit.value = 'portions';
+  const mangerQtyLabel = document.getElementById('manger-qty-label');
+  if (mangerQtyLabel) mangerQtyLabel.textContent = 'Quantité (portions) :';
+
+  const qtyInput = document.getElementById('manger-qty');
+  qtyInput.value = '1';
+  qtyInput.removeEventListener('input', updateMangerPreview);
+  qtyInput.addEventListener('input', updateMangerPreview);
+  select.removeEventListener('change', updateMangerPreview);
+
+  updateMangerRecipePreview();
+
+  modal.classList.remove('hidden');
+  modal.classList.add('open');
+  qtyInput.focus();
 }
 
 function updateMangerPreview() {
@@ -189,7 +234,7 @@ async function submitManger(e) {
   const customMode = document.getElementById('manger-custom-mode');
   const isCustom = customMode && customMode.style.display !== 'none';
 
-  let mealName, qty, unit, totalKcal, kcalPer100g = null;
+  let mealName, qty, unit, totalKcal, kcalPer100g = null, portionsEaten = 0;
 
   if (isCustom) {
     // Custom mode
@@ -224,15 +269,18 @@ async function submitManger(e) {
     kcalPer100g = parseFloat(selectedOption.dataset.kcalPer100) || 0;
 
     const unitSelect = document.getElementById('manger-unit')?.value || 'g';
+    const portionG = parseFloat(selectedOption.dataset.portionG) || 0;
     let qtyGrams;
     if (unitSelect === 'portions') {
-      const portionG = parseFloat(selectedOption.dataset.portionG) || 0;
       qtyGrams = qty * portionG;
       unit = 'portion';
     } else {
       qtyGrams = qty;
       unit = 'g';
     }
+
+    // Portions actually eaten (for leftover tracking)
+    portionsEaten = unit === 'portion' ? qty : (portionG > 0 ? qty / portionG : 0);
 
     totalKcal = Math.round(qtyGrams * (kcalPer100g / 100));
   }
@@ -241,14 +289,16 @@ async function submitManger(e) {
   const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const date = getTodayISO();
   const user = getCurrentUser();
+  const reste = currentResteContext;
+  const consType = reste ? 'reste' : 'manger';
 
   try {
     const token = getAccessToken?.();
     const tabName = `History_${user}`;
-    const row = [date, time, mealName, qty, unit, totalKcal, 'manger'];
+    const row = [date, time, mealName, qty, unit, totalKcal, consType];
 
     // Add to local state (match sheet column names)
-    todaysConsumptions.push({ Heure: time, Nom: mealName, Quantité: qty, Unité: unit, Kcal_total: totalKcal, Type: 'manger' });
+    todaysConsumptions.push({ Heure: time, Nom: mealName, Quantité: qty, Unité: unit, Kcal_total: totalKcal, Type: consType });
 
     // Update global calories consumed
     caloriesConsumed = (caloriesConsumed || 0) + totalKcal;
@@ -256,6 +306,16 @@ async function submitManger(e) {
     // Save to sheet
     if (token && SheetsAPI) {
       await SheetsAPI.appendRowWithToken(tabName, row, token);
+
+      // Leftover tracking (recipe meals only)
+      if (!isCustom && portionsEaten > 0 && typeof consumePlannedRecipePortions === 'function') {
+        if (reste) {
+          await decrementResteBatch(reste.rowNumber, portionsEaten, token);
+        } else {
+          await consumePlannedRecipePortions(mealName, portionsEaten, token);
+        }
+        if (typeof renderRestes === 'function') await renderRestes();
+      }
     }
 
     renderConsumptionLog();

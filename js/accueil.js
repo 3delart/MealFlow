@@ -643,6 +643,7 @@ async function initAccueil() {
       loadTodaysMeals(),
       loadTodaysConsumptions(),
       loadConversionFactors ? loadConversionFactors() : Promise.resolve(),
+      (typeof loadRestes === 'function') ? loadRestes() : Promise.resolve(),
     ]);
   } catch (err) {
     showSheetsError(err);
@@ -655,6 +656,7 @@ async function initAccueil() {
   // Re-render with real data
   renderGreeting();
   renderMeals();
+  if (typeof renderRestes === 'function') renderRestes();
   updateProgressDisplay();
   renderWheel();
 

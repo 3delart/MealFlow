@@ -434,10 +434,13 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
         const portions = entry.portions || 1;
         const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
         if (!recipe?.ingredients) return;
+        // Portions = servings wanted; a recipe is cooked whole and yields
+        // `portions_total` servings, so shop for ceil(wanted / yield) whole recipes.
+        const recipeCount = Math.ceil(portions / (recipe.portions_total || 1));
         recipe.ingredients.forEach(ing => {
           const key = Utils.normalizeString(ing.name);
           if (!map[key]) map[key] = { name: ing.name, qty: 0, unit: ing.unit || 'g', days: [] };
-          map[key].qty += (parseFloat(ing.quantity) || 0) * portions;
+          map[key].qty += (parseFloat(ing.quantity) || 0) * recipeCount;
           if (!map[key].days.includes(day.dateISO)) map[key].days.push(day.dateISO);
         });
       });

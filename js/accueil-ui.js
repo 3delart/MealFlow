@@ -242,6 +242,22 @@ async function initAccueilUI() {
       }
     });
   }
+
+  // Event delegation for leftover ("Reste") Manger buttons
+  const restesContainer = document.getElementById('restes-container');
+  if (restesContainer) {
+    restesContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-reste-manger');
+      if (!btn) return;
+      openResteMangerModal({
+        recipe: btn.dataset.recipe,
+        row: parseInt(btn.dataset.row, 10),
+        portionG: parseFloat(btn.dataset.portionG) || 0,
+        kcal100: parseFloat(btn.dataset.kcal100) || 0,
+        remaining: parseFloat(btn.dataset.remaining) || 0,
+      });
+    });
+  }
 }
 
 function renderGreeting() {

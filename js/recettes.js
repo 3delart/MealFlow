@@ -66,6 +66,7 @@ async function loadRecipes() {
         steps: safeParseJSON(row[6], []),
         kcal_per_100: parseFloat(row[7]) || 0,
         portion_g: parseFloat(row[8]) || null,
+        portions_total: parseInt(row[9]) || null,
         sheetRowNumber: idx + 2
       };
     });
@@ -414,6 +415,7 @@ function openViewModal(recipeID, portions = 1) {
       <div>🔥 <strong>Calories total:</strong> ${totalKcal} kcal${p > 1 ? ` (${p}×${cals.total_kcal})` : ''}</div>
       <div>🔥 <strong>Par 100g:</strong> ${cals.kcal_per_100} kcal</div>
       ${recipe.portion_g ? `<div>🍽️ <strong>Portion:</strong> ${recipe.portion_g * p}g = ${Math.round(recipe.portion_g * p * cals.kcal_per_100 / 100)} kcal</div>` : ''}
+      ${recipe.portions_total ? `<div>🍰 <strong>Rendement:</strong> ${recipe.portions_total} portions</div>` : ''}
     </div>
 
     <h3 style="margin-top: 16px; color: var(--color-primary, #2e7d32);">INGRÉDIENTS${p > 1 ? ` (×${p} portions)` : ''}</h3>

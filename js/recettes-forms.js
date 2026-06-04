@@ -367,6 +367,7 @@ function collectRecipeFormData() {
   });
 
   const portionVal = parseInt(document.getElementById("field-portion-g").value) || null;
+  const portionsTotal = parseInt(document.getElementById("field-portions-total").value) || null;
 
   return {
     name,
@@ -376,7 +377,8 @@ function collectRecipeFormData() {
     tags,
     ingredients,
     steps,
-    portion_g: portionVal
+    portion_g: portionVal,
+    portions_total: portionsTotal
   };
 }
 
@@ -480,6 +482,7 @@ function openEditModal(recipeID) {
   });
 
   document.getElementById("field-portion-g").value = recipe.portion_g || "";
+  document.getElementById("field-portions-total").value = recipe.portions_total || "";
 
   currentRecipeID = recipeID;
   updateCalories();
@@ -529,6 +532,7 @@ async function handleRecipeFormSubmit(e) {
     ingredients: data.ingredients,
     steps: data.steps,
     portion_g: data.portion_g || null,
+    portions_total: data.portions_total || null,
     sheetRowNumber: existingSheetRow || null
   };
 
@@ -548,11 +552,12 @@ async function handleRecipeFormSubmit(e) {
         JSON.stringify(data.ingredients || []),
         JSON.stringify(data.steps || []),
         cals.kcal_per_100,
-        data.portion_g || ""
+        data.portion_g || "",
+        data.portions_total || ""
       ];
       if (recipe.sheetRowNumber) {
         // Edit existing row
-        await window.SheetsAPI.batchUpdateRange(`Recettes!A${recipe.sheetRowNumber}:I${recipe.sheetRowNumber}`, [row], token);
+        await window.SheetsAPI.batchUpdateRange(`Recettes!A${recipe.sheetRowNumber}:J${recipe.sheetRowNumber}`, [row], token);
       } else {
         // New recipe — append and assign row number
         await window.SheetsAPI.appendRowWithToken("Recettes", row, token);
