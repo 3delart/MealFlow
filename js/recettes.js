@@ -450,7 +450,14 @@ function openViewModal(recipeID, portions = 1) {
       ${(recipe.ingredients || [])
         .map(ing => {
           const qty = ((parseFloat(ing.quantity) || 0) * p);
-          const ingCals = Math.round((parseFloat(ing.calories_per_100) || 0) * qty / 100);
+          const unit = ing.unit || 'g';
+          // "pièce" quantities are counts → convert to grams via Conversion_factor.
+          let convFactor = null;
+          if (unit === 'piece' || unit === 'pièce') {
+            convFactor = window.getProductConversionFactor ? window.getProductConversionFactor(ing.name) : null;
+          }
+          const qtyGrams = window.convertToGrams ? window.convertToGrams(qty, unit, convFactor) : qty;
+          const ingCals = Math.round((parseFloat(ing.calories_per_100) || 0) * qtyGrams / 100);
           const dangerHits = [...ingredientAllergyHits(ing), ...ingredientDietViolations(ing)];
           const aversHits = ingredientAversionHits(ing);
           const warn = dangerHits.length
