@@ -23,7 +23,7 @@ function onConsommerProductInput(e) {
       return;
     }
     const normQ = _normStr(q);
-    const items = InventoryAPI.getActiveItems();
+    const items = InventoryAPI.getAllItems();
     const matches = items.filter(i => _normStr(i.name).includes(normQ)).slice(0, 5);
     if (!matches.length) {
       dropdown.style.display = 'none';

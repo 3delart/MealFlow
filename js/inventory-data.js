@@ -334,12 +334,8 @@ window.InventoryAPI = {
       return matches && isActive;
     });
   },
-  getActiveItems: () => {
+  getAllItems: () => {
     return inventoryData
-      .filter(item => {
-        const qtyNum = parseFloat(item.Qty) || 0;
-        return qtyNum > 0;
-      })
       .map(item => ({
         id: item.id,
         name: item.Produit,
@@ -355,6 +351,9 @@ window.InventoryAPI = {
         }
         return a.name.localeCompare(b.name, 'fr');
       });
+  },
+  getActiveItems: () => {
+    return InventoryAPI.getAllItems().filter(item => item.qty > 0);
   }
 };
 

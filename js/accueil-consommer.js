@@ -277,7 +277,7 @@ async function submitConsommerInventaire() {
     return;
   }
 
-  const items = InventoryAPI.getActiveItems();
+  const items = InventoryAPI.getAllItems();
   const product = items.find(i => i.id === _consommerSelectedProductId);
   if (!product) {
     alert('Produit non trouvé');
