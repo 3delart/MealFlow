@@ -157,7 +157,9 @@ function renderMealPlan() {
       return recipes.map(item => {
         const name = item.name || item;
         const portions = item.portions || 1;
-        const label = portions > 1 ? `${name} ×${portions}` : name;
+        const label = (item.type === 'inventory')
+          ? `📦 ${name} (${item.qty}${item.unit || ''})`
+          : (portions > 1 ? `${name} ×${portions}` : name);
         const safeNameAttr = escapeHTML(String(name).replace(/'/g, "\\'"));
         return `
         <span class="recipe-chip" onclick="event.stopPropagation()">${escapeHTML(label)}
@@ -231,7 +233,107 @@ function openRecipePickerModal(dateISO, mealTime) {
   // TASK 8: Setup search/filter listener
   searchInput.addEventListener("input", filterRecipes);
 
+  // Populate inventory tab
+  const invItems = (window.InventoryAPI && InventoryAPI.getAllItems) ? InventoryAPI.getAllItems() : [];
+  renderInventoryOptions(invItems);
+  const invSearch = document.getElementById("inventory-search-input");
+  if (invSearch) {
+    invSearch.value = "";
+    invSearch.removeEventListener("input", filterInventory);
+    invSearch.addEventListener("input", filterInventory);
+  }
+  const invQty = document.getElementById("inventory-qty");
+  if (invQty) invQty.value = "1";
+  const invUnit = document.getElementById("inventory-unit");
+  if (invUnit) invUnit.textContent = "";
+
   document.getElementById("recipe-picker-modal").style.display = "flex";
+}
+
+/**
+ * Render inventory products in the picker (includes qty=0 items).
+ * @param {Object[]} items - InventoryAPI.getAllItems() result
+ */
+function renderInventoryOptions(items) {
+  const container = document.getElementById("inventory-options");
+  if (!container) return;
+
+  if (!items || items.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--color-text-secondary);">Aucun produit en inventaire</p>';
+    return;
+  }
+
+  container.innerHTML = items.map(item => {
+    const name = item.name || "";
+    const unit = item.unit || "g";
+    const qty = item.qty || 0;
+    const stockLabel = qty > 0 ? `${qty} ${unit} en stock` : "rupture de stock";
+    const onclick = `selectInventoryItem('${escapeHTML(String(name).replace(/'/g, "\\'"))}', '${escapeHTML(String(unit).replace(/'/g, "\\'"))}', '${escapeHTML(String(item.category || 'Autres').replace(/'/g, "\\'"))}')`;
+    return `
+    <div class="recipe-option" onclick="${onclick}">
+      <div class="recipe-option-name">${escapeHTML(name)}</div>
+      <div class="recipe-option-description">${escapeHTML(stockLabel)}</div>
+    </div>
+  `;
+  }).join("");
+}
+
+/**
+ * Filter inventory products by name as the user types.
+ */
+function filterInventory(event) {
+  const query = event.target.value.toLowerCase().trim();
+  const items = (window.InventoryAPI && InventoryAPI.getAllItems) ? InventoryAPI.getAllItems() : [];
+  renderInventoryOptions(items.filter(i => (i.name || "").toLowerCase().includes(query)));
+}
+
+/**
+ * Add an inventory product as a planning entry for the current slot.
+ * Entry shape: { name, type:'inventory', qty, unit }. Flows into Courses via
+ * buildCoursesRows (planning-tagged rows, deducted against stock) and into the
+ * "Repas du jour" list on the home page.
+ */
+function selectInventoryItem(name, unit, category) {
+  const cleanedName = (name || "").trim();
+  if (!cleanedName) return;
+
+  const qtyEl = document.getElementById("inventory-qty");
+  const qty = parseFloat(qtyEl && qtyEl.value) || 0;
+  if (qty <= 0) {
+    alert("Veuillez entrer une quantité");
+    return;
+  }
+
+  const { dateISO, mealTime } = currentModalContext;
+  if (!dateISO || !mealTime) {
+    console.error("Invalid modal context");
+    return;
+  }
+
+  if (!allPlanData[dateISO]) {
+    allPlanData[dateISO] = { Midi: [], Soir: [] };
+  }
+
+  const newEntry = { name: cleanedName, type: 'inventory', qty, unit: unit || 'g' };
+  const recipeValue = allPlanData[dateISO][mealTime];
+
+  if (!recipeValue || recipeValue === "None" || (Array.isArray(recipeValue) && recipeValue.length === 0)) {
+    allPlanData[dateISO][mealTime] = [newEntry];
+  } else {
+    if (!Array.isArray(recipeValue)) {
+      allPlanData[dateISO][mealTime] = recipeValue ? [{ name: recipeValue, portions: 1 }] : [];
+    }
+    const existing = allPlanData[dateISO][mealTime];
+    if (!existing.some(r => (r.name || r) === cleanedName)) {
+      existing.push(newEntry);
+    }
+  }
+
+  closeRecipePickerModal();
+  buildMealPlanForCurrentWindow();
+  renderMealPlan();
+  syncCoursesFromMealPlan();
+  savePlanningToSheets();
 }
 
 /**
@@ -430,6 +532,15 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
         return [{name: recipeValue, portions: 1}];
       })();
       recipeEntries.forEach(entry => {
+        // Inventory items: add the product directly to the shopping map. Stock
+        // deduction (only buy the shortfall) happens later in the Courses view.
+        if (entry.type === 'inventory') {
+          const key = Utils.normalizeString(entry.name);
+          if (!map[key]) map[key] = { name: entry.name, qty: 0, unit: entry.unit || 'g', days: [] };
+          map[key].qty += parseFloat(entry.qty) || 0;
+          if (!map[key].days.includes(day.dateISO)) map[key].days.push(day.dateISO);
+          return;
+        }
         const recipeName = entry.name || entry;
         const portions = entry.portions || 1;
         const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);

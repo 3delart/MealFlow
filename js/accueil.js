@@ -173,6 +173,29 @@ function renderMeals() {
       const displayKcal = meal.actualKcal || meal.estimatedKcal;
       const eatenClass = meal.eaten ? "eaten" : "";
 
+      // Inventory product planned for today: dedicated card with a Manger button
+      // that consumes from inventory (no recipe → no Voir button).
+      if (meal.inventorySource) {
+        const safeName = Utils.escapeHTML(meal.name);
+        return `
+        <div class="meal-card ${eatenClass}" data-meal-type="${meal.mealType}">
+          <div class="meal-info">
+            <div style="display: flex; align-items: center;">
+              <span class="meal-time-icon">${meal.emoji}</span>
+              <div>
+                <p class="meal-name">📦 ${Utils.escapeHTML(meal.name)} <span style="color:#999;font-size:0.85em;font-weight:normal;">(${meal.qty} ${Utils.escapeHTML(meal.unit || '')})</span></p>
+              </div>
+            </div>
+          </div>
+          <div class="meal-actions">
+            <button class="btn-meal btn-mange-inv" data-name="${safeName}" data-qty="${meal.qty}" data-unit="${Utils.escapeHTML(meal.unit || '')}">
+              Manger
+            </button>
+          </div>
+        </div>
+      `;
+      }
+
       // For snacks (grignottage), display quantity with unit
       let displayName = meal.name;
       if (meal.mealType === "grignottage" && meal.quantity !== undefined && meal.unit) {
@@ -274,10 +297,11 @@ function renderWheel() {
   const validConsumptions = todaysConsumptions.filter(c => (c.Kcal_total || 0) > 0);
   const consumed = validConsumptions.reduce((sum, c) => sum + (c.Kcal_total || 0), 0);
 
-  // Add meals that were eaten
+  // Add meals that were eaten (inventory items are already counted via the
+  // History consumption log, and carry no estimated kcal — skip them here).
   const mealsConsumed = todaysMeals
-    .filter(m => m.eaten)
-    .reduce((sum, m) => sum + (m.actualKcal || m.estimatedKcal), 0);
+    .filter(m => m.eaten && !m.inventorySource)
+    .reduce((sum, m) => sum + (m.actualKcal || m.estimatedKcal || 0), 0);
   const total = consumed + mealsConsumed;
   const percentage = dailyGoal > 0 ? Math.round((total / dailyGoal) * 100) : 0;
   const remaining = Math.max(0, dailyGoal - total);
@@ -457,6 +481,27 @@ async function loadTodaysMeals() {
         const recipeName = entry.name || entry;
         const portions = entry.portions || 1;
         if (!recipeName) return;
+
+        // Inventory product planned as a meal: display + "Manger" deducts stock.
+        if (entry.type === 'inventory') {
+          todaysMeals.push({
+            mealType: mealDef.type,
+            label: mealDef.label,
+            emoji: mealDef.emoji,
+            name: recipeName,
+            portions: 1,
+            qty: parseFloat(entry.qty) || 0,
+            unit: entry.unit || 'g',
+            inventorySource: true,
+            kcal_per_100: null,
+            estimatedKcal: null,
+            actualKcal: null,
+            eaten: false,
+            timestamp: null,
+            isCustom: true,
+          });
+          return;
+        }
 
         let recipeKcal = mealDef.estimatedKcal;
         let isCustom = false;

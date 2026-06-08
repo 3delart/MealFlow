@@ -236,9 +236,12 @@ async function initAccueilUI() {
   const mealsContainer = document.getElementById('meals-container');
   if (mealsContainer) {
     mealsContainer.addEventListener('click', (e) => {
+      const mangeInvBtn = e.target.closest('.btn-mange-inv');
       const mangeBtn = e.target.closest('.btn-mange');
       const voirBtn = e.target.closest('.btn-voir');
-      if (mangeBtn) {
+      if (mangeInvBtn) {
+        mangerInventoryItem(mangeInvBtn.dataset.name, parseFloat(mangeInvBtn.dataset.qty) || 0, mangeInvBtn.dataset.unit);
+      } else if (mangeBtn) {
         openMangerModal(mangeBtn.dataset.mealName);
       } else if (voirBtn) {
         viewMealRecipe(voirBtn.dataset.mealName);

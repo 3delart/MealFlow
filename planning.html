@@ -50,6 +50,7 @@
         <div class="modal-tabs">
           <button class="modal-tab active" data-tab="recipe-tab" onclick="switchRecipeTab('recipe-tab')">Choisir une recette</button>
           <button class="modal-tab" data-tab="custom-tab" onclick="switchRecipeTab('custom-tab')">Texte libre</button>
+          <button class="modal-tab" data-tab="inventory-tab" onclick="switchRecipeTab('inventory-tab')">📦 Inventaire</button>
         </div>
         <div class="modal-body">
           <!-- Recipe Search Tab -->
@@ -68,6 +69,19 @@
           <div id="custom-tab" class="recipe-tab-content">
             <input type="text" id="custom-recipe-name" class="search-input" placeholder="Ex: Salade composée maison" onkeypress="if(event.key==='Enter') selectCustomRecipe()">
             <button class="btn btn-primary" onclick="selectCustomRecipe()" style="width: 100%; margin-top: 12px;">Ajouter</button>
+          </div>
+          <!-- Inventory Tab -->
+          <div id="inventory-tab" class="recipe-tab-content">
+            <input type="text" id="inventory-search-input" class="search-input" placeholder="Rechercher un produit...">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--color-border);">
+              <label for="inventory-qty" style="margin:0;font-size:14px;color:var(--color-text);">Quantité :</label>
+              <input type="number" id="inventory-qty" min="0" value="1" step="any"
+                style="width:80px;padding:6px 8px;border:1px solid var(--color-border);border-radius:4px;font-size:14px;" />
+              <span id="inventory-unit" style="font-size:14px;color:var(--color-text-secondary);"></span>
+            </div>
+            <div id="inventory-options" class="recipe-options">
+              <!-- Dynamically populated -->
+            </div>
           </div>
         </div>
       </div>

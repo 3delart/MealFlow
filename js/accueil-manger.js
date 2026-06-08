@@ -46,7 +46,7 @@ function openMangerModal(mealName) {
 
     // Populate from todaysMeals with actual recipe data
     select.innerHTML = '<option value="">-- Sélectionner --</option>';
-    const mealsWithRecipes = todaysMeals.filter(m => m.name && m.name.trim());
+    const mealsWithRecipes = todaysMeals.filter(m => m.name && m.name.trim() && !m.inventorySource);
     mealsWithRecipes.forEach(m => {
       const option = document.createElement('option');
       option.value = m.name;

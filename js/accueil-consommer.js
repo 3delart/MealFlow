@@ -298,6 +298,40 @@ async function submitConsommerInventaire() {
   _enregistrerConsommation(product.name, qty, unit, kcalPer100, totalKcal, 'inventaire');
 }
 
+/**
+ * "Manger" a planned inventory product from the home page.
+ * Opens the Consommer modal on the Inventaire tab, pre-filled with the product
+ * and planned quantity, so the user confirms via the existing flow
+ * (submitConsommerInventaire → stock deduction + calorie log).
+ */
+function mangerInventoryItem(name, qty, unit) {
+  openConsommerModal();
+  switchConsommerTab('inventaire');
+
+  const norm = s => Utils.normalizeString(s);
+  const invItem = (window.inventoryData || []).find(i => norm(i.Produit) === norm(name));
+  if (!invItem) {
+    alert('Produit introuvable dans l\'inventaire');
+    return;
+  }
+
+  _consommerSelectedProductId = invItem.id;
+  const searchEl = document.getElementById('consommer-product-search');
+  if (searchEl) searchEl.value = invItem.Produit;
+  const dd = document.getElementById('consommer-product-dropdown');
+  if (dd) dd.style.display = 'none';
+
+  const u = invItem.Unité || unit || 'g';
+  const label = document.getElementById('consommer-qty-label');
+  if (label) label.textContent = `Quantité (${u}) :`;
+  const qtyInput = document.getElementById('consommer-qty');
+  if (qtyInput) {
+    qtyInput.step = (u === 'pièce' || u === 'piece') ? '1' : '0.1';
+    qtyInput.value = qty || '';
+  }
+  updateConsommerPreview();
+}
+
 function updateConsommerRecettePreview() {
   const qtyInput = document.getElementById('consommer-recette-qty');
   const previewBox = document.getElementById('consommer-recette-preview');
