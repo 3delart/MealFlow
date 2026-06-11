@@ -82,6 +82,21 @@ async function loadRecipes() {
 }
 
 /**
+ * Calories for a recipe, computed once and memoized on the recipe object so
+ * re-rendering a list of N recipes doesn't recompute N times. The cache is
+ * cleared on edit (handleRecipeFormSubmit) and naturally dropped on reload
+ * (loadRecipes rebuilds fresh objects).
+ * @param {Object} recipe
+ * @returns {{total_kcal:number, total_weight_grams:number, kcal_per_100:number}}
+ */
+function getRecipeCals(recipe) {
+  if (!recipe._cals) {
+    recipe._cals = calculateRecipeCalories(recipe.ingredients || []);
+  }
+  return recipe._cals;
+}
+
+/**
  * Load recipes from localStorage (fallback)
  * @returns {void}
  */
@@ -162,7 +177,7 @@ function renderRecipeCard(recipeID, recipe) {
   meta.appendChild(timeSpan);
 
   // Calories
-  const cals = calculateRecipeCalories(recipe.ingredients || []);
+  const cals = getRecipeCals(recipe);
   const calSpan = document.createElement("span");
   calSpan.textContent = `🔥 ${cals.kcal_per_100} kcal/100g`;
   meta.appendChild(calSpan);
@@ -400,7 +415,7 @@ function openViewModal(recipeID, portions = 1) {
 
   title.textContent = p > 1 ? `${recipe.name} ×${p}` : recipe.name;
 
-  const cals = calculateRecipeCalories(recipe.ingredients || []);
+  const cals = getRecipeCals(recipe);
   const totalKcal = Math.round(cals.total_kcal * p);
 
   // Allergy + dietary-regime + aversion checks against the active profile

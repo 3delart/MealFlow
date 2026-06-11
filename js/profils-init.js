@@ -68,9 +68,15 @@ function setupModalHandlers() {
       return;
     }
 
-    const heightCm = parseFloat(formData.Taille_cm);
-    const weightKg = parseFloat(formData.Poids_kg);
-    const ageYears = parseFloat(formData.Âge);
+    const _num = v => parseFloat((v ?? "").toString().replace(",", ".")); // accept French comma decimals
+    const heightCm = _num(formData.Taille_cm);
+    const weightKg = _num(formData.Poids_kg);
+    const ageYears = _num(formData.Âge);
+
+    // Persist normalized (dot) decimals so the sheet never stores a "78,4".
+    if (Number.isFinite(heightCm)) formData.Taille_cm = String(heightCm);
+    if (Number.isFinite(weightKg)) formData.Poids_kg = String(weightKg);
+    if (Number.isFinite(ageYears)) formData.Âge = String(ageYears);
     const sex = formData.Sexe;
     const activity = formData.Activité;
     const objectif = formData.Objectif;

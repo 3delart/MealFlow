@@ -76,20 +76,25 @@ async function saveEditedItem(e) {
   const token = authenticated ? getAccessToken() : null;
 
   if (authenticated && item.sheetRowNumber && token) {
+    const r = item.sheetRowNumber;
+    const updates = [
+      { range: `Inventory!B${r}`, value: newName },
+      { range: `Inventory!C${r}`, value: item.Catégorie },
+      { range: `Inventory!D${r}`, value: item.Qty },
+      { range: `Inventory!E${r}`, value: item.Unité },
+      { range: `Inventory!F${r}`, value: item.Conversion_factor || "" },
+      { range: `Inventory!G${r}`, value: item.Date_ajout },
+      { range: `Inventory!H${r}`, value: item.Péremption },
+      { range: `Inventory!I${r}`, value: item.Prix },
+      { range: `Inventory!J${r}`, value: item.Calories_per_100 || "" },
+      { range: `Inventory!O${r}`, value: item.cooking_factor || 1.0 },
+      { range: `Inventory!P${r}`, value: (item.dietTags || []).join(",") },
+      { range: `Inventory!Q${r}`, value: item.minQty || 0 },
+      { range: `Inventory!R${r}`, value: item.priceUnit || "" }
+    ];
     try {
-      await SheetsAPI.updateSheetCell(`Inventory!B${item.sheetRowNumber}`, newName, token);
-      await SheetsAPI.updateSheetCell(`Inventory!C${item.sheetRowNumber}`, item.Catégorie, token);
-      await SheetsAPI.updateSheetCell(`Inventory!D${item.sheetRowNumber}`, item.Qty, token);
-      await SheetsAPI.updateSheetCell(`Inventory!E${item.sheetRowNumber}`, item.Unité, token);
-      await SheetsAPI.updateSheetCell(`Inventory!F${item.sheetRowNumber}`, item.Conversion_factor || "", token);
-      await SheetsAPI.updateSheetCell(`Inventory!G${item.sheetRowNumber}`, item.Date_ajout, token);
-      await SheetsAPI.updateSheetCell(`Inventory!H${item.sheetRowNumber}`, item.Péremption, token);
-      await SheetsAPI.updateSheetCell(`Inventory!I${item.sheetRowNumber}`, item.Prix, token);
-      await SheetsAPI.updateSheetCell(`Inventory!J${item.sheetRowNumber}`, item.Calories_per_100 || "", token);
-      await SheetsAPI.updateSheetCell(`Inventory!O${item.sheetRowNumber}`, item.cooking_factor || 1.0, token);
-      await SheetsAPI.updateSheetCell(`Inventory!P${item.sheetRowNumber}`, (item.dietTags || []).join(","), token);
-      await SheetsAPI.updateSheetCell(`Inventory!Q${item.sheetRowNumber}`, item.minQty || 0, token);
-      await SheetsAPI.updateSheetCell(`Inventory!R${item.sheetRowNumber}`, item.priceUnit || "", token);
+      // One atomic batch instead of 13 sequential round-trips.
+      await SheetsAPI.batchUpdateCells(updates, token);
     } catch (err) {
       console.error("Failed to update Sheets:", err);
     }

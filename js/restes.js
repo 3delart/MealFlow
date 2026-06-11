@@ -16,6 +16,7 @@ const RESTES_TAB = "Restes";
 const RESTES_HEADER = ["Recette", "Date_creation", "Portions_restantes", "Portion_g", "Kcal_per_100"];
 
 let restesCache = null;
+let _restesCacheDate = null; // ISO day the cache was built; invalidated when the day rolls over
 // Set while the Manger modal is being used to eat from a leftover batch.
 let currentResteContext = null;
 
@@ -36,7 +37,10 @@ async function ensureRestesSheet(token) {
  * @returns {Promise<Array<{recette,dateCreation,portionsRestantes,portionG,kcalPer100,rowNumber}>>}
  */
 async function loadRestes() {
-  if (restesCache) return restesCache;
+  const today = Utils.getDateISO(0);
+  // Leftovers are shown from the day AFTER creation, so a cache built yesterday is
+  // stale once the day rolls over — drop it at midnight.
+  if (restesCache && _restesCacheDate === today) return restesCache;
   try {
     const rows = await SheetsAPI.readSheetTab(RESTES_TAB);
     const out = [];
@@ -55,6 +59,7 @@ async function loadRestes() {
       });
     });
     restesCache = out;
+    _restesCacheDate = today;
     return out;
   } catch (err) {
     console.error("Failed to load restes:", err);

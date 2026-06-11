@@ -337,7 +337,7 @@ async function saveWeight() {
   if (!userId) return;
 
   const input = document.getElementById("field-weigh");
-  const value = parseFloat(input.value);
+  const value = parseFloat((input.value || "").replace(",", ".")); // accept French comma decimals
   if (!value || value <= 0) {
     alert("Veuillez entrer un poids valide.");
     return;

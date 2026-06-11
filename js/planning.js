@@ -543,7 +543,9 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
         }
         const recipeName = entry.name || entry;
         const portions = entry.portions || 1;
-        const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
+        const recipeKey = Utils.normalizeString(recipeName);
+        const recipe = Object.values(window.recipesData || {})
+          .find(r => Utils.normalizeString(r.name) === recipeKey);
         if (!recipe?.ingredients) return;
         // Portions = servings wanted; a recipe is cooked whole and yields
         // `portions_total` servings, so shop for ceil(wanted / yield) whole recipes.
@@ -563,7 +565,7 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
     const ingKey = Utils.normalizeString(ing.name);
     const match = inventoryObjects.find(item => {
       const k = Utils.normalizeString(item.Produit);
-      return k === ingKey || k.includes(ingKey) || ingKey.includes(k);
+      return k === ingKey; // strict normalized match (avoids false fuzzy hits)
     });
     if (match) {
       ing.category = match.Catégorie || 'Autres';

@@ -227,44 +227,35 @@ function updateCalories() {
   const tbody = document.getElementById("ingredients-tbody");
   const rows = tbody.querySelectorAll("tr");
 
-  let totalKcal = 0;
-  let totalWeight = 0;
-
-  rows.forEach(row => {
+  // Map the DOM rows to ingredient objects and reuse the single source of truth
+  // (RecettesUtils.calculateRecipeCalories) so cooking-factor / piece-conversion
+  // handling stays identical to the recipe view and home page.
+  const ingredients = Array.from(rows).map(row => {
     const nameInput = row.querySelector("td:nth-child(1) input");
     const qtyInput = row.querySelector("td:nth-child(2) input");
     const unitSelect = row.querySelector("td:nth-child(3) select");
     const calSpan = row.querySelector("td:nth-child(4) span");
-
-    const name = nameInput.value || "";
-    const qty = parseFloat(qtyInput.value) || 0;
-    const unit = unitSelect.value;
-    const cal100 = parseFloat(calSpan.dataset.caloriesPer100 || 0) || 0;
-
-    // Convert to grams (use convertToGrams like calculateRecipeCalories)
-    let conversionFactor = null;
-    if (unit === "piece" || unit === "pièce") {
-      conversionFactor = window.getProductConversionFactor ? window.getProductConversionFactor(name) : null;
-    }
-    const qtyGrams = window.convertToGrams ? window.convertToGrams(qty, unit, conversionFactor) : qty;
-    const cookingFactor = parseFloat(calSpan.dataset.cookingFactor) || 1.0;
-
-    totalWeight += qtyGrams * cookingFactor;
-    totalKcal += cal100 * (qtyGrams / 100);
+    return {
+      name: nameInput?.value || "",
+      quantity: parseFloat(qtyInput?.value) || 0,
+      unit: unitSelect?.value || "g",
+      calories_per_100: parseFloat(calSpan?.dataset.caloriesPer100 || 0) || 0,
+      cooking_factor: parseFloat(calSpan?.dataset.cookingFactor) || 1.0
+    };
   });
 
-  const kcalPer100 = totalWeight > 0 ? totalKcal / (totalWeight / 100) : 0;
+  const cals = window.RecettesUtils.calculateRecipeCalories(ingredients);
 
-  document.getElementById("calorie-total").textContent = Math.round(totalKcal);
-  document.getElementById("calorie-per-100").textContent = Math.round(kcalPer100);
+  document.getElementById("calorie-total").textContent = cals.total_kcal;
+  document.getElementById("calorie-per-100").textContent = cals.kcal_per_100;
   const weightEl = document.getElementById("recipe-total-weight");
-  if (weightEl) weightEl.textContent = Math.round(totalWeight);
+  if (weightEl) weightEl.textContent = cals.total_weight_grams;
 
   const portionG = parseInt(document.getElementById("field-portion-g")?.value) || 0;
   const portionPreview = document.getElementById("calorie-portion-preview");
   if (portionPreview) {
     portionPreview.textContent = portionG > 0
-      ? ` · 🍽️ ${portionG}g = ${Math.round(portionG * kcalPer100 / 100)} kcal`
+      ? ` · 🍽️ ${portionG}g = ${Math.round(portionG * cals.kcal_per_100 / 100)} kcal`
       : "";
   }
 }
@@ -564,10 +555,17 @@ async function handleRecipeFormSubmit(e) {
         // Edit existing row
         await window.SheetsAPI.batchUpdateRange(`Recettes!A${recipe.sheetRowNumber}:K${recipe.sheetRowNumber}`, [row], token);
       } else {
-        // New recipe — append and assign row number
-        await window.SheetsAPI.appendRowWithToken("Recettes", row, token);
-        const allRows = await window.SheetsAPI.readSheetTab("Recettes");
-        recipe.sheetRowNumber = allRows.length;
+        // New recipe — append and read the inserted row number from the API
+        // response (e.g. "Recettes!A12:K12") instead of a length-based guess,
+        // which is wrong under concurrent writes.
+        const resp = await window.SheetsAPI.appendRowWithToken("Recettes", row, token);
+        const m = (resp?.updates?.updatedRange || "").match(/![A-Z]+(\d+)/);
+        if (m) {
+          recipe.sheetRowNumber = parseInt(m[1], 10);
+        } else {
+          const allRows = await window.SheetsAPI.readSheetTab("Recettes");
+          recipe.sheetRowNumber = allRows.length;
+        }
       }
       window.saveRecipesToLocalStorage();
     }

@@ -93,54 +93,75 @@ function stopScanner() {
 
 async function processBarcodeDetection(barcode) {
   const status = document.getElementById("scanner-status");
-  status.textContent = "⏳ Recherche produit...";
 
-  const product = await fetchProductFromOpenFoodFacts(barcode);
+  // Check the local inventory first: if we already know this barcode, prefill
+  // from it and skip the Open Food Facts network call entirely.
+  const existingItem = findItemByBarcode(barcode);
+  let product = null;
 
-  if (!product) {
-    status.textContent = "❌ Produit non trouvé. Entrez manuellement.";
-    status.classList.add("error");
-    document.getElementById("add-item-section").style.display = "block";
-    return;
+  if (existingItem) {
+    status.textContent = `✅ Déjà en stock : ${existingItem.Produit}`;
+    status.classList.remove("error");
+    status.classList.add("success");
+  } else {
+    status.textContent = "⏳ Recherche produit...";
+    product = await fetchProductFromOpenFoodFacts(barcode);
+    if (!product) {
+      status.textContent = "❌ Produit non trouvé. Entrez manuellement.";
+      status.classList.add("error");
+      document.getElementById("add-item-section").style.display = "block";
+      return;
+    }
+    status.textContent = `✅ Produit trouvé: ${product.name}`;
+    status.classList.remove("error");
+    status.classList.add("success");
   }
-
-  status.textContent = `✅ Produit trouvé: ${product.name}`;
-  status.classList.remove("error");
-  status.classList.add("success");
 
   document.getElementById("add-item-section").style.display = "block";
 
-  const existingItem = findItemByBarcode(barcode);
+  // Unified source: API product when scanned fresh, else the inventory item.
+  const src = product || {
+    name: existingItem.Produit,
+    quantity: 1,
+    unit: existingItem.Unité,
+    category: existingItem.Catégorie,
+    calories: existingItem.calories_per_100,
+    proteins: existingItem.proteins,
+    fats: existingItem.fats,
+    carbs: existingItem.carbs,
+    allergens: existingItem.allergens,
+    barcode
+  };
 
-  document.getElementById("field-product-name").value = existingItem?.Produit || product.name;
+  document.getElementById("field-product-name").value = existingItem?.Produit || src.name;
 
-  if (product.quantity > 100) {
-    console.warn(`⚠️ Suspicious quantity from API: ${product.quantity} ${product.unit}. User should verify.`);
+  if (src.quantity > 100) {
+    console.warn(`⚠️ Suspicious quantity from API: ${src.quantity} ${src.unit}. User should verify.`);
     status.textContent += ` ⚠️ Vérifiez la quantité`;
   }
 
-  document.getElementById("field-quantity").value = product.quantity || 1;
-  document.getElementById("field-unit").value = existingItem?.Unité || product.unit || "pièce";
-  document.getElementById("field-category").value = existingItem?.Catégorie || product.category || "Autres";
+  document.getElementById("field-quantity").value = src.quantity || 1;
+  document.getElementById("field-unit").value = existingItem?.Unité || src.unit || "pièce";
+  document.getElementById("field-category").value = existingItem?.Catégorie || src.category || "Autres";
   document.getElementById("field-price").value = existingItem?.Prix || "";
-  scannedProductData = product;
+  scannedProductData = src;
 
   const infoSection = document.getElementById("product-info");
   infoSection.style.display = "grid";
 
-  if (product.calories) {
-    document.getElementById("info-calories").textContent = product.calories.toFixed(1) + " kcal";
+  if (src.calories) {
+    document.getElementById("info-calories").textContent = Number(src.calories).toFixed(1) + " kcal";
   }
-  if (product.proteins) {
-    document.getElementById("info-proteins").textContent = product.proteins.toFixed(1) + "g";
+  if (src.proteins) {
+    document.getElementById("info-proteins").textContent = Number(src.proteins).toFixed(1) + "g";
   }
-  if (product.fats) {
-    document.getElementById("info-fats").textContent = product.fats.toFixed(1) + "g";
+  if (src.fats) {
+    document.getElementById("info-fats").textContent = Number(src.fats).toFixed(1) + "g";
   }
-  if (product.carbs) {
-    document.getElementById("info-carbs").textContent = product.carbs.toFixed(1) + "g";
+  if (src.carbs) {
+    document.getElementById("info-carbs").textContent = Number(src.carbs).toFixed(1) + "g";
   }
-  document.getElementById("info-allergens").textContent = product.allergens;
+  document.getElementById("info-allergens").textContent = src.allergens || "—";
 
   // Auto-fill expiry date based on category and date-added
   updateExpiryDateFromCategory("field-date-added", "field-category", "field-expiry");

@@ -28,7 +28,10 @@ function generateRecipeID(name) {
  */
 const UNIT_CONVERSION_TABLE = {
   'g': 1,
+  'kg': 1000,
   'ml': 1,
+  'cl': 10,
+  'dl': 100,
   'litre': 1000,
   'piece': 100,
   'pièce': 100

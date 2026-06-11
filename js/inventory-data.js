@@ -5,6 +5,8 @@
 let inventoryData = [];
 let scannedProductData = null;
 let _consolidatingDuplicates = false; // guard against re-entrant consolidation
+let _loadInFlight = null;             // shared promise so concurrent loadInventory() calls don't race
+let _addingItem = false;              // guard against double form submission
 
 async function applyInventoryDeduction(item, qtyToDeduct, token) {
   if (!item.sheetRowNumber || !window.SheetsAPI || !token) return;
@@ -20,6 +22,14 @@ async function applyInventoryDeduction(item, qtyToDeduct, token) {
 }
 
 async function loadInventory() {
+  // Share one in-flight read so concurrent callers (auto-load, addItem, page init)
+  // don't race and delete/rewrite rows out from under each other.
+  if (_loadInFlight) return _loadInFlight;
+  _loadInFlight = _loadInventoryImpl().finally(() => { _loadInFlight = null; });
+  return _loadInFlight;
+}
+
+async function _loadInventoryImpl() {
   try {
     const rows = await SheetsAPI.readSheetTab("Inventory");
 
@@ -82,7 +92,8 @@ async function loadInventory() {
             // 2. Delete the orphan rows (deleteSheetRows sorts descending internally).
             await window.SheetsAPI.deleteSheetRows("Inventory", orphanRows, token);
             // 3. Reload to refresh sheetRowNumbers now that duplicates are gone.
-            await loadInventory();
+            // Call the impl directly: we're already inside the shared in-flight promise.
+            await _loadInventoryImpl();
           } catch (err) {
             console.error("Inventory: duplicate consolidation failed:", err);
           } finally {
@@ -155,7 +166,25 @@ function findItemByBarcode(barcode) {
   return inventoryData.find(i => splitBarcodes(i.Barcode).includes(barcode));
 }
 
+function _resetAddItemForm() {
+  scannedProductData = null;
+  document.getElementById("add-item-form").reset();
+  document.getElementById("product-info").style.display = "none";
+  const section = document.getElementById("add-item-section");
+  if (section) section.style.display = "none";
+}
+
 async function addItem(item) {
+  if (_addingItem) return; // guard against double submission
+  _addingItem = true;
+  try {
+    await _addItemImpl(item);
+  } finally {
+    _addingItem = false;
+  }
+}
+
+async function _addItemImpl(item) {
   const barcode = scannedProductData?.barcode || "";
   const quantity = parseFloat(item.quantity) || 0;
 
@@ -187,9 +216,7 @@ async function addItem(item) {
         }
       }
 
-      scannedProductData = null;
-      document.getElementById("add-item-form").reset();
-      document.getElementById("product-info").style.display = "none";
+      _resetAddItemForm();
       renderInventory();
       return;
     }
@@ -205,7 +232,7 @@ async function addItem(item) {
         existingByName.Prix = item.price;
       }
 
-      if (barcode && !existingByName.Barcode.includes(barcode)) {
+      if (barcode && !splitBarcodes(existingByName.Barcode).includes(barcode)) {
         existingByName.Barcode = existingByName.Barcode ? `${existingByName.Barcode};${barcode}` : barcode;
       }
 
@@ -222,16 +249,16 @@ async function addItem(item) {
         }
       }
 
-      scannedProductData = null;
-      document.getElementById("add-item-form").reset();
-      document.getElementById("product-info").style.display = "none";
+      _resetAddItemForm();
       renderInventory();
       return;
     }
   }
 
   const newItem = {
-    id: Date.now(),
+    id: (typeof crypto !== "undefined" && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `${Date.now()}_${Math.random().toString(36).slice(2)}`,
     Produit: item.product_name,
     Qty: quantity.toString(),
     Unité: item.unit,
@@ -279,28 +306,35 @@ async function addItem(item) {
     ];
 
     // Append at the bottom (no sheet-side sort: rows stay stable so sheetRowNumbers
-    // remain valid; display sorting is handled by renderInventory). Reload to assign
-    // the new row's sheetRowNumber.
-    SheetsAPI.appendRowWithToken("Inventory", row, token)
-      .then(async () => {
-        await loadInventory();
-        window.inventoryData = inventoryData;
-        renderInventory();
-        if (window.Toast) Toast.success(`${newItem.Produit} ajouté ✓`);
-      })
-      .catch(err => {
-        console.error("Failed to sync to Sheets:", err);
-        if (window.Toast) Toast.error("Échec de l'ajout sur Google Sheets.");
-      });
+    // remain valid; display sorting is handled by renderInventory). The append
+    // response carries the inserted range (e.g. "Inventory!A47:R47"); we read the
+    // row number from it instead of re-reading the whole sheet (no N+1).
+    try {
+      const resp = await SheetsAPI.appendRowWithToken("Inventory", row, token);
+      const m = (resp?.updates?.updatedRange || "").match(/![A-Z]+(\d+)/);
+      if (m) {
+        newItem.sheetRowNumber = parseInt(m[1], 10);
+        newItem.id = `sheet_${m[1]}`;
+      }
+      _resetAddItemForm();
+      window.inventoryData = inventoryData;
+      renderInventory();
+      if (window.Toast) Toast.success(`${newItem.Produit} ajouté ✓`);
+    } catch (err) {
+      console.error("Failed to sync to Sheets:", err);
+      // Roll back the optimistic insert and keep the form so the user can retry.
+      const i = inventoryData.indexOf(newItem);
+      if (i !== -1) inventoryData.splice(i, 1);
+      window.inventoryData = inventoryData;
+      renderInventory();
+      if (window.Toast) Toast.error("Échec de l'ajout sur Google Sheets.");
+    }
+    return;
   }
 
-  scannedProductData = null;
-  document.getElementById("add-item-form").reset();
-  document.getElementById("product-info").style.display = "none";
-  document.getElementById("add-item-section").style.display = "none";
-
+  // Not authenticated: local-only add.
+  _resetAddItemForm();
   window.inventoryData = inventoryData;
-
   renderInventory();
 }
 

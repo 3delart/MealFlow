@@ -58,7 +58,8 @@ function getHistoryForLast30Days(user) {
   for (let i = 29; i >= 0; i--) {
     const date = new Date();
     date.setDate(date.getDate() - i);
-    const isoDate = date.toISOString().split("T")[0];
+    // Local date (not UTC) so the day labels don't shift by one near midnight.
+    const isoDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     const entry = userData[isoDate] || {};
     result.push({
       date: isoDate,
@@ -128,7 +129,8 @@ function generateDemoData() {
   for (let i = 29; i >= 0; i--) {
     const date = new Date();
     date.setDate(date.getDate() - i);
-    const isoDate = date.toISOString().split("T")[0];
+    // Local date (not UTC) so the day labels don't shift by one near midnight.
+    const isoDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
     // Florian: calories 1500–1800, weight drifts ±0.2 per day around 74.5–75.5
     florianWeight = Math.max(74.5, Math.min(75.5, florianWeight + randBetween(-0.2, 0.2)));

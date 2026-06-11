@@ -27,126 +27,10 @@ function calculateWeekWindow() {
   return days;
 }
 
-/**
- * Build courses rows from meal plan + inventory (with deduction)
- * Returns array of rows for Courses!A2:G sheet
- */
-function buildCoursesRows(mealPlanArg, inventoryObjects) {
-  const map = {};
-
-  // 1. Aggregate ingredients from recipes
-  mealPlanArg.forEach(day => {
-    ['Midi', 'Soir'].forEach(slot => {
-      const recipeValue = day[slot];
-      if (!recipeValue) return;
-      const recipeEntries = (() => {
-        if (!recipeValue) return [];
-        if (Array.isArray(recipeValue)) return recipeValue;
-        try {
-          const parsed = JSON.parse(recipeValue);
-          if (Array.isArray(parsed)) return parsed.map(i => typeof i === 'string' ? {name:i,portions:1} : i);
-        } catch(e) {}
-        return [{name: recipeValue, portions: 1}];
-      })();
-      recipeEntries.forEach(entry => {
-        const recipeName = entry.name || entry;
-        const portions = entry.portions || 1;
-        const recipe = Object.values(window.recipesData || {}).find(r => r.name === recipeName);
-        if (!recipe?.ingredients) return;
-        recipe.ingredients.forEach(ing => {
-          const key = Utils.normalizeString(ing.name);
-          if (!map[key]) map[key] = { name: ing.name, qty: 0, unit: ing.unit || 'g', days: [] };
-          map[key].qty += (parseFloat(ing.quantity) || 0) * portions;
-          if (!map[key].days.includes(day.dateISO)) map[key].days.push(day.dateISO);
-        });
-      });
-    });
-  });
-
-  // 2. Enrich from inventory + deduct stock
-  Object.values(map).forEach(ing => {
-    const ingKey = Utils.normalizeString(ing.name);
-    const match = inventoryObjects.find(item => {
-      const k = Utils.normalizeString(item.Produit);
-      return k === ingKey || k.includes(ingKey) || ingKey.includes(k);
-    });
-    if (match) {
-      ing.category = match.Catégorie || 'Autres';
-      ing.price = parseFloat(match.Prix) || 0;
-      ing.priceUnit = match.Prix_unité || Utils.defaultPriceUnit(ing.unit);
-      // Store original qty — deduction happens in populateIngredientMap via live inventory lookup
-    } else {
-      ing.category = 'Autres';
-      ing.price = 0;
-      ing.priceUnit = Utils.defaultPriceUnit(ing.unit);
-    }
-  });
-
-  // 3. Sort and return rows (cols A-I; G=Acheté, H=Ajout filled by caller, I=Prix_unité)
-  return Object.values(map)
-    .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-    .map(ing => [ing.name, ing.category, ing.qty.toFixed(1), ing.unit, ing.price.toFixed(2), ing.days.join(','), '', '', ing.priceUnit || '']);
-}
-
-/**
- * Generate and write Courses sheet from current mealPlan
- */
-/**
- * Ensure Courses sheet has proper headers with Date_utilisation column
- */
-async function ensureCoursesHeaders(token) {
-  try {
-    const headerRow = ['Produit', 'Catégorie', 'Qty', 'Unité', 'Prix', 'Date_utilisation', 'Acheté', 'Ajout', 'Prix_unité'];
-    await window.SheetsAPI.batchUpdateRange('Courses!A1:I1', [headerRow], token);
-  } catch (err) {
-    console.warn('Could not ensure Courses headers:', err);
-  }
-}
-
-async function generateAndWriteCourses(token, existingAcheté = {}) {
-  if (!window.SheetsAPI || !token) return;
-
-  try {
-    await ensureCoursesHeaders(token);
-
-    const invRows = await window.SheetsAPI.readSheetTab('Inventory');
-    const inventory = window.SheetsAPI.rowsToObjects(invRows);
-
-    const planRows = await window.SheetsAPI.readSheetTab('Planning');
-    const planObjects = window.SheetsAPI.rowsToObjects(planRows);
-    const tempMealPlan = calculateWeekWindow().map(day => ({
-      ...day,
-      Midi: planObjects.find(p => p.Date === day.dateISO)?.Midi || null,
-      Soir: planObjects.find(p => p.Date === day.dateISO)?.Soir || null
-    }));
-
-    let rows = buildCoursesRows(tempMealPlan, inventory);
-    rows = rows.map(row => {
-      const key = Utils.normalizeString(row[0]);
-      row[6] = existingAcheté[key] || '';
-      row[7] = 'planning';
-      return row;
-    });
-
-    // Read current sheet, delete only planning rows — use raw col position (index 7 = col H)
-    const existingRaw = await window.SheetsAPI.readSheetTab('Courses', 'A:H');
-    const planningRowNums = [];
-    for (let i = 1; i < existingRaw.length; i++) { // i=0 is header
-      const ajout = (existingRaw[i][7] || '').toString().trim();
-      if (ajout === 'planning') planningRowNums.push(i + 1);
-    }
-
-    if (planningRowNums.length > 0) {
-      await window.SheetsAPI.deleteSheetRows('Courses', planningRowNums, token);
-    }
-
-    for (const row of rows) {
-      await window.SheetsAPI.appendRowWithToken('Courses', row, token);
-    }
-  } catch (err) {
-    console.warn('Courses sync failed:', err);
-  }
-}
+// NOTE: buildCoursesRows / generateAndWriteCourses used to live here but were dead
+// duplicates (initCourses only READS the Courses sheet). The live versions are in
+// planning.js, which writes the sheet with the correct per-recipe scaling
+// (recipeCount = ceil(portions / portions_total)). Kept single-sourced there.
 
 /**
  * Populate ingredientMap from Courses sheet rows
@@ -173,7 +57,7 @@ function populateIngredientMap(objects) {
       const invMatch = (window.inventoryData || []).find(item => {
         const k = norm(item.Produit);
         const n = norm(row.Produit);
-        return k === n || k.includes(n) || n.includes(k);
+        return k === n; // strict normalized match (avoids "sel" matching "salé")
       });
       const customPrice = invMatch ? (parseFloat(invMatch.Prix) || 0) : 0;
       const customUnit = row.Unité || 'g';
@@ -200,7 +84,7 @@ function populateIngredientMap(objects) {
     const invItem = (window.inventoryData || []).find(item => {
       const k = norm(item.Produit);
       const n = norm(row.Produit);
-      return k === n || k.includes(n) || n.includes(k);
+      return k === n; // strict normalized match (avoids "sel" matching "salé")
     });
     const unit = row.Unité || 'g';
     const invUnit = invItem ? (invItem.Unité || 'g') : unit;

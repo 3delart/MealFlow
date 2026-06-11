@@ -17,6 +17,21 @@ const Diet = (() => {
     }
   }
 
+  // Memoized normalized-name → inventory item index. Rebuilt only when the
+  // window.inventoryData array reference changes (i.e. after a reload), so
+  // per-ingredient lookups are O(1) instead of scanning the whole inventory.
+  let _invIndex = null;
+  let _invIndexSource = null;
+  function _inventoryIndex() {
+    const inv = window.inventoryData || [];
+    if (_invIndex && _invIndexSource === inv) return _invIndex;
+    const m = new Map();
+    inv.forEach(i => m.set(Utils.normalizeString(i.Produit), i));
+    _invIndex = m;
+    _invIndexSource = inv;
+    return _invIndex;
+  }
+
   /** Load the active profile's allergies, aversions and regime from the Profils sheet. */
   async function loadProfile() {
     allergies = []; aversions = []; regime = "";
@@ -41,8 +56,7 @@ const Diet = (() => {
     const cfg = window.FoodConfig;
     if (!cfg) return concepts;
     const normName = Utils.normalizeString(ing.name);
-    const invItem = (window.inventoryData || [])
-      .find(i => Utils.normalizeString(i.Produit) === normName);
+    const invItem = _inventoryIndex().get(normName);
     // Explicit per-product tags are authoritative
     if (invItem && Array.isArray(invItem.dietTags) && invItem.dietTags.length > 0) {
       invItem.dietTags.forEach(c => concepts.add(c));
@@ -62,8 +76,7 @@ const Diet = (() => {
   }
 
   function _invAllergens(ing) {
-    const invItem = (window.inventoryData || [])
-      .find(i => Utils.normalizeString(i.Produit) === Utils.normalizeString(ing.name));
+    const invItem = _inventoryIndex().get(Utils.normalizeString(ing.name));
     return invItem ? (invItem.allergens || "") : "";
   }
 

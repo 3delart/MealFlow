@@ -239,7 +239,12 @@ function _inventoryQtyToGrams(qty, unit, conversionFactor) {
     return qty * (parseFloat(conversionFactor) || 1);
   }
   if (unit === 'litre') return qty * 1000;
-  return qty; // g or ml
+  if (unit === 'kg') return qty * 1000;
+  if (unit === 'cl') return qty * 10;
+  if (unit === 'dl') return qty * 100;
+  if (unit === 'g' || unit === 'ml') return qty;
+  console.warn(`_inventoryQtyToGrams: unité inconnue "${unit}", traitée comme grammes`);
+  return qty;
 }
 
 function updateConsommerPreview() {
