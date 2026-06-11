@@ -143,11 +143,16 @@ function saveInventory() {
   // no-op: Sheets is the source of truth
 }
 
+/**
+ * Split a Barcode cell into individual codes. Accepts both ";" and ","
+ * as separators (the sheet may contain either), trims, drops empties.
+ */
+function splitBarcodes(raw) {
+  return (raw || "").split(/[;,]/).map(b => b.trim()).filter(Boolean);
+}
+
 function findItemByBarcode(barcode) {
-  return inventoryData.find(i => {
-    const barcodes = (i.Barcode || "").split(";").map(b => b.trim());
-    return barcodes.includes(barcode);
-  });
+  return inventoryData.find(i => splitBarcodes(i.Barcode).includes(barcode));
 }
 
 async function addItem(item) {
@@ -160,7 +165,7 @@ async function addItem(item) {
   }
 
   if (barcode) {
-    const existing = inventoryData.find(i => (i.Barcode || "").split(";").map(b => b.trim()).includes(barcode));
+    const existing = inventoryData.find(i => splitBarcodes(i.Barcode).includes(barcode));
     if (existing) {
       const existingQty = parseFloat(existing.Qty) || 0;
       existing.Qty = (existingQty + quantity).toString();
@@ -341,7 +346,7 @@ async function deleteItem(itemId) {
 window.InventoryAPI = {
   getData: () => inventoryData,
   findByBarcode: (barcode) => {
-    return inventoryData.find(i => i.Barcode === barcode);
+    return inventoryData.find(i => splitBarcodes(i.Barcode).includes(barcode));
   },
   searchByName: (query, activeOnly = true) => {
     const lowerQuery = (query || "").toLowerCase();
