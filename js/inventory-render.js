@@ -124,7 +124,7 @@ function createInventoryItemElement(item) {
 
   const priceSpan = document.createElement("span");
   priceSpan.className = "inventory-item-price";
-  priceSpan.textContent = item.Prix ? `${item.Prix}€` : "—";
+  priceSpan.textContent = item.Prix ? `${item.Prix}€/${Utils.priceUnitLabel(item.priceUnit, item.Unité)}` : "—";
 
   headerDiv.appendChild(nameH3);
   headerDiv.appendChild(priceSpan);

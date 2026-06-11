@@ -568,17 +568,19 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
     if (match) {
       ing.category = match.Catégorie || 'Autres';
       ing.price = parseFloat(match.Prix) || 0;
+      ing.priceUnit = match.Prix_unité || Utils.defaultPriceUnit(ing.unit);
       // Store original qty — deduction happens in UI via live inventory lookup
     } else {
       ing.category = 'Autres';
       ing.price = 0;
+      ing.priceUnit = Utils.defaultPriceUnit(ing.unit);
     }
   });
 
-  // 3. Sort and return rows
+  // 3. Sort and return rows (cols A-I; G=Acheté, H=Ajout set by caller, I=Prix_unité)
   return Object.values(map)
     .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-    .map(ing => [ing.name, ing.category, ing.qty.toFixed(1), ing.unit, ing.price.toFixed(2), ing.days.join(','), '']);
+    .map(ing => [ing.name, ing.category, ing.qty.toFixed(1), ing.unit, ing.price.toFixed(2), ing.days.join(','), '', '', ing.priceUnit || '']);
 }
 
 /**
@@ -592,8 +594,8 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
   try {
     // Ensure col H header "Ajout" exists — without this rowsToObjects won't map col H
     // and custom items (Ajout=custom) would be treated as planning rows and deleted
-    await window.SheetsAPI.batchUpdateRange('Courses!A1:H1',
-      [['Produit','Catégorie','Qty','Unité','Prix','Date_utilisation','Acheté','Ajout']], token);
+    await window.SheetsAPI.batchUpdateRange('Courses!A1:I1',
+      [['Produit','Catégorie','Qty','Unité','Prix','Date_utilisation','Acheté','Ajout','Prix_unité']], token);
 
     const invRows = await window.SheetsAPI.readSheetTab('Inventory');
     const inventory = window.SheetsAPI.rowsToObjects(invRows);
@@ -606,8 +608,8 @@ async function generateAndWriteCourses(token, existingAcheté = {}) {
       return row;
     });
 
-    // Add "planning" marker to col H
-    const taggedRows = rows.map(r => [...r, 'planning']);
+    // Add "planning" marker to col H (idx7); preserve Prix_unité at col I (idx8)
+    const taggedRows = rows.map(r => { const c = [...r]; c[7] = 'planning'; return c; });
 
     // Delete only planning rows — use raw column position (index 7 = col H)
     // NEVER relies on header name so custom rows are always safe

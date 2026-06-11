@@ -240,6 +240,28 @@ function debounce(fn, ms = 250) {
 }
 
 /**
+ * Default price reference unit derived from a product's storage unit.
+ * Mass (g) → kg, volume (ml/litre) → L, count (pièce) → pièce.
+ * @param {string} productUnit
+ * @returns {'kg'|'L'|'pièce'}
+ */
+function defaultPriceUnit(productUnit) {
+  if (productUnit === 'ml' || productUnit === 'litre') return 'L';
+  if (productUnit === 'pièce' || productUnit === 'piece') return 'pièce';
+  return 'kg';
+}
+
+/**
+ * Resolve the price unit to display: stored value if present, else derived default.
+ * @param {string} priceUnit - stored Prix_unité ('' if unset)
+ * @param {string} productUnit - product's Unité
+ * @returns {string} e.g. 'kg', 'L', 'pièce'
+ */
+function priceUnitLabel(priceUnit, productUnit) {
+  return priceUnit || defaultPriceUnit(productUnit);
+}
+
+/**
  * Lightweight toast notifications. Self-injects its container and styles,
  * so no per-page HTML is required. Call Toast.show / .success / .error.
  */
@@ -307,6 +329,8 @@ const Utils = {
   escapeHTML,
   normalizeString,
   debounce,
+  defaultPriceUnit,
+  priceUnitLabel,
   Toast
 };
 

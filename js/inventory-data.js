@@ -22,6 +22,20 @@ async function applyInventoryDeduction(item, qtyToDeduct, token) {
 async function loadInventory() {
   try {
     const rows = await SheetsAPI.readSheetTab("Inventory");
+
+    // Ensure the Prix_unité header (col R) exists so rowsToObjects maps it.
+    // Without it, per-unit prices can't be read/written. Idempotent.
+    if (rows && rows[0] && !rows[0].includes("Prix_unité")) {
+      const token = typeof getAccessToken === "function" ? getAccessToken() : null;
+      if (token && window.SheetsAPI?.updateSheetCell) {
+        try {
+          await window.SheetsAPI.updateSheetCell("Inventory!R1", "Prix_unité", token);
+        } catch (err) {
+          console.warn("Could not ensure Prix_unité header:", err);
+        }
+      }
+    }
+
     const objects = SheetsAPI.rowsToObjects(rows);
 
     if (objects.length > 0) {
@@ -36,6 +50,7 @@ async function loadInventory() {
         Date_ajout: row["Date_ajout"] || Utils.getTodayISO(),
         Péremption: row["Péremption"] || "",
         Prix: row["Prix"] || "",
+        priceUnit: row["Prix_unité"] || "",
         calories_per_100: parseFloat(row["Calories_per_100"]) || 0,
         proteins: parseFloat(row["Proteins"]) || 0,
         fats: parseFloat(row["Fats"]) || 0,
@@ -221,6 +236,7 @@ async function addItem(item) {
     Consommé: false,
     Barcode: barcode,
     Prix: item.price || "",
+    priceUnit: item.price_unit || "",
     Conversion_factor: item.conversion_factor || "",
     calories_per_100: parseFloat(item.calories_per_100) || scannedProductData?.calories || null,
     proteins: scannedProductData?.proteins || null,
@@ -253,7 +269,8 @@ async function addItem(item) {
       newItem.allergens,
       newItem.cooking_factor || 1.0,
       (newItem.dietTags || []).join(","),
-      newItem.minQty || 0
+      newItem.minQty || 0,
+      newItem.priceUnit || ""
     ];
 
     // Append at the bottom (no sheet-side sort: rows stay stable so sheetRowNumbers

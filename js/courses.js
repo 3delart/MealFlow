@@ -73,17 +73,19 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
     if (match) {
       ing.category = match.Catégorie || 'Autres';
       ing.price = parseFloat(match.Prix) || 0;
+      ing.priceUnit = match.Prix_unité || Utils.defaultPriceUnit(ing.unit);
       // Store original qty — deduction happens in populateIngredientMap via live inventory lookup
     } else {
       ing.category = 'Autres';
       ing.price = 0;
+      ing.priceUnit = Utils.defaultPriceUnit(ing.unit);
     }
   });
 
-  // 3. Sort and return rows
+  // 3. Sort and return rows (cols A-I; G=Acheté, H=Ajout filled by caller, I=Prix_unité)
   return Object.values(map)
     .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-    .map(ing => [ing.name, ing.category, ing.qty.toFixed(1), ing.unit, ing.price.toFixed(2), ing.days.join(','), '']);
+    .map(ing => [ing.name, ing.category, ing.qty.toFixed(1), ing.unit, ing.price.toFixed(2), ing.days.join(','), '', '', ing.priceUnit || '']);
 }
 
 /**
@@ -94,8 +96,8 @@ function buildCoursesRows(mealPlanArg, inventoryObjects) {
  */
 async function ensureCoursesHeaders(token) {
   try {
-    const headerRow = ['Produit', 'Catégorie', 'Qty', 'Unité', 'Prix', 'Date_utilisation', 'Acheté', 'Ajout'];
-    await window.SheetsAPI.batchUpdateRange('Courses!A1:H1', [headerRow], token);
+    const headerRow = ['Produit', 'Catégorie', 'Qty', 'Unité', 'Prix', 'Date_utilisation', 'Acheté', 'Ajout', 'Prix_unité'];
+    await window.SheetsAPI.batchUpdateRange('Courses!A1:I1', [headerRow], token);
   } catch (err) {
     console.warn('Could not ensure Courses headers:', err);
   }
@@ -174,9 +176,12 @@ function populateIngredientMap(objects) {
         return k === n || k.includes(n) || n.includes(k);
       });
       const customPrice = invMatch ? (parseFloat(invMatch.Prix) || 0) : 0;
+      const customUnit = row.Unité || 'g';
       ingredientMap[customKey] = {
         name: row.Produit,
         mapKey: customKey,
+        priceUnit: row.Prix_unité || (invMatch ? invMatch.priceUnit : '') || Utils.defaultPriceUnit(customUnit),
+        conversionFactor: invMatch ? invMatch.Conversion_factor : null,
         category: row.Catégorie || 'Autres',
         totalNeeded: parseFloat(row.Qty) || 0,
         needed: parseFloat(row.Qty) || 0,
@@ -214,6 +219,8 @@ function populateIngredientMap(objects) {
       stock,
       unit,
       price: parseFloat(row.Prix) || 0,
+      priceUnit: row.Prix_unité || (invItem ? invItem.priceUnit : '') || Utils.defaultPriceUnit(unit),
+      conversionFactor: invItem ? invItem.Conversion_factor : null,
       days: row['Date_utilisation'] ? row['Date_utilisation'].split(',').filter(Boolean) : [],
       acheté: isChecked,
       isCustom: false,
@@ -245,6 +252,8 @@ function populateIngredientMap(objects) {
       stock: qty,
       unit: item.Unité || 'g',
       price: parseFloat(item.Prix) || 0,
+      priceUnit: item.priceUnit || Utils.defaultPriceUnit(item.Unité || 'g'),
+      conversionFactor: item.Conversion_factor || null,
       days: [],
       acheté: false,
       isCustom: false,
@@ -310,8 +319,8 @@ function renderCoursesList() {
   const toBuy = Object.values(ingredientMap).filter(ing => ing.needed > 0);
   const inStock = Object.values(ingredientMap).filter(ing => ing.needed <= 0);
 
-  // Calculate total price
-  const totalPrice = toBuy.reduce((sum, ing) => sum + (ing.price || 0), 0);
+  // Calculate total price (real cost = quantity to buy × per-unit price)
+  const totalPrice = toBuy.reduce((sum, ing) => sum + ingredientCost(ing), 0);
 
   // Group by category
   function groupByCategory(items) {
@@ -389,6 +398,17 @@ function renderCoursesList() {
 }
 
 /**
+ * Real cost of an ingredient = quantity to buy (converted to the price's
+ * reference unit) × per-unit price. Returns 0 when nothing to buy or no price.
+ */
+function ingredientCost(ing) {
+  if (!ing.price || ing.needed <= 0) return 0;
+  const priceUnit = ing.priceUnit || Utils.defaultPriceUnit(ing.unit);
+  const qty = convertToPriceUnit(ing.needed, ing.unit, priceUnit, ing.conversionFactor);
+  return qty * ing.price;
+}
+
+/**
  * Render a single ingredient item with badges
  */
 function renderIngredientItem(ing, dimmed = false) {
@@ -408,7 +428,16 @@ function renderIngredientItem(ing, dimmed = false) {
     qtyDisplay = ` <small style="font-size:0.85em;color:#2E7D32;">(${ing.stock.toFixed(0)}${ing.unit})</small>`;
   }
 
-  const priceText = ing.price > 0 ? `${ing.price.toFixed(2)}€` : '-€';
+  let priceText;
+  if (ing.price > 0) {
+    const unitLabel = Utils.priceUnitLabel(ing.priceUnit, ing.unit);
+    const unitPrice = `${ing.price.toFixed(2)}€/${unitLabel}`;
+    priceText = ing.needed > 0
+      ? `${ingredientCost(ing).toFixed(2)}€ <small style="color:#999;font-weight:normal;">(${unitPrice})</small>`
+      : unitPrice;
+  } else {
+    priceText = '-€';
+  }
 
   let dayBadges = '';
   const todayISO = today.toISOString().split('T')[0];
@@ -592,6 +621,8 @@ function openEditModal(ingredientName) {
   document.getElementById('edit-ingredient-quantity').value = ing.needed.toFixed(1);
   document.getElementById('edit-ingredient-unit').value = ing.unit || 'g';
   document.getElementById('edit-ingredient-price').value = ing.price.toFixed(2);
+  const priceLabel = document.querySelector('label[for="edit-ingredient-price"]');
+  if (priceLabel) priceLabel.textContent = `Prix unitaire (€/${Utils.priceUnitLabel(ing.priceUnit, ing.unit)})`;
 
   modal.setAttribute('aria-hidden', 'false');
   modal.classList.remove('hidden');
@@ -654,7 +685,7 @@ async function initCourses() {
   document.getElementById('loading-state').textContent = 'Chargement...';
 
   try {
-    const rows = await SheetsAPI.readSheetTab('Courses', 'A:H');
+    const rows = await SheetsAPI.readSheetTab('Courses', 'A:I');
     let objects = SheetsAPI.rowsToObjects(rows);
 
     if (typeof loadInventory === 'function') await loadInventory();
@@ -671,7 +702,7 @@ async function initCourses() {
       }
       if (toDelete.length > 0) {
         // Re-lire après suppression pour avoir les bons sheetRow
-        const fresh = await SheetsAPI.readSheetTab('Courses', 'A:H');
+        const fresh = await SheetsAPI.readSheetTab('Courses', 'A:I');
         objects = SheetsAPI.rowsToObjects(fresh);
       }
     }

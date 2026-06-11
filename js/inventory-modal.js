@@ -11,6 +11,7 @@ function openEditModal(item) {
   document.getElementById("edit-date-added").value = item.Date_ajout;
   document.getElementById("edit-expiry").value = item.Péremption;
   document.getElementById("edit-price").value = (item.Prix || "").toString().replace(",", ".");
+  document.getElementById("edit-price-unit").value = item.priceUnit || Utils.defaultPriceUnit(item.Unité);
   document.getElementById("edit-calories").value = item.calories_per_100 || item.Calories_per_100 || "";
   document.getElementById("edit-conversion").value = item.Conversion_factor || item.conversion_factor || "";
   document.getElementById("edit-cooking-factor").value = item.cooking_factor || 1.0;
@@ -54,6 +55,7 @@ async function saveEditedItem(e) {
     Date_ajout: document.getElementById("edit-date-added").value || item.Date_ajout,
     Péremption: document.getElementById("edit-expiry").value || item.Péremption,
     Prix: priceValue.toString().replace(".", ","),
+    priceUnit: document.getElementById("edit-price-unit").value || item.priceUnit || "",
     Calories_per_100: caloriesValue ? parseFloat(caloriesValue) : item.Calories_per_100,
     Conversion_factor: conversionValue || item.Conversion_factor || "",
     cooking_factor: parseFloat(document.getElementById("edit-cooking-factor").value) || 1.0,
@@ -87,6 +89,7 @@ async function saveEditedItem(e) {
       await SheetsAPI.updateSheetCell(`Inventory!O${item.sheetRowNumber}`, item.cooking_factor || 1.0, token);
       await SheetsAPI.updateSheetCell(`Inventory!P${item.sheetRowNumber}`, (item.dietTags || []).join(","), token);
       await SheetsAPI.updateSheetCell(`Inventory!Q${item.sheetRowNumber}`, item.minQty || 0, token);
+      await SheetsAPI.updateSheetCell(`Inventory!R${item.sheetRowNumber}`, item.priceUnit || "", token);
     } catch (err) {
       console.error("Failed to update Sheets:", err);
     }
@@ -142,11 +145,11 @@ async function renameProductInRecipes(oldName, newName, token) {
 async function renameProductInCourses(oldName, newName, token) {
   if (!token || !window.SheetsAPI) return;
 
-  const rows = await SheetsAPI.readSheetTab("Courses", "A:G");
+  const rows = await SheetsAPI.readSheetTab("Courses", "A:I");
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     if (!row || row[0] !== oldName) continue;
-    const updatedRow = [newName, row[1] || "", row[2] || "", row[3] || "", row[4] || "", row[5] || "", row[6] || ""];
-    await SheetsAPI.batchUpdateRange(`Courses!A${i + 1}:G${i + 1}`, [updatedRow], token);
+    const updatedRow = [newName, row[1] || "", row[2] || "", row[3] || "", row[4] || "", row[5] || "", row[6] || "", row[7] || "", row[8] || ""];
+    await SheetsAPI.batchUpdateRange(`Courses!A${i + 1}:I${i + 1}`, [updatedRow], token);
   }
 }

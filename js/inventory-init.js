@@ -18,6 +18,7 @@ function searchProducts(query) {
       category: item.Catégorie,
       calories: item.calories_per_100,
       price: item.Prix,
+      priceUnit: item.priceUnit,
       conversionFactor: item.Conversion_factor
     }))
     .slice(0, 10);
@@ -90,6 +91,7 @@ function setupProductAutocomplete() {
             if (match.category) document.getElementById("field-category").value = match.category;
             if (match.calories) document.getElementById("field-calories").value = match.calories;
             if (match.price) document.getElementById("field-price").value = match.price;
+            if (match.priceUnit) document.getElementById("field-price-unit").value = match.priceUnit;
             if (match.conversionFactor) document.getElementById("field-conversion").value = match.conversionFactor;
             suggestionsDiv.style.display = "none";
           });
@@ -197,6 +199,7 @@ function setupEventHandlers() {
         category: document.getElementById("field-category").value,
         expiry_date: document.getElementById("field-expiry").value,
         price: document.getElementById("field-price").value || "",
+        price_unit: document.getElementById("field-price-unit").value || "",
         calories_per_100: document.getElementById("field-calories").value || null,
         cooking_factor: parseFloat(document.getElementById("field-cooking-factor").value) || 1.0,
         diet_tags: getCheckedDietTags("diet-tags-add"),

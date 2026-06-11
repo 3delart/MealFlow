@@ -93,6 +93,24 @@ function convertToGrams(qty, unit, productConversionFactor = null) {
 }
 
 /**
+ * Convert a quantity (in the product's unit) into the price reference unit
+ * (kg, L or pièce), so it can be multiplied by a per-unit price.
+ * @param {number} qty - quantity in productUnit
+ * @param {string} productUnit - product storage unit (g, ml, litre, pièce)
+ * @param {string} priceUnit - reference unit of the price (kg, L, pièce)
+ * @param {number} conversionFactor - per-product piece→gram factor
+ * @returns {number} quantity expressed in priceUnit
+ */
+function convertToPriceUnit(qty, productUnit, priceUnit, conversionFactor = null) {
+  const grams = convertToGrams(qty, productUnit, conversionFactor);
+  if (priceUnit === 'pièce' || priceUnit === 'piece') {
+    return grams / (parseFloat(conversionFactor) || 100);
+  }
+  // kg and L both come from grams / 1000 (ml ≈ g, water equivalence)
+  return grams / 1000;
+}
+
+/**
  * Calculate total calories and per 100g for a recipe
  * @param {Object[]} ingredients - Array of {name, quantity, unit, calories_per_100}
  * @returns {Object} {total_kcal, total_weight_grams, kcal_per_100}

@@ -83,6 +83,14 @@
             <label for="field-price">Prix (€)</label>
             <input type="number" id="field-price" name="price" step="0.01" min="0" placeholder="ex. 2.50">
           </div>
+          <div class="form-group">
+            <label for="field-price-unit">par</label>
+            <select id="field-price-unit" name="price_unit">
+              <option value="kg">€/kg</option>
+              <option value="L">€/L</option>
+              <option value="pièce">€/pièce</option>
+            </select>
+          </div>
         </div>
 
         <div class="form-group">
@@ -214,9 +222,19 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="edit-price">Prix (€)</label>
-          <input type="number" id="edit-price" step="0.01" min="0">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-price">Prix (€)</label>
+            <input type="number" id="edit-price" step="0.01" min="0">
+          </div>
+          <div class="form-group">
+            <label for="edit-price-unit">par</label>
+            <select id="edit-price-unit">
+              <option value="kg">€/kg</option>
+              <option value="L">€/L</option>
+              <option value="pièce">€/pièce</option>
+            </select>
+          </div>
         </div>
 
         <div class="form-group">
