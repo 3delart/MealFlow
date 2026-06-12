@@ -27,10 +27,9 @@ function calculateWeekWindow() {
   return days;
 }
 
-// NOTE: buildCoursesRows / generateAndWriteCourses used to live here but were dead
-// duplicates (initCourses only READS the Courses sheet). The live versions are in
-// planning.js, which writes the sheet with the correct per-recipe scaling
-// (recipeCount = ceil(portions / portions_total)). Kept single-sourced there.
+// NOTE: the shopping-list builder lives in js/courses-build.js and is driven by the
+// planning page (window.requestCoursesRegen after each meal change). This page only
+// READS + renders the Courses sheet.
 
 /**
  * Populate ingredientMap from Courses sheet rows
@@ -54,11 +53,7 @@ function populateIngredientMap(objects) {
     if (isCustom) {
       const customKey = `${row.Produit}__perso_${idx + 2}`;
       // Auto-derive price from inventory if this product exists there; otherwise no price.
-      const invMatch = (window.inventoryData || []).find(item => {
-        const k = norm(item.Produit);
-        const n = norm(row.Produit);
-        return k === n; // strict normalized match (avoids "sel" matching "salé")
-      });
+      const invMatch = (window.inventoryData || []).find(item => Utils.foodMatch(item.Produit, row.Produit));
       const customPrice = invMatch ? (parseFloat(invMatch.Prix) || 0) : 0;
       const customUnit = row.Unité || 'g';
       ingredientMap[customKey] = {
@@ -81,11 +76,7 @@ function populateIngredientMap(objects) {
     }
 
     const totalNeeded = parseFloat(row.Qty) || 0;
-    const invItem = (window.inventoryData || []).find(item => {
-      const k = norm(item.Produit);
-      const n = norm(row.Produit);
-      return k === n; // strict normalized match (avoids "sel" matching "salé")
-    });
+    const invItem = (window.inventoryData || []).find(item => Utils.foodMatch(item.Produit, row.Produit));
     const unit = row.Unité || 'g';
     const invUnit = invItem ? (invItem.Unité || 'g') : unit;
     const unitMatch = unit === invUnit ||
@@ -120,8 +111,7 @@ function populateIngredientMap(objects) {
     if (minQty <= 0) return;
     const qty = parseFloat(item.Qty) || 0;
     if (qty >= minQty) return;
-    const key = norm(item.Produit);
-    const existing = Object.values(ingredientMap).find(ing => norm(ing.name) === key);
+    const existing = Object.values(ingredientMap).find(ing => Utils.foodMatch(ing.name, item.Produit));
     if (existing) {
       existing.isLowStock = true;
       return;

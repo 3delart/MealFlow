@@ -226,6 +226,29 @@ function normalizeString(value) {
 }
 
 /**
+ * Canonical key for matching food/product names across recipes, inventory and
+ * the shopping list. On top of normalizeString it collapses internal whitespace
+ * and drops a trailing plural "s", so "Tomates" and "tomate" resolve to the same
+ * key — without the false positives of substring matching ("ail" vs "ailes").
+ * @param {*} value
+ * @returns {string}
+ */
+function foodKey(value) {
+  return normalizeString(value).replace(/\s+/g, ' ').replace(/s$/, '');
+}
+
+/**
+ * Whether two food/product names refer to the same item (plural/whitespace tolerant).
+ * @param {*} a
+ * @param {*} b
+ * @returns {boolean}
+ */
+function foodMatch(a, b) {
+  const ka = foodKey(a);
+  return ka.length > 0 && ka === foodKey(b);
+}
+
+/**
  * Create a debounced version of a function.
  * @param {Function} fn - Function to debounce
  * @param {number} ms - Delay in milliseconds
@@ -328,6 +351,8 @@ const Utils = {
   clearElement,
   escapeHTML,
   normalizeString,
+  foodKey,
+  foodMatch,
   debounce,
   defaultPriceUnit,
   priceUnitLabel,
