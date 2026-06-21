@@ -419,6 +419,18 @@ function renderWeightChart(userId, days) {
     const ctx = document.getElementById("chart-poids").getContext("2d");
     destroyChart("chart-poids");
 
+    // Tight bounds around real values so the axis shows decimal granularity
+    const values = data.filter(v => v !== null && v !== undefined);
+    let yMin, yMax;
+    if (values.length) {
+      const dataMin = Math.min(...values);
+      const dataMax = Math.max(...values);
+      const range = dataMax - dataMin;
+      const pad = range === 0 ? 1 : Math.max(range * 0.15, 0.5);
+      yMin = Math.floor((dataMin - pad) * 10) / 10;
+      yMax = Math.ceil((dataMax + pad) * 10) / 10;
+    }
+
     activeCharts["chart-poids"] = new Chart(ctx, {
       type: "line",
       data: {
@@ -441,11 +453,21 @@ function renderWeightChart(userId, days) {
         responsive: true,
         maintainAspectRatio: true,
         plugins: {
-          legend: { display: true, position: "top" }
+          legend: { display: true, position: "top" },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ctx.parsed.y != null ? `${ctx.parsed.y.toFixed(1)} kg` : ""
+            }
+          }
         },
         scales: {
           y: {
-            beginAtZero: false
+            beginAtZero: false,
+            min: yMin,
+            max: yMax,
+            ticks: {
+              callback: (value) => Number(value).toFixed(1)
+            }
           }
         }
       }
