@@ -294,7 +294,7 @@ async function loadUserWeights(userId) {
     const map = {};
     (rows || []).forEach(r => {
       if ((r[6] || "") === WEIGHT_ROW_TYPE && r[0]) {
-        const kg = parseFloat(r[3]);
+        const kg = parseFloat(String(r[3]).replace(",", ".")); // accept French comma decimals
         if (!isNaN(kg)) map[normalizeDateISO(r[0])] = kg;
       }
     });
